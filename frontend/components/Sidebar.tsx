@@ -73,7 +73,7 @@ const bottomNavItems: NavItem[] = [
   { id: "progress", label: "My Progress", icon: TrendingUp, badge: "beta", tooltip: "See how your wellness journey is evolving" },
   { id: "insights", label: "Insights", icon: Sparkles, badge: "beta", tooltip: "Discover patterns in your health data" },
   { id: "milestones", label: "Milestones", icon: Trophy, badge: "beta", tooltip: "Celebrate achievements in your wellness journey" },
-  { id: "memories", label: "Emma's Memory", icon: Brain, tooltip: "View what Emma remembers about you" },
+  { id: "memories", label: "Emma's Memory", icon: Brain, badge: "beta", tooltip: "View what Emma remembers about you" },
   { id: "care-team", label: "Care Team", icon: Users, tooltip: "Manage your support network and caregivers" },
   { id: "notifications", label: "Notifications", icon: Bell, badge: "beta", tooltip: "Set up reminders for check-ins and medications" },
   { id: "provider-access", label: "Provider Access", icon: Shield, badge: "beta", tooltip: "Share your data with healthcare providers" },
