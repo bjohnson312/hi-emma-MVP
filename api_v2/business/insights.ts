@@ -1,3 +1,5 @@
+import { addDevLog } from "../utils/devLogs";
+
 /**
  * Core business logic for intent detection and entity extraction.
  * 
@@ -47,10 +49,10 @@ export interface DetectedIntent {
  */
 export function detectIntentFromMessage(message: string): DetectedIntent {
   try {
-    console.log("detectIntentFromMessage: Starting with message:", message);
+    addDevLog({ event: "detectIntentFromMessage_start", message });
     
     const lowerMessage = message.toLowerCase().trim();
-    console.log("detectIntentFromMessage: Lowercase message:", lowerMessage);
+    addDevLog({ event: "detectIntentFromMessage_lowercase", lowerMessage });
     
     // Pattern matching for each intent type
     const intentPatterns: Array<{
@@ -144,31 +146,31 @@ export function detectIntentFromMessage(message: string): DetectedIntent {
   for (const { intent, patterns, confidence, entityExtractor } of intentPatterns) {
     for (const pattern of patterns) {
       if (pattern.test(lowerMessage)) {
-        console.log("detectIntentFromMessage: Matched intent:", intent);
+        addDevLog({ event: "detectIntentFromMessage_matched", intent });
         const result = {
           intent,
           confidence,
           entities: entityExtractor ? entityExtractor(lowerMessage) : {},
           originalMessage: message,
         };
-        console.log("detectIntentFromMessage: Result:", result);
+        addDevLog({ event: "detectIntentFromMessage_result", result });
         return result;
       }
     }
   }
   
   // Default: general conversation
-  console.log("detectIntentFromMessage: No pattern matched, returning general_conversation");
+  addDevLog({ event: "detectIntentFromMessage_no_match" });
   const result = {
     intent: 'general_conversation' as IntentType,
     confidence: 1.0,
     entities: {},
     originalMessage: message,
   };
-  console.log("detectIntentFromMessage: Result:", result);
+  addDevLog({ event: "detectIntentFromMessage_result", result });
   return result;
   } catch (error) {
-    console.error("ERROR IN detectIntentFromMessage:", error);
+    addDevLog({ event: "detectIntentFromMessage_error", error: error instanceof Error ? error.toString() : String(error), stack: error instanceof Error ? error.stack : undefined });
     throw error;
   }
 }

@@ -3,27 +3,28 @@ import type { ConversationSendRequest, ConversationSendResponse } from "./types"
 import db from "../db";
 import { determineTimeOfDay } from "../../api_v2/business/routine";
 import { detectIntentFromMessage } from "../../api_v2/business/insights";
+import { addDevLog } from "../../api_v2/utils/devLogs";
 
 async function loadUserProfile(userId: string) {
   try {
-    console.log("loadUserProfile: Starting for userId:", userId);
+    addDevLog({ event: "loadUserProfile_start", userId });
     
     const profile = await db.queryRow<{
       name: string;
       timezone: string | null;
     }>`SELECT name, timezone FROM user_profiles WHERE user_id = ${userId}`;
     
-    console.log("loadUserProfile: Profile result:", profile);
+    addDevLog({ event: "loadUserProfile_profile", profile });
 
     const result = {
       name: profile?.name || "User",
       timezone: profile?.timezone || "America/New_York"
     };
     
-    console.log("loadUserProfile: Returning:", result);
+    addDevLog({ event: "loadUserProfile_result", result });
     return result;
   } catch (error) {
-    console.error("ERROR IN loadUserProfile:", error);
+    addDevLog({ event: "loadUserProfile_error", error: error instanceof Error ? error.toString() : String(error), stack: error instanceof Error ? error.stack : undefined });
     throw error;
   }
 }
@@ -32,25 +33,24 @@ export const conversationSend = api(
   { method: "POST", path: "/api/v2/conversations/send", expose: true, auth: false },
   async (req: ConversationSendRequest): Promise<ConversationSendResponse> => {
     try {
-      console.log("=== conversationSend: Request received ===");
-      console.log("Request:", JSON.stringify(req, null, 2));
+      addDevLog({ event: "conversation_send_request", req });
       
-      console.log("conversationSend: Loading user profile");
+      addDevLog({ event: "conversation_send_load_user_profile" });
       const userProfile = await loadUserProfile(req.userId);
-      console.log("conversationSend: User profile loaded");
+      addDevLog({ event: "conversation_send_user_profile_loaded" });
       
-      console.log("conversationSend: Determining time of day");
+      addDevLog({ event: "conversation_send_determine_time_of_day" });
       const timeOfDay = determineTimeOfDay(new Date(), userProfile.timezone);
-      console.log("conversationSend: Time of day:", timeOfDay);
+      addDevLog({ event: "conversation_send_time_of_day", timeOfDay });
 
-      console.log("conversationSend: Detecting intent from message");
+      addDevLog({ event: "conversation_send_detect_intent" });
       const intentResult = detectIntentFromMessage(req.message);
-      console.log("conversationSend: Intent result:", intentResult);
+      addDevLog({ event: "conversation_send_intent_result", intentResult });
 
       const response = `I understand you said: "${req.message}". As Emma, I'm here to help with your wellness journey. [Intent detected: ${intentResult.intent} with ${(intentResult.confidence * 100).toFixed(0)}% confidence]`;
-      console.log("conversationSend: Generated response:", response);
+      addDevLog({ event: "conversation_send_generated_response", response });
 
-      console.log("conversationSend: Inserting conversation history");
+      addDevLog({ event: "conversation_send_insert_history" });
       await db.exec`
         INSERT INTO conversation_history (user_id, conversation_type, user_message, emma_response, context)
         VALUES (${req.userId}, ${req.sessionType}, ${req.message}, ${response}, ${JSON.stringify({
@@ -61,21 +61,21 @@ export const conversationSend = api(
           entities: intentResult.entities || {}
         })})
       `;
-      console.log("conversationSend: Conversation history inserted");
+      addDevLog({ event: "conversation_send_history_inserted" });
 
-      console.log("conversationSend: Updating session last_activity_at");
+      addDevLog({ event: "conversation_send_update_session" });
       await db.exec`
         UPDATE conversation_sessions
         SET last_activity_at = NOW()
         WHERE id = ${req.sessionId}
       `;
-      console.log("conversationSend: Session updated");
+      addDevLog({ event: "conversation_send_session_updated" });
 
       const suggestedActions = [];
       
       if (intentResult.intent === 'start_morning_routine' || intentResult.intent === 'start_evening_routine') {
         const routineType = intentResult.intent === 'start_morning_routine' ? 'morning' : 'evening';
-        console.log("conversationSend: Adding suggested action for routine type:", routineType);
+        addDevLog({ event: "conversation_send_add_suggested_action", routineType });
         suggestedActions.push({
           id: `start_${routineType}_routine`,
           label: `Start ${routineType.charAt(0).toUpperCase() + routineType.slice(1)} Routine`,
@@ -102,15 +102,12 @@ export const conversationSend = api(
         }
       };
       
-      console.log("conversationSend: Response:", JSON.stringify(result, null, 2));
-      console.log("=== conversationSend: Completed successfully ===");
+      addDevLog({ event: "conversation_send_response", result });
+      addDevLog({ event: "conversation_send_completed_successfully" });
       
       return result;
     } catch (error) {
-      console.error("=== ERROR IN conversationSend ===");
-      console.error("Error details:", error);
-      console.error("Error stack:", (error as Error).stack);
-      console.error("Request that failed:", JSON.stringify(req, null, 2));
+      addDevLog({ event: "conversation_send_error", error: error instanceof Error ? error.toString() : String(error), stack: error instanceof Error ? error.stack : undefined, req });
       throw error;
     }
   }

@@ -1,3 +1,5 @@
+import { addDevLog } from "../utils/devLogs";
+
 /**
  * Core business logic for routine management.
  * 
@@ -435,11 +437,7 @@ export async function generateContextualGreeting(
   routineState?: RoutineSuggestion
 ): Promise<string> {
   try {
-    console.log("generateContextualGreeting: Starting");
-    console.log("generateContextualGreeting: userContext:", userContext);
-    console.log("generateContextualGreeting: sessionType:", sessionType);
-    console.log("generateContextualGreeting: isFirstCheckIn:", isFirstCheckIn);
-    console.log("generateContextualGreeting: routineState:", routineState);
+    addDevLog({ event: "generateContextualGreeting_start", userContext, sessionType, isFirstCheckIn, routineState });
     
     const { name, timeOfDay, streak } = userContext;
     
@@ -456,15 +454,15 @@ export async function generateContextualGreeting(
     
     if (routineState?.state === 'suggest' && routineState.suggestion) {
       const result = `${greeting}, ${name}!${streakText} Ready to start your ${routineState.suggestion.type} routine?`;
-      console.log("generateContextualGreeting: Generated suggest greeting:", result);
+      addDevLog({ event: "generateContextualGreeting_suggest_greeting", result });
       return result;
     } else if (routineState?.state === 'completed') {
       const result = `${greeting}, ${name}! You've already completed your ${sessionType} routine today.${streakText} How can I help?`;
-      console.log("generateContextualGreeting: Generated completed greeting:", result);
+      addDevLog({ event: "generateContextualGreeting_completed_greeting", result });
       return result;
     }
     
-    console.log("generateContextualGreeting: Calling generateGreeting");
+    addDevLog({ event: "generateContextualGreeting_call_generateGreeting" });
     const result = generateGreeting({
       userName: name,
       timeOfDay,
@@ -476,10 +474,10 @@ export async function generateContextualGreeting(
         recentMood: userContext.recentMood
       }
     });
-    console.log("generateContextualGreeting: Generated greeting:", result);
+    addDevLog({ event: "generateContextualGreeting_result", result });
     return result;
   } catch (error) {
-    console.error("ERROR IN generateContextualGreeting:", error);
+    addDevLog({ event: "generateContextualGreeting_error", error: error instanceof Error ? error.toString() : String(error), stack: error instanceof Error ? error.stack : undefined });
     throw error;
   }
 }
