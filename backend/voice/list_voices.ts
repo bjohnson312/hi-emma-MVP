@@ -8,9 +8,15 @@ export const listVoices = api(
   { method: "GET", path: "/voice/list", expose: true },
   async (): Promise<{ voices: VoiceOption[] }> => {
     try {
+      const apiKey = elevenLabsApiKey();
+      if (!apiKey) {
+        console.warn("ElevenLabs API key not configured");
+        return { voices: [] };
+      }
+
       const response = await fetch("https://api.elevenlabs.io/v1/voices", {
         headers: {
-          "xi-api-key": elevenLabsApiKey(),
+          "xi-api-key": apiKey,
         },
       });
 

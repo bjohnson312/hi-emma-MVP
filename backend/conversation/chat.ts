@@ -4,9 +4,9 @@ import db from "../db";
 import type { ChatRequest, ChatResponse, ConversationSession } from "./types";
 import type { UserProfile } from "../profile/types";
 import type { ConversationEntry } from "../profile/types";
-import { addFromConversation } from "../wellness_journal/add_manual";
 import { buildMemoryContext, extractAndStoreMemories } from "./memory";
 import { trackInteraction, getBehaviorPatterns } from "../profile/personalization";
+import { createJournalEntry } from "../wellness_journal/auto_create";
 
 const openAIKey = secret("OpenAIKey");
 
@@ -195,12 +195,17 @@ export const chat = api<ChatRequest, ChatResponse>(
       cleanedReply = emmaReply.replace(/JOURNAL_ENTRY:\s*.+?(?:\n|$)/s, '').trim();
       
       try {
-        const entry = await addFromConversation({
+        const defaultTitle = `${session_type ? capitalizeFirst(session_type) : 'Personal'} Reflection`;
+        const defaultTags = session_type ? [session_type, 'conversation', 'reflection'] : ['conversation', 'reflection'];
+        
+        const entry = await createJournalEntry({
           user_id,
-          conversation_text: journalContent,
-          session_type,
-          title: `${session_type ? capitalizeFirst(session_type) : 'Personal'} Reflection`,
-          tags: [session_type, 'conversation', 'reflection']
+          entry_type: "event",
+          title: defaultTitle,
+          content: journalContent,
+          tags: defaultTags,
+          source_type: "conversation",
+          ai_generated: false
         });
         journalEntryId = entry.id;
       } catch (error) {
