@@ -24,8 +24,8 @@ async function getClerkToken() {
   const header = { alg: "none", typ: "JWT" };
   const payload = { sub: user.id, email: user.email_addresses[0]?.email_address };
   
-  const headerB64 = Buffer.from(JSON.stringify(header)).toString('base64');
-  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+  const headerB64 = btoa(JSON.stringify(header));
+  const payloadB64 = btoa(JSON.stringify(payload));
   const signature = "mock-signature"; // In production, this would be a real signature
   
   const token = `${headerB64}.${payloadB64}.${signature}`;
