@@ -90,6 +90,12 @@ export default function App() {
           setIsAuthenticated(true);
           setUserId(user.id);
           setUserEmail(user.email_addresses[0]?.email_address || "");
+          
+          // Update localStorage to match Clerk's authenticated user
+          localStorage.setItem("emma_user_id", user.id);
+          localStorage.setItem("emma_user_email", user.email_addresses[0]?.email_address || "");
+          localStorage.setItem("emma_authenticated", "true");
+          
           await checkOnboardingStatus(user.id);
           return;
         }
