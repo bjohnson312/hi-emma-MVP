@@ -3,7 +3,7 @@ import db from "../db";
 import type { CompleteOnboardingRequest, CompleteOnboardingResponse, OnboardingPreferences } from "./types";
 
 export const complete = api(
-  { method: "POST", path: "/onboarding/complete", expose: true },
+  { method: "POST", path: "/onboarding/complete", expose: true, auth: false },
   async (req: CompleteOnboardingRequest): Promise<CompleteOnboardingResponse> => {
     const prefs = await db.queryRow<OnboardingPreferences>`
       SELECT id, user_id, first_name, reason_for_joining, current_feeling, 

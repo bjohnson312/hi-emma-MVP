@@ -3,7 +3,7 @@ import db from "../db";
 import type { GetOnboardingStatusRequest, GetOnboardingStatusResponse, OnboardingPreferences } from "./types";
 
 export const getStatus = api(
-  { method: "POST", path: "/onboarding/status", expose: true },
+  { method: "POST", path: "/onboarding/status", expose: true, auth: false },
   async (req: GetOnboardingStatusRequest): Promise<GetOnboardingStatusResponse> => {
     const result = await db.queryRow<OnboardingPreferences>`
       SELECT id, user_id, first_name, reason_for_joining, current_feeling, 

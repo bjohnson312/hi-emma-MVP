@@ -18,7 +18,7 @@ const getNextQuestion = (step: number, firstName?: string): string => {
 };
 
 export const updateStep = api(
-  { method: "POST", path: "/onboarding/update-step", expose: true },
+  { method: "POST", path: "/onboarding/update-step", expose: true, auth: false },
   async (req: UpdateOnboardingStepRequest): Promise<UpdateOnboardingStepResponse> => {
     let firstName: string | undefined = req.first_name;
     
