@@ -34,12 +34,37 @@ export const conversationSend = api(
   { method: "POST", path: "/api/v2/conversations/send", expose: true },
   async (req: ConversationSendRequest): Promise<ConversationSendResponse> => {
     try {
+      console.log('[conversation_send] ==================== REQUEST START ====================');
+      console.log('[conversation_send] 📥 Incoming request body:', JSON.stringify(req, null, 2));
+      console.log('[conversation_send] 👤 Request userId:', req.userId);
+      console.log('[conversation_send] 💬 Message:', req.message);
       addDevLog({ event: "conversation_send_request", req });
       
+      console.log('[conversation_send] 🔐 Calling getAuthData()...');
       const auth = getAuthData();
+      console.log('[conversation_send] 🔐 getAuthData() returned:', JSON.stringify(auth, null, 2));
+      console.log('[conversation_send] 👤 auth.userID:', auth?.userID);
+      console.log('[conversation_send] 👤 auth exists?', !!auth);
+      console.log('[conversation_send] 👤 auth.userID exists?', !!auth?.userID);
+      
+      console.log('[conversation_send] 🔍 Comparing auth and request:');
+      console.log('[conversation_send]    - req.userId:', req.userId);
+      console.log('[conversation_send]    - auth?.userID:', auth?.userID);
+      console.log('[conversation_send]    - Match?', auth?.userID === req.userId);
+      console.log('[conversation_send]    - auth exists?', !!auth);
+      console.log('[conversation_send]    - Both exist and match?', !!auth && auth.userID === req.userId);
+      
+      addDevLog({ event: "conversation_send_auth_check", authUserID: auth?.userID, requestUserId: req.userId, match: auth?.userID === req.userId, authExists: !!auth });
+      
       if (!auth || auth.userID !== req.userId) {
+        console.log('[conversation_send] ❌ Authorization failed!');
+        console.log('[conversation_send] ❌ Reason:', !auth ? 'auth is null/undefined' : 'userID mismatch');
+        console.log('[conversation_send] ❌ Expected userId:', req.userId);
+        console.log('[conversation_send] ❌ Got auth.userID:', auth?.userID);
         throw APIError.permissionDenied("Cannot access or modify another user's data");
       }
+      
+      console.log('[conversation_send] ✅ Authorization successful! Proceeding with request...');
       
       addDevLog({ event: "conversation_send_load_user_profile" });
       const userProfile = await loadUserProfile(req.userId);

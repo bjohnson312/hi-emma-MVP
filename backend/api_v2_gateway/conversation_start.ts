@@ -127,14 +127,36 @@ export const conversationStart = api(
   { method: "POST", path: "/api/v2/conversations/start", expose: true },
   async (req: ConversationStartRequest): Promise<ConversationStartResponse> => {
     try {
+      console.log('[conversation_start] ==================== REQUEST START ====================');
+      console.log('[conversation_start] 📥 Incoming request body:', JSON.stringify(req, null, 2));
+      console.log('[conversation_start] 👤 Request userId:', req.userId);
       addDevLog({ event: "conversation_start_request", req });
       
+      console.log('[conversation_start] 🔐 Calling getAuthData()...');
       const auth = getAuthData();
-      addDevLog({ event: "auth_check", authUserID: auth?.userID, requestUserId: req.userId, match: auth?.userID === req.userId });
+      console.log('[conversation_start] 🔐 getAuthData() returned:', JSON.stringify(auth, null, 2));
+      console.log('[conversation_start] 👤 auth.userID:', auth?.userID);
+      console.log('[conversation_start] 👤 auth exists?', !!auth);
+      console.log('[conversation_start] 👤 auth.userID exists?', !!auth?.userID);
+      
+      console.log('[conversation_start] 🔍 Comparing auth and request:');
+      console.log('[conversation_start]    - req.userId:', req.userId);
+      console.log('[conversation_start]    - auth?.userID:', auth?.userID);
+      console.log('[conversation_start]    - Match?', auth?.userID === req.userId);
+      console.log('[conversation_start]    - auth exists?', !!auth);
+      console.log('[conversation_start]    - Both exist and match?', !!auth && auth.userID === req.userId);
+      
+      addDevLog({ event: "auth_check", authUserID: auth?.userID, requestUserId: req.userId, match: auth?.userID === req.userId, authExists: !!auth });
       
       if (!auth || auth.userID !== req.userId) {
+        console.log('[conversation_start] ❌ Authorization failed!');
+        console.log('[conversation_start] ❌ Reason:', !auth ? 'auth is null/undefined' : 'userID mismatch');
+        console.log('[conversation_start] ❌ Expected userId:', req.userId);
+        console.log('[conversation_start] ❌ Got auth.userID:', auth?.userID);
         throw APIError.permissionDenied("Cannot access or modify another user's data");
       }
+      
+      console.log('[conversation_start] ✅ Authorization successful! Proceeding with request...');
       
       addDevLog({ event: "conversation_start_load_user_context" });
       const userContext = await loadUserContext(req.userId);
