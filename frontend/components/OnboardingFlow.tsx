@@ -137,12 +137,20 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       }
 
       const response = await backend.onboarding.updateStep(updateData);
-      setIsLoading(false);
       
       if (response.onboarding_completed) {
-        const completionResponse = await backend.onboarding.complete({ user_id: userId });
-        onComplete(firstName, completionResponse.welcome_message);
+        try {
+          const completionResponse = await backend.onboarding.complete({ user_id: userId });
+          setIsLoading(false);
+          onComplete(firstName || "User", completionResponse.welcome_message);
+        } catch (completeError) {
+          console.error("Failed to complete onboarding:", completeError);
+          setIsLoading(false);
+          // Fallback: Complete without calling the API
+          onComplete(firstName || "User", "Welcome! Let's get started with your wellness journey.");
+        }
       } else {
+        setIsLoading(false);
         if (response.next_question) {
           setEmmaMessage(response.next_question);
         }

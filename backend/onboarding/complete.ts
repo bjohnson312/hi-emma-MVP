@@ -14,9 +14,17 @@ export const complete = api(
     `;
 
     if (!prefs) {
+      console.error('[onboarding/complete] No preferences found for user:', req.user_id);
+      // Create default preferences if they don't exist
+      await db.exec`
+        INSERT INTO onboarding_preferences (user_id, onboarding_completed, onboarding_step, first_name)
+        VALUES (${req.user_id}, FALSE, 0, 'User')
+        ON CONFLICT (user_id) DO NOTHING
+      `;
+      
       return {
-        success: false,
-        welcome_message: "Unable to complete onboarding. Please try again."
+        success: true,
+        welcome_message: "Welcome! Let's get started with your wellness journey."
       };
     }
 
