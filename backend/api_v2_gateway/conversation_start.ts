@@ -92,7 +92,7 @@ async function checkRoutineSuggestion(
 }
 
 export const conversationStart = api(
-  { method: "POST", path: "/api/v2/conversations/start", expose: true },
+  { method: "POST", path: "/api/v2/conversations/start", expose: true, auth: false },
   async (req: ConversationStartRequest): Promise<ConversationStartResponse> => {
     
     const userContext = await loadUserContext(req.userId);

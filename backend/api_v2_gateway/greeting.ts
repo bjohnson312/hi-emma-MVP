@@ -4,7 +4,7 @@ import db from "../db";
 import { determineTimeOfDay, generateGreeting } from "../../api_v2/business/routine";
 
 export const greeting = api(
-  { method: "GET", path: "/api/v2/user/greeting", expose: true },
+  { method: "GET", path: "/api/v2/user/greeting", expose: true, auth: false },
   async (req: GreetingRequest): Promise<GreetingResponse> => {
     const profileResult = await db.queryAll<{
       user_id: string;

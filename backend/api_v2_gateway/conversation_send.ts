@@ -17,7 +17,7 @@ async function loadUserProfile(userId: string) {
 }
 
 export const conversationSend = api(
-  { method: "POST", path: "/api/v2/conversations/send", expose: true },
+  { method: "POST", path: "/api/v2/conversations/send", expose: true, auth: false },
   async (req: ConversationSendRequest): Promise<ConversationSendResponse> => {
     
     const userProfile = await loadUserProfile(req.userId);

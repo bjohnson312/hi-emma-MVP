@@ -8,7 +8,7 @@ import {
 } from "../../api_v2/business/routine";
 
 export const currentContext = api(
-  { method: "GET", path: "/api/v2/user/current-context", expose: true },
+  { method: "GET", path: "/api/v2/user/current-context", expose: true, auth: false },
   async (req: CurrentContextRequest): Promise<CurrentContextResponse> => {
     const profileResult = await db.queryAll<{
       user_id: string;
