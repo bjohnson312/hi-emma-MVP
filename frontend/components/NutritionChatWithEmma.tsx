@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Send, X, RefreshCw, Sparkles, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import AutoExpandTextarea from "@/components/AutoExpandTextarea";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import Tooltip from "@/components/Tooltip";

@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Tooltip from "@/components/Tooltip";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { USE_NEW_GREETING_FLOW } from "@/config";
 
 export type NavigationView = 

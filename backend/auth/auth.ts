@@ -11,39 +11,54 @@ export interface AuthData {
 
 export const clerkAuth = authHandler<AuthParams, AuthData>(
   async (params) => {
+    console.log('[Auth Handler] 🔍 Auth handler called');
+    console.log('[Auth Handler] Headers:', params);
+    
     const authHeader = params.authorization;
     if (!authHeader) {
+      console.log('[Auth Handler] ❌ No authorization header found');
       throw APIError.unauthenticated("Missing authorization header");
     }
 
+    console.log('[Auth Handler] ✅ Authorization header present:', authHeader.substring(0, 50) + '...');
+
     const token = authHeader.replace("Bearer ", "");
     if (!token) {
+      console.log('[Auth Handler] ❌ No token after stripping Bearer prefix');
       throw APIError.unauthenticated("Invalid or missing Clerk token");
     }
 
+    console.log('[Auth Handler] 🎫 Token extracted (first 50 chars):', token.substring(0, 50) + '...');
+
     // Verify the Clerk token
-    // Using fetch to call Clerk's API directly since @clerk/clerk-sdk-node may not be available
     try {
-      // This is a simplified verification - in production you'd decode and verify the JWT
-      // For now, we'll extract the user ID from the token payload
-      // Clerk JWTs have the user ID in the 'sub' claim
-      
       const parts = token.split('.');
+      console.log('[Auth Handler] 📦 Token has', parts.length, 'parts');
+      
       if (parts.length !== 3) {
+        console.log('[Auth Handler] ❌ Invalid JWT format - expected 3 parts, got', parts.length);
         throw new Error("Invalid JWT format");
       }
       
+      console.log('[Auth Handler] 🔓 Decoding payload...');
       const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      console.log('[Auth Handler] 📄 Payload decoded:', payload);
+      
       const userId = payload.sub;
       
       if (!userId) {
+        console.log('[Auth Handler] ❌ No user ID (sub) in token payload');
         throw new Error("No user ID in token");
       }
+
+      console.log('[Auth Handler] ✅ User ID extracted from token:', userId);
+      console.log('[Auth Handler] 🎉 Authentication successful!');
 
       return {
         userID: userId
       };
     } catch (err) {
+      console.log('[Auth Handler] 💥 Error during token verification:', err);
       throw APIError.unauthenticated("Invalid or missing Clerk token", err as Error);
     }
   }

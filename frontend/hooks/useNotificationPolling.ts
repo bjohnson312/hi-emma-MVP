@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { useNotifications } from "./useNotifications";
 
 export function useNotificationPolling(userId: string, enabled: boolean = true) {

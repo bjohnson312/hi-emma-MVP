@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Target, Award, Calendar, Sparkles, CheckCircle2, Circle, Trophy, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { GetJourneySetupResponse, WellnessMilestone } from "~backend/journey/types";
 
 export default function ProgressView({ onNavigate }: { onNavigate?: (view: string) => void }) {

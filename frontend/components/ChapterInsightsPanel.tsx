@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sparkles, TrendingUp, Flame, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { ChapterInsight } from "~backend/wellness_journal/types";
 import { useToast } from "@/components/ui/use-toast";
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Check, Sparkles, Calendar, Heart, Apple, Pill, Activity } from "lucide-react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 
 interface DetectedInsight {
   id: string;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 
 export function useNotifications(userId: string) {
   const [permission, setPermission] = useState<NotificationPermission>("default");

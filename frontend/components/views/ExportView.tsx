@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Download, Share2, FileText, Calendar, CheckSquare, Clock, Trash2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { DataCategory, ShareInfo } from "~backend/journal/types";
 import { useToast } from "@/components/ui/use-toast";
 import Tooltip from "@/components/Tooltip";

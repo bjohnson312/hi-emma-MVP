@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, User, Calendar, Clock, FileText, CheckSquare, Activity, Sparkles, Save, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { GetAppointmentDetailResponse, AppointmentNote, AppointmentAction, PatientTimelineEvent } from "~backend/appointments/types";
 
 type SummaryType = "physician" | "nurse" | "dietitian" | "mental_health" | "physical_therapy";

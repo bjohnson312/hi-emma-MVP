@@ -1,4 +1,4 @@
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { clerkClient } from "@/lib/clerk-client";
 
 export function useBackend() {

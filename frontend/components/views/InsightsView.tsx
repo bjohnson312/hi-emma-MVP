@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, CheckCircle, Award, Lightbulb } from "lucide-react";
 

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, RefreshCw, ShoppingCart, Edit2, Save, X, Sparkles, Download, Star, Heart, List } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { WeeklyMealPlan, MealItem, DayMealPlan, ShoppingList } from "~backend/wellness/meal_plan_types";
 
 interface WeeklyMealPlanViewProps {

@@ -3,7 +3,7 @@ import { Send, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { NutritionChatMessage } from "~backend/wellness/types";
 
 interface NutritionChatOnboardingProps {

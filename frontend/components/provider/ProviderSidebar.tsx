@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Home, Users, BarChart3, MessageSquare, Settings, LogOut, UserPlus, HelpCircle, FileText, Shield, MessageCircle, Calendar } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Tooltip from "@/components/Tooltip";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { USE_NEW_GREETING_FLOW } from "@/config";
 
 export type ProviderView = 

@@ -3,7 +3,7 @@ import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Targe
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { DietNutritionLog, NutritionPlan, NutritionSetupProgress } from "~backend/wellness/types";
 import { NutritionSetupFlow } from "../NutritionSetupFlow";
 import FoodImageUpload from "../FoodImageUpload";

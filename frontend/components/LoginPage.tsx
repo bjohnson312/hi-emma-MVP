@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from "lucide-react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 
 const MOTIVATIONAL_QUOTES = [
   "Every day is a fresh start.",

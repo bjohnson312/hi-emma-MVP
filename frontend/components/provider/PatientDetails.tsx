@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { PatientWellnessData } from "~backend/provider_portal/types";
 import type { ProviderNote, Message } from "~backend/provider_portal/types";
 import { ArrowLeft, FileText, MessageSquare, Activity, TrendingUp } from "lucide-react";

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X, ChevronRight, Target, CheckCircle2, List, BookMarked, Rocket, AlertCircle, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { WellnessJournalEntry, JournalStats, WellnessChapter, WellnessSection } from "~backend/wellness_journal/types";
 import type { GetJourneySetupResponse } from "~backend/journey/types";
 import { useToast } from "@/components/ui/use-toast";

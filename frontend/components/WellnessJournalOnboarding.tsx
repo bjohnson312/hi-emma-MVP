@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BookOpen, Target, Heart, Lightbulb, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { useToast } from "@/components/ui/use-toast";
 
 interface WellnessJournalOnboardingProps {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Clock, CheckCircle2, Plus, Edit2, Sparkles } from "lucide-react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { MorningJournalEntry, MorningJournalEntryType } from "~backend/morning/journal_types";
 
 interface MorningRoutineJournalProps {

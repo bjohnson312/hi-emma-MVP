@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Camera, Refrigerator, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 
 interface FoodImageUploadProps {
   userId: string;

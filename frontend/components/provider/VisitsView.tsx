@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Clock, User, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { AppointmentWithPatient } from "~backend/appointments/types";
 
 type ViewType = "day" | "week" | "month";

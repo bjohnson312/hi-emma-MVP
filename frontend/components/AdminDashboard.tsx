@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { UserListResponse, UsageStatsResponse } from "~backend/admin_portal/types";
 import type { SystemInfoResponse, AccessStatsResponse } from "~backend/admin_portal/admin_types";
 import { Button } from "./ui/button";

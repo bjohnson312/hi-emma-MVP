@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FileText, Calendar, Shield, Eye, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { AccessShareResponse } from "~backend/journal/types";
 
 interface SharedReportViewProps {

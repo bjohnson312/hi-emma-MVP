@@ -1,5 +1,5 @@
 import { useState } from "react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";

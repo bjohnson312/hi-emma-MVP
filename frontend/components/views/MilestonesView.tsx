@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { Award, Trophy, Star, Calendar } from "lucide-react";
 
 interface UserMilestone {

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Heart, Wind, Send, Music, Check } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { HabitAction, RoutinePreference } from "~backend/morning/types";
 import Tooltip from "@/components/Tooltip";
 import { USE_NEW_CONVERSATION_FLOW } from "@/config";

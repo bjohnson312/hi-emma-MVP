@@ -3,7 +3,7 @@ import { Bell, Clock, Sun, Moon, Phone, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { NotificationPreferences } from "~backend/notifications/types";
 import Tooltip from "@/components/Tooltip";
 import { usePushNotifications } from "@/hooks/usePushNotifications";

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { AuditLog } from "~backend/provider_portal/get_audit_logs";
 import { Shield, Search, Calendar, User, FileText } from "lucide-react";
 

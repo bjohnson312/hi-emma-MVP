@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { PatientListItem } from "~backend/provider_portal/list_patients";
 import { Users, Search, Calendar, Activity } from "lucide-react";
 
