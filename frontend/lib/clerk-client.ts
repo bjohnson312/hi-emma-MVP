@@ -1,18 +1,15 @@
-import { CLERK_PUBLISHABLE_KEY } from "../config";
-
-interface ClerkUser {
+interface LocalUser {
   id: string;
   email_addresses: Array<{ email_address: string }>;
   first_name?: string;
   last_name?: string;
 }
 
-class ClerkClient {
-  private publishableKey: string;
-  private user: ClerkUser | null = null;
+class LocalAuthClient {
+  private user: LocalUser | null = null;
+  private token: string | null = null;
 
-  constructor(publishableKey: string) {
-    this.publishableKey = publishableKey;
+  constructor() {
     this.loadUser();
   }
 
@@ -20,24 +17,28 @@ class ClerkClient {
     if (typeof window !== 'undefined') {
       const storedUserId = localStorage.getItem('emma_user_id');
       const storedEmail = localStorage.getItem('emma_user_email');
+      const storedToken = localStorage.getItem('emma_auth_token');
       
-      if (storedUserId && storedEmail) {
+      if (storedUserId && storedEmail && storedToken) {
         this.user = {
           id: storedUserId,
           email_addresses: [{ email_address: storedEmail }],
         };
+        this.token = storedToken;
       }
     }
   }
 
-  private saveUser(userId: string, email: string) {
+  private saveUser(userId: string, email: string, token: string) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('emma_user_id', userId);
       localStorage.setItem('emma_user_email', email);
+      localStorage.setItem('emma_auth_token', token);
       this.user = {
         id: userId,
         email_addresses: [{ email_address: email }],
       };
+      this.token = token;
     }
   }
 
@@ -45,20 +46,19 @@ class ClerkClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('emma_user_id');
       localStorage.removeItem('emma_user_email');
+      localStorage.removeItem('emma_auth_token');
       this.user = null;
+      this.token = null;
     }
   }
 
-  async signUp(emailAddress: string, password: string): Promise<ClerkUser> {
+  async signUp(emailAddress: string, password: string): Promise<LocalUser> {
     const { Client } = await import('~backend/client');
-    const backend = new Client(import.meta.env.VITE_CLIENT_TARGET, { requestInit: { credentials: "include" } });
+    const backend = new Client(import.meta.env.VITE_CLIENT_TARGET);
     
     try {
       const data = await backend.auth.signup({ email: emailAddress, password });
-      
-      // The backend sets a session cookie automatically
-      // We just need to store the user info
-      this.saveUser(data.userId, data.email);
+      this.saveUser(data.userId, data.email, data.token);
 
       return {
         id: data.userId,
@@ -77,16 +77,13 @@ class ClerkClient {
     }
   }
 
-  async signIn(emailAddress: string, password: string): Promise<ClerkUser> {
+  async signIn(emailAddress: string, password: string): Promise<LocalUser> {
     const { Client } = await import('~backend/client');
-    const backend = new Client(import.meta.env.VITE_CLIENT_TARGET, { requestInit: { credentials: "include" } });
+    const backend = new Client(import.meta.env.VITE_CLIENT_TARGET);
     
     try {
       const data = await backend.auth.login({ email: emailAddress, password });
-      
-      // The backend sets a session cookie automatically
-      // We just need to store the user info
-      this.saveUser(data.userId, data.email);
+      this.saveUser(data.userId, data.email, data.token);
 
       return {
         id: data.userId,
@@ -105,23 +102,21 @@ class ClerkClient {
     }
   }
 
-  async getCurrentUser(): Promise<ClerkUser | null> {
+  async getCurrentUser(): Promise<LocalUser | null> {
     return this.user;
   }
 
   getToken(): Promise<string | null> {
-    // Session is managed via cookies, no token needed
-    return Promise.resolve(null);
+    return Promise.resolve(this.token);
   }
 
   signOut() {
     this.clearUser();
-    // Note: Should also call backend logout to clear session cookie
   }
 
   isSignedIn(): boolean {
-    return this.user !== null;
+    return this.user !== null && this.token !== null;
   }
 }
 
-export const clerkClient = new ClerkClient(CLERK_PUBLISHABLE_KEY);
+export const clerkClient = new LocalAuthClient();

@@ -127,7 +127,7 @@ export const conversationSend = api(
         suggestedActions: suggestedActions.length > 0 ? suggestedActions : undefined,
         context: {
           timeOfDay: timeOfDay as any,
-          routineState: 'none',
+          routineState: 'none' as const,
           streak: 0,
           entities: intentResult.entities || {}
         }
