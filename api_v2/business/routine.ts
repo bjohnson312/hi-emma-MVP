@@ -434,34 +434,52 @@ export async function generateContextualGreeting(
   isFirstCheckIn: boolean,
   routineState?: RoutineSuggestion
 ): Promise<string> {
-  const { name, timeOfDay, streak } = userContext;
-  
-  const timeGreetings: Record<TimeOfDay, string> = {
-    morning: 'Good morning',
-    afternoon: 'Good afternoon',
-    evening: 'Good evening',
-    night: 'Hello'
-  };
-  
-  const greeting = timeGreetings[timeOfDay] || 'Hello';
-  
-  const streakText = streak && streak > 0 ? ` You're on a ${streak}-day streak! 🔥` : '';
-  
-  if (routineState?.state === 'suggest' && routineState.suggestion) {
-    return `${greeting}, ${name}!${streakText} Ready to start your ${routineState.suggestion.type} routine?`;
-  } else if (routineState?.state === 'completed') {
-    return `${greeting}, ${name}! You've already completed your ${sessionType} routine today.${streakText} How can I help?`;
-  }
-  
-  return generateGreeting({
-    userName: name,
-    timeOfDay,
-    sessionType,
-    isFirstCheckIn,
-    userContext: {
-      currentStreak: streak,
-      lastCheckInDate: userContext.lastCheckInDate,
-      recentMood: userContext.recentMood
+  try {
+    console.log("generateContextualGreeting: Starting");
+    console.log("generateContextualGreeting: userContext:", userContext);
+    console.log("generateContextualGreeting: sessionType:", sessionType);
+    console.log("generateContextualGreeting: isFirstCheckIn:", isFirstCheckIn);
+    console.log("generateContextualGreeting: routineState:", routineState);
+    
+    const { name, timeOfDay, streak } = userContext;
+    
+    const timeGreetings: Record<TimeOfDay, string> = {
+      morning: 'Good morning',
+      afternoon: 'Good afternoon',
+      evening: 'Good evening',
+      night: 'Hello'
+    };
+    
+    const greeting = timeGreetings[timeOfDay] || 'Hello';
+    
+    const streakText = streak && streak > 0 ? ` You're on a ${streak}-day streak! 🔥` : '';
+    
+    if (routineState?.state === 'suggest' && routineState.suggestion) {
+      const result = `${greeting}, ${name}!${streakText} Ready to start your ${routineState.suggestion.type} routine?`;
+      console.log("generateContextualGreeting: Generated suggest greeting:", result);
+      return result;
+    } else if (routineState?.state === 'completed') {
+      const result = `${greeting}, ${name}! You've already completed your ${sessionType} routine today.${streakText} How can I help?`;
+      console.log("generateContextualGreeting: Generated completed greeting:", result);
+      return result;
     }
-  });
+    
+    console.log("generateContextualGreeting: Calling generateGreeting");
+    const result = generateGreeting({
+      userName: name,
+      timeOfDay,
+      sessionType,
+      isFirstCheckIn,
+      userContext: {
+        currentStreak: streak,
+        lastCheckInDate: userContext.lastCheckInDate,
+        recentMood: userContext.recentMood
+      }
+    });
+    console.log("generateContextualGreeting: Generated greeting:", result);
+    return result;
+  } catch (error) {
+    console.error("ERROR IN generateContextualGreeting:", error);
+    throw error;
+  }
 }

@@ -46,15 +46,19 @@ export interface DetectedIntent {
  * // }
  */
 export function detectIntentFromMessage(message: string): DetectedIntent {
-  const lowerMessage = message.toLowerCase().trim();
-  
-  // Pattern matching for each intent type
-  const intentPatterns: Array<{
-    intent: IntentType;
-    patterns: RegExp[];
-    confidence: number;
-    entityExtractor?: (message: string) => Record<string, any>;
-  }> = [
+  try {
+    console.log("detectIntentFromMessage: Starting with message:", message);
+    
+    const lowerMessage = message.toLowerCase().trim();
+    console.log("detectIntentFromMessage: Lowercase message:", lowerMessage);
+    
+    // Pattern matching for each intent type
+    const intentPatterns: Array<{
+      intent: IntentType;
+      patterns: RegExp[];
+      confidence: number;
+      entityExtractor?: (message: string) => Record<string, any>;
+    }> = [
     // START MORNING ROUTINE
     {
       intent: 'start_morning_routine',
@@ -140,23 +144,33 @@ export function detectIntentFromMessage(message: string): DetectedIntent {
   for (const { intent, patterns, confidence, entityExtractor } of intentPatterns) {
     for (const pattern of patterns) {
       if (pattern.test(lowerMessage)) {
-        return {
+        console.log("detectIntentFromMessage: Matched intent:", intent);
+        const result = {
           intent,
           confidence,
           entities: entityExtractor ? entityExtractor(lowerMessage) : {},
           originalMessage: message,
         };
+        console.log("detectIntentFromMessage: Result:", result);
+        return result;
       }
     }
   }
   
   // Default: general conversation
-  return {
-    intent: 'general_conversation',
+  console.log("detectIntentFromMessage: No pattern matched, returning general_conversation");
+  const result = {
+    intent: 'general_conversation' as IntentType,
     confidence: 1.0,
     entities: {},
     originalMessage: message,
   };
+  console.log("detectIntentFromMessage: Result:", result);
+  return result;
+  } catch (error) {
+    console.error("ERROR IN detectIntentFromMessage:", error);
+    throw error;
+  }
 }
 
 /**
