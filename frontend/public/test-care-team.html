@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Care Team Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+    input, textarea { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+    .result { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .error { background: #fee; border: 1px solid #c00; }
+    .success { background: #efe; border: 1px solid #0c0; }
+  </style>
+</head>
+<body>
+  <h1>Care Team API Test</h1>
+  
+  <h2>Add Member</h2>
+  <input type="text" id="userId" placeholder="User ID" value="test_user_123">
+  <input type="text" id="name" placeholder="Name" value="Ranada Johnson">
+  <input type="text" id="relationship" placeholder="Relationship" value="Daughter">
+  <input type="text" id="phone" placeholder="Phone" value="555-1234">
+  <input type="email" id="email" placeholder="Email" value="ranada@example.com">
+  <select id="memberType">
+    <option value="family">Family</option>
+    <option value="primary_care">Primary Care</option>
+    <option value="specialist">Specialist</option>
+  </select>
+  <button onclick="addMember()">Add Member</button>
+  
+  <h2>List Members</h2>
+  <input type="text" id="listUserId" placeholder="User ID" value="test_user_123">
+  <button onclick="listMembers()">List Members</button>
+  
+  <h2>Result</h2>
+  <div id="result" class="result"></div>
+  
+  <script>
+    const API_BASE = 'https://hi-emma-morning-routine-d44g7ks82vjgsfshe5i0.api.lp.dev';
+    
+    async function addMember() {
+      const data = {
+        userId: document.getElementById('userId').value,
+        name: document.getElementById('name').value,
+        relationship: document.getElementById('relationship').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        memberType: document.getElementById('memberType').value
+      };
+      
+      try {
+        const response = await fetch(`${API_BASE}/care-team/members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        document.getElementById('result').className = 'result success';
+        document.getElementById('result').innerHTML = '<h3>Success!</h3><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+      } catch (error) {
+        document.getElementById('result').className = 'result error';
+        document.getElementById('result').innerHTML = '<h3>Error</h3><pre>' + error.message + '</pre>';
+      }
+    }
+    
+    async function listMembers() {
+      const userId = document.getElementById('listUserId').value;
+      
+      try {
+        const response = await fetch(`${API_BASE}/care-team/members/${userId}`);
+        const result = await response.json();
+        document.getElementById('result').className = 'result success';
+        document.getElementById('result').innerHTML = '<h3>Members</h3><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+      } catch (error) {
+        document.getElementById('result').className = 'result error';
+        document.getElementById('result').innerHTML = '<h3>Error</h3><pre>' + error.message + '</pre>';
+      }
+    }
+  </script>
+</body>
+</html>

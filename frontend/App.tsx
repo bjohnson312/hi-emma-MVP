@@ -1,0 +1,206 @@
+import { useState, useEffect } from "react";
+import ConversationalCheckIn from "./components/ConversationalCheckIn";
+import MicrophoneSetup from "./components/MicrophoneSetup";
+import Sidebar, { type NavigationView } from "./components/Sidebar";
+import MorningRoutineView from "./components/views/MorningRoutineView";
+import DoctorsOrdersView from "./components/views/DoctorsOrdersView";
+import DietNutritionView from "./components/views/DietNutritionView";
+import MoodView from "./components/views/MoodView";
+import EveningRoutineView from "./components/views/EveningRoutineView";
+import WellnessJournalView from "./components/views/WellnessJournalView";
+import MemoriesView from "./components/views/MemoriesView";
+import ProgressView from "./components/views/ProgressView";
+import NotificationsView from "./components/views/NotificationsView";
+import SettingsView from "./components/views/SettingsView";
+import HelpView from "./components/views/HelpView";
+import ExportView from "./components/views/ExportView";
+import SharedReportView from "./components/views/SharedReportView";
+import { LoginPage } from "./components/LoginPage";
+import { InsightsView } from "./components/views/InsightsView";
+import { MilestonesView } from "./components/views/MilestonesView";
+import { ProviderAccessView } from "./components/views/ProviderAccessView";
+import { CareTeamView } from "./components/views/CareTeamView";
+import { Toaster } from "@/components/ui/toaster";
+import { useNotificationPolling } from "./hooks/useNotificationPolling";
+
+export default function App() {
+  const [currentView, setCurrentView] = useState<NavigationView>("home");
+  const [userName, setUserName] = useState<string>("");
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [showMicSetup, setShowMicSetup] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  const [userId, setUserId] = useState(() => {
+    const stored = localStorage.getItem("emma_user_id");
+    return stored || "";
+  });
+
+  useEffect(() => {
+    const storedAuth = localStorage.getItem("emma_authenticated");
+    const storedEmail = localStorage.getItem("emma_user_email");
+    const storedUserId = localStorage.getItem("emma_user_id");
+    const demoMode = localStorage.getItem("emma_demo_mode");
+    
+    if (demoMode === "true" && storedUserId) {
+      setIsAuthenticated(true);
+      setUserId(storedUserId);
+      setUserEmail("demo@example.com");
+      localStorage.setItem("emma_authenticated", "true");
+    } else if (storedAuth === "true" && storedUserId) {
+      setIsAuthenticated(true);
+      setUserId(storedUserId);
+      setUserEmail(storedEmail || "");
+    }
+  }, []);
+
+  useNotificationPolling(userId, isAuthenticated);
+
+  const handleLoginSuccess = (userId: string, email: string) => {
+    setUserId(userId);
+    setUserEmail(email);
+    setIsAuthenticated(true);
+    localStorage.setItem("emma_user_id", userId);
+    localStorage.setItem("emma_user_email", email);
+    localStorage.setItem("emma_authenticated", "true");
+  };
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/shared\/([a-f0-9]+)$/);
+    if (match) {
+      setShareToken(match[1]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const hasCompletedSetup = localStorage.getItem('emma_mic_setup_complete');
+    const isSpeechSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+    
+    if (!hasCompletedSetup && isSpeechSupported && !shareToken) {
+      setShowMicSetup(true);
+    }
+  }, [shareToken]);
+
+
+
+  if (shareToken) {
+    return (
+      <>
+        <SharedReportView shareToken={shareToken} />
+        <Toaster />
+      </>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
+        <Toaster />
+      </>
+    );
+  }
+
+  if (showMicSetup) {
+    return (
+      <div 
+        className="min-h-screen relative flex items-center justify-center p-4"
+        style={{
+          backgroundImage: "url('/background.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed"
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
+        <div className="relative z-10">
+          <MicrophoneSetup onComplete={() => {
+            localStorage.setItem('emma_mic_setup_complete', 'true');
+            setShowMicSetup(false);
+          }} />
+        </div>
+        <Toaster />
+      </div>
+    );
+  }
+
+
+
+  const renderMainContent = () => {
+    const personalizedTitle = userName ? `${userName}'s Daily Check-In` : "Daily Check-In";
+    
+    switch (currentView) {
+      case "home":
+        return <ConversationalCheckIn userId={userId} sessionType="morning" title={personalizedTitle} onNameUpdate={setUserName} />;
+      case "morning-routine":
+        return <MorningRoutineView />;
+      case "doctors-orders":
+        return <DoctorsOrdersView userId={userId} />;
+      case "diet-nutrition":
+        return <DietNutritionView userId={userId} />;
+      case "mood":
+        return <MoodView userId={userId} />;
+      case "evening-routine":
+        return <EveningRoutineView userId={userId} />;
+      case "wellness-journal":
+        return <WellnessJournalView userId={userId} />;
+      case "memories":
+        return <MemoriesView userId={userId} />;
+      case "progress":
+        return <ProgressView />;
+      case "insights":
+        return <InsightsView />;
+      case "milestones":
+        return <MilestonesView />;
+      case "care-team":
+        return <CareTeamView userId={userId} />;
+      case "notifications":
+        return <NotificationsView />;
+      case "settings":
+        return <SettingsView onOpenMicSetup={() => {
+          localStorage.removeItem('emma_mic_setup_complete');
+          setShowMicSetup(true);
+        }} />;
+      case "export":
+        return <ExportView />;
+      case "provider-access":
+        return <ProviderAccessView userId={userId} />;
+      case "help":
+        return <HelpView />;
+      default:
+        return <ConversationalCheckIn userId={userId} sessionType="morning" title="Daily Check-In" onNameUpdate={setUserName} />;
+    }
+  };
+
+  return (
+    <div 
+      className="min-h-screen relative"
+      style={{
+        backgroundImage: "url('/background.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed"
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
+      
+      <div className="relative z-10 flex h-screen">
+        <Sidebar 
+          currentView={currentView} 
+          onNavigate={setCurrentView}
+          userName={userName}
+        />
+        
+        <main className="flex-1 overflow-y-auto">
+          <div className="container mx-auto px-4 lg:px-8 py-8">
+            {renderMainContent()}
+          </div>
+        </main>
+      </div>
+      <Toaster />
+    </div>
+  );
+}
