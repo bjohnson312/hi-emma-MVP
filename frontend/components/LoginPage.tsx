@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from "lucide-react";
-import backend from "@/lib/backend-client";
+import { clerkClient } from "@/lib/clerk-client";
 
 const MOTIVATIONAL_QUOTES = [
   "Every day is a fresh start.",
@@ -40,19 +40,19 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
     try {
       if (isSignup) {
-        const response = await backend.auth.signup({ email, password });
+        const user = await clerkClient.signUp(email, password);
         toast({
           title: "Account created!",
           description: "Welcome to Hi, Emma.",
         });
-        onLoginSuccess(response.userId, response.email);
+        onLoginSuccess(user.id, user.email_addresses[0].email_address);
       } else {
-        const response = await backend.auth.login({ email, password });
+        const user = await clerkClient.signIn(email, password);
         toast({
           title: "Welcome back!",
           description: "You've successfully logged in.",
         });
-        onLoginSuccess(response.userId, response.email);
+        onLoginSuccess(user.id, user.email_addresses[0].email_address);
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
