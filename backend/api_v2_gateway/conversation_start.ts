@@ -1,4 +1,5 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import type { ConversationStartRequest, ConversationStartResponse } from "./types";
 import db from "../db";
 import { determineTimeOfDay, shouldSuggestRoutine, generateContextualGreeting, type UserContext, type RoutineSuggestion } from "../../api_v2/business/routine";
@@ -123,10 +124,15 @@ async function checkRoutineSuggestion(
 }
 
 export const conversationStart = api(
-  { method: "POST", path: "/api/v2/conversations/start", expose: true, auth: false },
+  { method: "POST", path: "/api/v2/conversations/start", expose: true },
   async (req: ConversationStartRequest): Promise<ConversationStartResponse> => {
     try {
       addDevLog({ event: "conversation_start_request", req });
+      
+      const auth = getAuthData();
+      if (!auth || auth.userID !== req.userId) {
+        throw APIError.permissionDenied("Cannot access or modify another user's data");
+      }
       
       addDevLog({ event: "conversation_start_load_user_context" });
       const userContext = await loadUserContext(req.userId);

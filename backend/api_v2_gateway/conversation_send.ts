@@ -1,4 +1,5 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import type { ConversationSendRequest, ConversationSendResponse } from "./types";
 import db from "../db";
 import { determineTimeOfDay } from "../../api_v2/business/routine";
@@ -30,10 +31,15 @@ async function loadUserProfile(userId: string) {
 }
 
 export const conversationSend = api(
-  { method: "POST", path: "/api/v2/conversations/send", expose: true, auth: false },
+  { method: "POST", path: "/api/v2/conversations/send", expose: true },
   async (req: ConversationSendRequest): Promise<ConversationSendResponse> => {
     try {
       addDevLog({ event: "conversation_send_request", req });
+      
+      const auth = getAuthData();
+      if (!auth || auth.userID !== req.userId) {
+        throw APIError.permissionDenied("Cannot access or modify another user's data");
+      }
       
       addDevLog({ event: "conversation_send_load_user_profile" });
       const userProfile = await loadUserProfile(req.userId);

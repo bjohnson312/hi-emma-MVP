@@ -1,4 +1,5 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import type { CurrentContextRequest, CurrentContextResponse } from "./types";
 import db from "../db";
 import {
@@ -8,8 +9,13 @@ import {
 } from "../../api_v2/business/routine";
 
 export const currentContext = api(
-  { method: "GET", path: "/api/v2/user/current-context", expose: true, auth: false },
+  { method: "GET", path: "/api/v2/user/current-context", expose: true },
   async (req: CurrentContextRequest): Promise<CurrentContextResponse> => {
+    const auth = getAuthData();
+    if (!auth || auth.userID !== req.userId) {
+      throw APIError.permissionDenied("Cannot access or modify another user's data");
+    }
+    
     const profileResult = await db.queryAll<{
       user_id: string;
       name: string;

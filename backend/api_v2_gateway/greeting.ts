@@ -1,11 +1,17 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import type { GreetingRequest, GreetingResponse } from "./types";
 import db from "../db";
 import { determineTimeOfDay, generateGreeting } from "../../api_v2/business/routine";
 
 export const greeting = api(
-  { method: "GET", path: "/api/v2/user/greeting", expose: true, auth: false },
+  { method: "GET", path: "/api/v2/user/greeting", expose: true },
   async (req: GreetingRequest): Promise<GreetingResponse> => {
+    const auth = getAuthData();
+    if (!auth || auth.userID !== req.userId) {
+      throw APIError.permissionDenied("Cannot access or modify another user's data");
+    }
+    
     const profileResult = await db.queryAll<{
       user_id: string;
       name: string;
