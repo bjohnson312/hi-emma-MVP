@@ -47,6 +47,7 @@ export class Client {
     public readonly profile: profile.ServiceClient
     public readonly provider_auth: provider_auth.ServiceClient
     public readonly provider_portal: provider_portal.ServiceClient
+    public readonly push: push.ServiceClient
     public readonly voice: voice.ServiceClient
     public readonly wellness: wellness.ServiceClient
     public readonly wellness_journal: wellness_journal.ServiceClient
@@ -78,6 +79,7 @@ export class Client {
         this.profile = new profile.ServiceClient(base)
         this.provider_auth = new provider_auth.ServiceClient(base)
         this.provider_portal = new provider_portal.ServiceClient(base)
+        this.push = new push.ServiceClient(base)
         this.voice = new voice.ServiceClient(base)
         this.wellness = new wellness.ServiceClient(base)
         this.wellness_journal = new wellness_journal.ServiceClient(base)
@@ -1112,6 +1114,53 @@ export namespace provider_portal {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/provider/patients/${encodeURIComponent(params.patientUserId)}/messages`, {method: "POST", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_provider_portal_send_message_sendMessage>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { getPublicKey as api_push_get_public_key_getPublicKey } from "~backend/push/get_public_key";
+import { sendPush as api_push_send_sendPush } from "~backend/push/send";
+import { subscribe as api_push_subscribe_subscribe } from "~backend/push/subscribe";
+import { unsubscribe as api_push_unsubscribe_unsubscribe } from "~backend/push/unsubscribe";
+
+export namespace push {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.getPublicKey = this.getPublicKey.bind(this)
+            this.sendPush = this.sendPush.bind(this)
+            this.subscribe = this.subscribe.bind(this)
+            this.unsubscribe = this.unsubscribe.bind(this)
+        }
+
+        public async getPublicKey(): Promise<ResponseType<typeof api_push_get_public_key_getPublicKey>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/push/public-key`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_push_get_public_key_getPublicKey>
+        }
+
+        public async sendPush(params: RequestType<typeof api_push_send_sendPush>): Promise<ResponseType<typeof api_push_send_sendPush>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/push/send`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_push_send_sendPush>
+        }
+
+        public async subscribe(params: RequestType<typeof api_push_subscribe_subscribe>): Promise<ResponseType<typeof api_push_subscribe_subscribe>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/push/subscribe`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_push_subscribe_subscribe>
+        }
+
+        public async unsubscribe(params: RequestType<typeof api_push_unsubscribe_unsubscribe>): Promise<ResponseType<typeof api_push_unsubscribe_unsubscribe>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/push/unsubscribe`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_push_unsubscribe_unsubscribe>
         }
     }
 }
