@@ -37,7 +37,6 @@ export class Client {
     public readonly admin_portal: admin_portal.ServiceClient
     public readonly api_v2_gateway: api_v2_gateway.ServiceClient
     public readonly appointments: appointments.ServiceClient
-    public readonly auth: auth.ServiceClient
     public readonly care_team: care_team.ServiceClient
     public readonly conversation: conversation.ServiceClient
     public readonly insights: insights.ServiceClient
@@ -73,7 +72,6 @@ export class Client {
         this.admin_portal = new admin_portal.ServiceClient(base)
         this.api_v2_gateway = new api_v2_gateway.ServiceClient(base)
         this.appointments = new appointments.ServiceClient(base)
-        this.auth = new auth.ServiceClient(base)
         this.care_team = new care_team.ServiceClient(base)
         this.conversation = new conversation.ServiceClient(base)
         this.insights = new insights.ServiceClient(base)
@@ -109,7 +107,7 @@ export class Client {
 /**
  * Import the auth handler to be able to derive the auth type
  */
-import type { auth as auth_auth } from "~backend/auth/clerk";
+import type { clerkAuth as auth_clerkAuth } from "~backend/auth/auth";
 
 /**
  * ClientOptions allows you to override any default behaviour within the generated Encore client.
@@ -130,7 +128,7 @@ export interface ClientOptions {
      * request either by passing in a static object or by passing in
      * a function which returns a new object for each request.
      */
-    auth?: RequestType<typeof auth_auth> | AuthDataGenerator
+    auth?: RequestType<typeof auth_clerkAuth> | AuthDataGenerator
 }
 
 /**
@@ -241,6 +239,7 @@ export namespace admin_portal {
 import { conversationSend as api_api_v2_gateway_conversation_send_conversationSend } from "~backend/api_v2_gateway/conversation_send";
 import { conversationStart as api_api_v2_gateway_conversation_start_conversationStart } from "~backend/api_v2_gateway/conversation_start";
 import { currentContext as api_api_v2_gateway_current_context_currentContext } from "~backend/api_v2_gateway/current_context";
+import { devLogs as api_api_v2_gateway_dev_logs_devLogs } from "~backend/api_v2_gateway/dev_logs";
 import { greeting as api_api_v2_gateway_greeting_greeting } from "~backend/api_v2_gateway/greeting";
 
 export namespace api_v2_gateway {
@@ -253,6 +252,7 @@ export namespace api_v2_gateway {
             this.conversationSend = this.conversationSend.bind(this)
             this.conversationStart = this.conversationStart.bind(this)
             this.currentContext = this.currentContext.bind(this)
+            this.devLogs = this.devLogs.bind(this)
             this.greeting = this.greeting.bind(this)
         }
 
@@ -277,6 +277,25 @@ export namespace api_v2_gateway {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/api/v2/user/current-context`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_current_context_currentContext>
+        }
+
+        /**
+         * ⚠️ WARNING: DEBUG ENDPOINT - REMOVE BEFORE PRODUCTION DEPLOYMENT ⚠️
+         * 
+         * This endpoint exposes internal application logs and state.
+         * It is intentionally left without authentication for debugging purposes.
+         * 
+         * TODO: Before production:
+         * 1. Delete this entire file, OR
+         * 2. Add environment check to disable in production, OR
+         * 3. Add strong authentication and restrict to admin users only
+         * 
+         * Security Impact: HIGH - Exposes sensitive application internals
+         */
+        public async devLogs(): Promise<ResponseType<typeof api_api_v2_gateway_dev_logs_devLogs>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/api/v2/dev/logs`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_dev_logs_devLogs>
         }
 
         public async greeting(params: RequestType<typeof api_api_v2_gateway_greeting_greeting>): Promise<ResponseType<typeof api_api_v2_gateway_greeting_greeting>> {
@@ -360,35 +379,8 @@ export namespace appointments {
     }
 }
 
-/**
- * Import the endpoint handlers to derive the types for the client.
- */
-import { login as api_auth_login_login } from "~backend/auth/login";
-import { signup as api_auth_signup_signup } from "~backend/auth/signup";
 
 export namespace auth {
-
-    export class ServiceClient {
-        private baseClient: BaseClient
-
-        constructor(baseClient: BaseClient) {
-            this.baseClient = baseClient
-            this.login = this.login.bind(this)
-            this.signup = this.signup.bind(this)
-        }
-
-        public async login(params: RequestType<typeof api_auth_login_login>): Promise<ResponseType<typeof api_auth_login_login>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/auth/login`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_auth_login_login>
-        }
-
-        public async signup(params: RequestType<typeof api_auth_signup_signup>): Promise<ResponseType<typeof api_auth_signup_signup>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/auth/signup`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_auth_signup_signup>
-        }
-    }
 }
 
 /**
@@ -2201,8 +2193,8 @@ type CallParameters = Omit<RequestInit, "headers"> & {
 
 // AuthDataGenerator is a function that returns a new instance of the authentication data required by this API
 export type AuthDataGenerator = () =>
-  | RequestType<typeof auth_auth>
-  | Promise<RequestType<typeof auth_auth> | undefined>
+  | RequestType<typeof auth_clerkAuth>
+  | Promise<RequestType<typeof auth_clerkAuth> | undefined>
   | undefined;
 
 // A fetcher is the prototype for the inbuilt Fetch function
@@ -2248,7 +2240,7 @@ class BaseClient {
     }
 
     async getAuthData(): Promise<CallParameters | undefined> {
-        let authData: RequestType<typeof auth_auth> | undefined;
+        let authData: RequestType<typeof auth_clerkAuth> | undefined;
 
         // If authorization data generator is present, call it and add the returned data to the request
         if (this.authGenerator) {
