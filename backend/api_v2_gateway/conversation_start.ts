@@ -130,6 +130,8 @@ export const conversationStart = api(
       addDevLog({ event: "conversation_start_request", req });
       
       const auth = getAuthData();
+      addDevLog({ event: "auth_check", authUserID: auth?.userID, requestUserId: req.userId, match: auth?.userID === req.userId });
+      
       if (!auth || auth.userID !== req.userId) {
         throw APIError.permissionDenied("Cannot access or modify another user's data");
       }
