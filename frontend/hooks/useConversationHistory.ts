@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { SessionType } from "~backend/conversation/types";
 import type { ConversationEntry } from "~backend/profile/types";
 

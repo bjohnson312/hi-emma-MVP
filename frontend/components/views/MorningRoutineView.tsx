@@ -3,7 +3,7 @@ import { Sun, MessageCircle, Plus, Edit2, Trash2, CheckCircle2, Clock, Sparkles,
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { RoutineTemplate, MorningRoutinePreference, MorningRoutineActivity } from "~backend/morning/routine_types";
 import type { GetJourneySetupResponse } from "~backend/journey/types";
 import ConversationalCheckIn from "../ConversationalCheckIn";

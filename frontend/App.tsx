@@ -28,7 +28,7 @@ import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { clerkClient } from "./lib/clerk-client";
 import AdminPortalApp from "./AdminPortalApp";
 import ProviderPortalApp from "./ProviderPortalApp";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 
 let serviceWorkerInitialized = false;
 

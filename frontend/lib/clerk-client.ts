@@ -1,5 +1,4 @@
 import { CLERK_PUBLISHABLE_KEY } from "../config";
-import backend from "~backend/client";
 
 interface ClerkUser {
   id: string;
@@ -49,6 +48,9 @@ class ClerkClient {
   }
 
   async signUp(emailAddress: string, password: string): Promise<ClerkUser> {
+    const { Client } = await import('~backend/client');
+    const backend = new Client(import.meta.env.VITE_CLIENT_TARGET, { requestInit: { credentials: "include" } });
+    
     try {
       const data = await backend.auth.signup({ email: emailAddress, password });
       
@@ -73,6 +75,9 @@ class ClerkClient {
   }
 
   async signIn(emailAddress: string, password: string): Promise<ClerkUser> {
+    const { Client } = await import('~backend/client');
+    const backend = new Client(import.meta.env.VITE_CLIENT_TARGET, { requestInit: { credentials: "include" } });
+    
     try {
       const data = await backend.auth.login({ email: emailAddress, password });
       
@@ -116,8 +121,8 @@ class ClerkClient {
     return null;
   }
 
-  getToken(): string | null {
-    return this.sessionToken;
+  getToken(): Promise<string | null> {
+    return Promise.resolve(this.sessionToken);
   }
 
   signOut() {

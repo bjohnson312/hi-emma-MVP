@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { SessionType } from "~backend/conversation/types";
 import { USE_NEW_GREETING_FLOW, USE_NEW_CONVERSATION_FLOW } from "@/config";
 

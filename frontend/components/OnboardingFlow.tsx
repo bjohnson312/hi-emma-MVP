@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2 } from "lucide-react";
 
 interface OnboardingFlowProps {

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock, Settings } from "lucide-react";
 import AutoExpandTextarea from "@/components/AutoExpandTextarea";
-import backend from "~backend/client";
+import backend from "@/lib/backend-client";
 import type { SessionType } from "~backend/conversation/types";
 import { useConversationSession } from "@/hooks/useConversationSession";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
