@@ -69,4 +69,4 @@ export const auth = authHandler<AuthParams, AuthData>(
   }
 );
 
-export const gw = new Gateway({ authHandler: auth });
+// Gateway removed - using session auth in api_v2_gateway instead

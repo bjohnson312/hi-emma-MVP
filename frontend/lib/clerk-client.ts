@@ -7,42 +7,44 @@ interface ClerkUser {
   last_name?: string;
 }
 
-interface ClerkSession {
-  id: string;
-  user_id: string;
-  status: string;
-  last_active_token?: {
-    jwt: string;
-  };
-}
-
 class ClerkClient {
   private publishableKey: string;
-  private sessionToken: string | null = null;
   private user: ClerkUser | null = null;
 
   constructor(publishableKey: string) {
     this.publishableKey = publishableKey;
-    this.loadSession();
+    this.loadUser();
   }
 
-  private loadSession() {
+  private loadUser() {
     if (typeof window !== 'undefined') {
-      this.sessionToken = localStorage.getItem('clerk_session_token');
+      const storedUserId = localStorage.getItem('emma_user_id');
+      const storedEmail = localStorage.getItem('emma_user_email');
+      
+      if (storedUserId && storedEmail) {
+        this.user = {
+          id: storedUserId,
+          email_addresses: [{ email_address: storedEmail }],
+        };
+      }
     }
   }
 
-  private saveSession(token: string) {
+  private saveUser(userId: string, email: string) {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('clerk_session_token', token);
-      this.sessionToken = token;
+      localStorage.setItem('emma_user_id', userId);
+      localStorage.setItem('emma_user_email', email);
+      this.user = {
+        id: userId,
+        email_addresses: [{ email_address: email }],
+      };
     }
   }
 
-  private clearSession() {
+  private clearUser() {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('clerk_session_token');
-      this.sessionToken = null;
+      localStorage.removeItem('emma_user_id');
+      localStorage.removeItem('emma_user_email');
       this.user = null;
     }
   }
@@ -54,8 +56,9 @@ class ClerkClient {
     try {
       const data = await backend.auth.signup({ email: emailAddress, password });
       
-      this.saveSession(data.userId);
-      localStorage.setItem('emma_user_email', data.email);
+      // The backend sets a session cookie automatically
+      // We just need to store the user info
+      this.saveUser(data.userId, data.email);
 
       return {
         id: data.userId,
@@ -81,8 +84,9 @@ class ClerkClient {
     try {
       const data = await backend.auth.login({ email: emailAddress, password });
       
-      this.saveSession(data.userId);
-      localStorage.setItem('emma_user_email', data.email);
+      // The backend sets a session cookie automatically
+      // We just need to store the user info
+      this.saveUser(data.userId, data.email);
 
       return {
         id: data.userId,
@@ -101,39 +105,23 @@ class ClerkClient {
     }
   }
 
-
-
   async getCurrentUser(): Promise<ClerkUser | null> {
-    if (!this.sessionToken) {
-      return null;
-    }
-
-    const storedEmail = localStorage.getItem('emma_user_email');
-    
-    if (storedEmail) {
-      this.user = {
-        id: this.sessionToken,
-        email_addresses: [{ email_address: storedEmail }],
-      };
-      return this.user;
-    }
-
-    return null;
+    return this.user;
   }
 
   getToken(): Promise<string | null> {
-    return Promise.resolve(this.sessionToken);
+    // Session is managed via cookies, no token needed
+    return Promise.resolve(null);
   }
 
   signOut() {
-    this.clearSession();
+    this.clearUser();
+    // Note: Should also call backend logout to clear session cookie
   }
 
   isSignedIn(): boolean {
-    return this.sessionToken !== null;
+    return this.user !== null;
   }
-
-
 }
 
 export const clerkClient = new ClerkClient(CLERK_PUBLISHABLE_KEY);

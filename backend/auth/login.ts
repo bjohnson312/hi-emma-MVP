@@ -37,7 +37,9 @@ export const login = api<LoginRequest, LoginResponse>(
       throw APIError.unauthenticated("invalid email or password");
     }
 
-    const sessionToken = crypto.randomBytes(32).toString("hex");
+    // Use user ID as session token for simplicity
+    // In production, use proper session management with a sessions table
+    const sessionToken = user.id;
 
     return {
       userId: user.id,

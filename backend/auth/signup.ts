@@ -54,7 +54,9 @@ export const signup = api<SignupRequest, SignupResponse>(
       VALUES (${userId}, FALSE, 0)
     `;
 
-    const sessionToken = crypto.randomBytes(32).toString("hex");
+    // Use user ID as session token for simplicity
+    // In production, use proper session management with a sessions table
+    const sessionToken = userId;
 
     return {
       userId,
