@@ -35,6 +35,7 @@ const BROWSER = typeof globalThis === "object" && ("window" in globalThis);
 export class Client {
     public readonly admin_auth: admin_auth.ServiceClient
     public readonly admin_portal: admin_portal.ServiceClient
+    public readonly api_v2_gateway: api_v2_gateway.ServiceClient
     public readonly appointments: appointments.ServiceClient
     public readonly auth: auth.ServiceClient
     public readonly care_team: care_team.ServiceClient
@@ -70,6 +71,7 @@ export class Client {
         const base = new BaseClient(this.target, this.options)
         this.admin_auth = new admin_auth.ServiceClient(base)
         this.admin_portal = new admin_portal.ServiceClient(base)
+        this.api_v2_gateway = new api_v2_gateway.ServiceClient(base)
         this.appointments = new appointments.ServiceClient(base)
         this.auth = new auth.ServiceClient(base)
         this.care_team = new care_team.ServiceClient(base)
@@ -229,6 +231,63 @@ export namespace admin_portal {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/users/reset-password`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_reset_password_resetPassword>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { conversationSend as api_api_v2_gateway_conversation_send_conversationSend } from "~backend/api_v2_gateway/conversation_send";
+import { conversationStart as api_api_v2_gateway_conversation_start_conversationStart } from "~backend/api_v2_gateway/conversation_start";
+import { currentContext as api_api_v2_gateway_current_context_currentContext } from "~backend/api_v2_gateway/current_context";
+import { greeting as api_api_v2_gateway_greeting_greeting } from "~backend/api_v2_gateway/greeting";
+
+export namespace api_v2_gateway {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.conversationSend = this.conversationSend.bind(this)
+            this.conversationStart = this.conversationStart.bind(this)
+            this.currentContext = this.currentContext.bind(this)
+            this.greeting = this.greeting.bind(this)
+        }
+
+        public async conversationSend(params: RequestType<typeof api_api_v2_gateway_conversation_send_conversationSend>): Promise<ResponseType<typeof api_api_v2_gateway_conversation_send_conversationSend>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/api/v2/conversations/send`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_conversation_send_conversationSend>
+        }
+
+        public async conversationStart(params: RequestType<typeof api_api_v2_gateway_conversation_start_conversationStart>): Promise<ResponseType<typeof api_api_v2_gateway_conversation_start_conversationStart>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/api/v2/conversations/start`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_conversation_start_conversationStart>
+        }
+
+        public async currentContext(params: RequestType<typeof api_api_v2_gateway_current_context_currentContext>): Promise<ResponseType<typeof api_api_v2_gateway_current_context_currentContext>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                userId: params.userId,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/api/v2/user/current-context`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_current_context_currentContext>
+        }
+
+        public async greeting(params: RequestType<typeof api_api_v2_gateway_greeting_greeting>): Promise<ResponseType<typeof api_api_v2_gateway_greeting_greeting>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                userId: params.userId,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/api/v2/user/greeting`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_greeting_greeting>
         }
     }
 }
