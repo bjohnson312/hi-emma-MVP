@@ -146,6 +146,16 @@ export default function ConversationalCheckIn({
     setVoiceEnabled(!voiceEnabled);
   };
 
+  const handleVoiceChange = (voice: SpeechSynthesisVoice) => {
+    setSelectedVoice(voice);
+    setShowVoiceSelector(false);
+  };
+
+  const handleElevenLabsVoiceChange = (voice: any) => {
+    setSelectedElevenLabsVoice(voice);
+    setShowVoiceSelector(false);
+  };
+
   const handleLoadConversation = async (date: string) => {
     const result = await loadConversationByDate(date);
     if (result) {
@@ -275,10 +285,10 @@ export default function ConversationalCheckIn({
           <VoiceSelector
             voices={voices}
             selectedVoice={selectedVoice}
-            onVoiceChange={setSelectedVoice}
+            onVoiceChange={handleVoiceChange}
             elevenLabsVoices={elevenLabsVoices}
             selectedElevenLabsVoice={selectedElevenLabsVoice}
-            onElevenLabsVoiceChange={setSelectedElevenLabsVoice}
+            onElevenLabsVoiceChange={handleElevenLabsVoiceChange}
           />
         </div>
       )}
