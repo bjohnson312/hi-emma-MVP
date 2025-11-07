@@ -5,6 +5,7 @@ import { Sparkles, Heart, Wind, Send, Music, Check } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { HabitAction, RoutinePreference } from "~backend/morning/types";
+import Tooltip from "@/components/Tooltip";
 
 interface MorningCheckInProps {
   userId: string;
@@ -544,14 +545,16 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
               disabled={loading}
               className="flex-1 border-white/40 focus:border-[#4e8f71] focus:ring-[#4e8f71]/20 rounded-2xl px-4 py-6 bg-white/90 backdrop-blur-sm shadow-lg"
             />
-            <Button 
-              onClick={handleInputSubmit}
-              disabled={loading || !currentInput.trim()}
-              size="icon"
-              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl border-0 w-14 h-14 rounded-2xl"
-            >
-              <Send className="w-5 h-5" />
-            </Button>
+            <Tooltip content="Send response" side="top">
+              <Button 
+                onClick={handleInputSubmit}
+                disabled={loading || !currentInput.trim()}
+                size="icon"
+                className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl border-0 w-14 h-14 rounded-2xl"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+            </Tooltip>
           </div>
         ) : null}
       </div>

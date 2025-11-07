@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { NotificationPreferences } from "~backend/notifications/types";
+import Tooltip from "@/components/Tooltip";
 
 export default function NotificationsView() {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
@@ -155,13 +156,15 @@ export default function NotificationsView() {
             )}
 
             {preferences.notification_method === "browser" || preferences.notification_method === "both" ? (
-              <Button
-                onClick={requestNotificationPermission}
-                variant="outline"
-                className="mt-2"
-              >
-                Enable Browser Notifications
-              </Button>
+              <Tooltip content="Allow browser to show notifications" side="top">
+                <Button
+                  onClick={requestNotificationPermission}
+                  variant="outline"
+                  className="mt-2"
+                >
+                  Enable Browser Notifications
+                </Button>
+              </Tooltip>
             ) : null}
           </div>
 
@@ -255,13 +258,15 @@ export default function NotificationsView() {
             </div>
           </div>
 
-          <Button 
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
-          >
-            {saving ? "Saving..." : "Save Preferences"}
-          </Button>
+          <Tooltip content="Save all notification settings" side="top">
+            <Button 
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+            >
+              {saving ? "Saving..." : "Save Preferences"}
+            </Button>
+          </Tooltip>
         </div>
       </div>
     </div>

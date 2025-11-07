@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { useToast } from "@/components/ui/use-toast";
 import VoiceSelector from "@/components/VoiceSelector";
+import Tooltip from "@/components/Tooltip";
 
 export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () => void }) {
   const { 
@@ -98,14 +99,16 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
                         <p className="text-xs text-[#323e48]/60">Test and configure your microphone</p>
                       </div>
                     </div>
-                    <Button 
-                      onClick={onOpenMicSetup}
-                      variant="outline"
-                      size="sm"
-                      className="bg-white/90 border-[#4e8f71]/30 text-[#4e8f71] hover:bg-white"
-                    >
-                      Setup
-                    </Button>
+                    <Tooltip content="Test your microphone" side="left">
+                      <Button 
+                        onClick={onOpenMicSetup}
+                        variant="outline"
+                        size="sm"
+                        className="bg-white/90 border-[#4e8f71]/30 text-[#4e8f71] hover:bg-white"
+                      >
+                        Setup
+                      </Button>
+                    </Tooltip>
                   </div>
                 </div>
               )}
@@ -124,13 +127,15 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
                       <p className="text-xs text-[#323e48]/60">Sync activity and sleep data</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/90 border-[#4e8f71]/30 text-[#4e8f71] hover:bg-white"
-                  >
-                    Connect
-                  </Button>
+                  <Tooltip content="Connect to Health app" side="left">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/90 border-[#4e8f71]/30 text-[#4e8f71] hover:bg-white"
+                    >
+                      Connect
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
 
@@ -143,13 +148,15 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
                       <p className="text-xs text-[#323e48]/60">Schedule wellness activities</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/90 border-[#364d89]/30 text-[#364d89] hover:bg-white"
-                  >
-                    Connect
-                  </Button>
+                  <Tooltip content="Connect to Calendar" side="left">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/90 border-[#364d89]/30 text-[#364d89] hover:bg-white"
+                    >
+                      Connect
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
             </div>

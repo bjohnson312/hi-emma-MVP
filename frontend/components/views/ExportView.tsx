@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
 import type { DataCategory, ShareInfo } from "~backend/journal/types";
 import { useToast } from "@/components/ui/use-toast";
+import Tooltip from "@/components/Tooltip";
 
 export default function ExportView() {
   const { toast } = useToast();
@@ -364,43 +365,51 @@ export default function ExportView() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button
-              onClick={handleDownloadJSON}
-              disabled={loading || selectedCategories.length === 0}
-              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download JSON
-            </Button>
-            <Button
-              onClick={handleDownloadPDF}
-              disabled={loading || selectedCategories.length === 0}
-              className="bg-gradient-to-r from-[#364d89] to-[#8b5cf6] hover:from-[#2a3d6f] hover:to-[#7c3aed] text-white shadow-xl"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Download Report
-            </Button>
+            <Tooltip content="Download data as JSON file" side="top">
+              <Button
+                onClick={handleDownloadJSON}
+                disabled={loading || selectedCategories.length === 0}
+                className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download JSON
+              </Button>
+            </Tooltip>
+            <Tooltip content="Download formatted PDF report" side="top">
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={loading || selectedCategories.length === 0}
+                className="bg-gradient-to-r from-[#364d89] to-[#8b5cf6] hover:from-[#2a3d6f] hover:to-[#7c3aed] text-white shadow-xl"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Download Report
+              </Button>
+            </Tooltip>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button
-              onClick={() => handleCreateShare("json")}
-              disabled={loading || selectedCategories.length === 0}
-              variant="outline"
-              className="border-[#4e8f71] text-[#4e8f71] hover:bg-[#4e8f71]/10"
-            >
-              <Share2 className="w-4 h-4 mr-2" />
-              Create JSON Share Link
-            </Button>
-            <Button
-              onClick={() => handleCreateShare("pdf")}
-              disabled={loading || selectedCategories.length === 0}
-              variant="outline"
-              className="border-[#8b5cf6] text-[#8b5cf6] hover:bg-[#8b5cf6]/10"
-            >
-              <Share2 className="w-4 h-4 mr-2" />
-              Create Report Share Link
-            </Button>
+            <Tooltip content="Create shareable JSON link" side="top">
+              <Button
+                onClick={() => handleCreateShare("json")}
+                disabled={loading || selectedCategories.length === 0}
+                variant="outline"
+                className="border-[#4e8f71] text-[#4e8f71] hover:bg-[#4e8f71]/10"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Create JSON Share Link
+              </Button>
+            </Tooltip>
+            <Tooltip content="Create shareable PDF link" side="top">
+              <Button
+                onClick={() => handleCreateShare("pdf")}
+                disabled={loading || selectedCategories.length === 0}
+                variant="outline"
+                className="border-[#8b5cf6] text-[#8b5cf6] hover:bg-[#8b5cf6]/10"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Create Report Share Link
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </div>
