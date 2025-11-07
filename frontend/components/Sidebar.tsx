@@ -97,19 +97,17 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
 
   return (
     <>
-      <Tooltip content={isOpen ? "Close menu" : "Open menu"} side="right">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/95 backdrop-blur-md shadow-xl border border-white/40"
-          aria-label="Toggle menu"
-        >
-          {isOpen ? (
-            <X className="w-6 h-6 text-[#4e8f71]" />
-          ) : (
-            <Menu className="w-6 h-6 text-[#4e8f71]" />
-          )}
-        </button>
-      </Tooltip>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/95 backdrop-blur-md shadow-xl border border-white/40"
+        aria-label="Toggle menu"
+      >
+        {isOpen ? (
+          <X className="w-6 h-6 text-[#4e8f71]" />
+        ) : (
+          <Menu className="w-6 h-6 text-[#4e8f71]" />
+        )}
+      </button>
 
       <div
         className={`
