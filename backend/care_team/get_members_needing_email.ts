@@ -11,7 +11,7 @@ export interface GetMembersNeedingEmailResponse {
 }
 
 export const getMembersNeedingEmail = api<GetMembersNeedingEmailRequest, GetMembersNeedingEmailResponse>(
-  { method: "GET", path: "/care-team/members-needing-email/:userId", expose: true },
+  { method: "GET", path: "/care-team/members-needing-email", expose: true },
   async (req) => {
     const allMembers = await storage.listMembers(req.userId, true);
     const members = allMembers.filter(m => m.emailPending);
