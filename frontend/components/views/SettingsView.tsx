@@ -2,6 +2,7 @@ import { Settings, User, Mail, Link, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { useToast } from "@/components/ui/use-toast";
 import VoiceSelector from "@/components/VoiceSelector";
 
 export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () => void }) {
@@ -14,6 +15,16 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
     selectedElevenLabsVoice,
     setSelectedElevenLabsVoice
   } = useTextToSpeech();
+  
+  const { toast } = useToast();
+
+  const handleSaveSettings = () => {
+    toast({
+      title: "Settings saved",
+      description: "Your preferences have been updated successfully.",
+      duration: 3000,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -143,7 +154,10 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
             </div>
           </div>
 
-          <Button className="w-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl">
+          <Button 
+            onClick={handleSaveSettings}
+            className="w-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+          >
             Save Settings
           </Button>
         </div>
