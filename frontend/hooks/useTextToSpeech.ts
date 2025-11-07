@@ -40,6 +40,12 @@ export function useTextToSpeech(): UseTextToSpeechResult {
             setSelectedElevenLabsVoice(savedVoice);
             setSelectedVoice(null);
           }
+        } else if (!savedVoicePreference) {
+          const trinityVoice = elVoices.find(v => v.id === '2qfp6zPuviqeCOZIE9RZ');
+          if (trinityVoice) {
+            setSelectedElevenLabsVoice(trinityVoice);
+            setSelectedVoice(null);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch ElevenLabs voices:', error);
