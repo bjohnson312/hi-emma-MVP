@@ -124,6 +124,15 @@ export interface GetLogsRequest {
   limit?: number;
 }
 
+export interface NutritionSetupProgress {
+  userId: string;
+  currentStep: number;
+  stepsCompleted: string[];
+  isCompleted: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface NutritionChatMessage {
   role: "user" | "assistant";
   content: string;

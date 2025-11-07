@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, TrendingUp } from "lucide-react";
+import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
-import type { DietNutritionLog, NutritionPlan } from "~backend/wellness/types";
-import NutritionChatOnboarding from "../NutritionChatOnboarding";
+import type { DietNutritionLog, NutritionPlan, NutritionSetupProgress } from "~backend/wellness/types";
+import { NutritionSetupFlow } from "../NutritionSetupFlow";
 import FoodImageUpload from "../FoodImageUpload";
 
 interface DietNutritionViewProps {
@@ -15,9 +15,10 @@ interface DietNutritionViewProps {
 export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const [todayLogs, setTodayLogs] = useState<DietNutritionLog[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
+  const [setupProgress, setSetupProgress] = useState<NutritionSetupProgress | null>(null);
+  const [showSetupFlow, setShowSetupFlow] = useState(false);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [showFoodAsMedicine, setShowFoodAsMedicine] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showImageCapture, setShowImageCapture] = useState(false);
   const [showRefrigeratorScan, setShowRefrigeratorScan] = useState(false);
   const [refrigeratorSuggestions, setRefrigeratorSuggestions] = useState<any>(null);
@@ -36,7 +37,8 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       setLoading(true);
       await Promise.all([
         loadTodayMeals(),
-        loadNutritionPlan()
+        loadNutritionPlan(),
+        loadSetupProgress()
       ]);
     } finally {
       setLoading(false);
@@ -62,11 +64,20 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     try {
       const response = await backend.wellness.getNutritionPlan({ user_id: userId });
       setNutritionPlan(response.plan || null);
-      if (!response.plan) {
-        setShowOnboarding(true);
-      }
     } catch (error) {
       console.error("Failed to load nutrition plan:", error);
+    }
+  };
+
+  const loadSetupProgress = async () => {
+    try {
+      const progress = await backend.wellness.getNutritionSetupProgress({ user_id: userId });
+      setSetupProgress(progress);
+      if (!progress.isCompleted) {
+        setShowSetupFlow(true);
+      }
+    } catch (error) {
+      console.error("Failed to load setup progress:", error);
     }
   };
 
@@ -133,6 +144,12 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     }
   };
 
+  const handleSetupComplete = () => {
+    setShowSetupFlow(false);
+    loadNutritionPlan();
+    loadSetupProgress();
+  };
+
   const getMealIcon = (type: string) => {
     switch (type) {
       case "breakfast": return Coffee;
@@ -144,7 +161,8 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   };
 
   const totalWater = todayLogs.reduce((sum, log) => sum + (log.water_intake_oz || 0), 0);
-  const waterProgress = Math.min((totalWater / 80) * 100, 100);
+  const waterGoalOz = 80;
+  const waterProgress = Math.min((totalWater / waterGoalOz) * 100, 100);
 
   const todayCalories = todayLogs.reduce((sum, log) => sum + (log.calories || 0), 0);
   const todayProtein = todayLogs.reduce((sum, log) => sum + (log.protein_g || 0), 0);
@@ -159,20 +177,44 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     );
   }
 
-  if (showOnboarding) {
+  if (showSetupFlow) {
     return (
-      <NutritionChatOnboarding
+      <NutritionSetupFlow
         userId={userId}
-        onComplete={() => {
-          setShowOnboarding(false);
-          loadNutritionPlan();
-        }}
+        existingProgress={setupProgress}
+        onComplete={handleSetupComplete}
+        onExit={() => setShowSetupFlow(false)}
       />
     );
   }
 
   return (
     <div className="space-y-6">
+      {setupProgress && !setupProgress.isCompleted && (
+        <div className="bg-gradient-to-r from-[#4e8f71]/20 to-[#364d89]/20 rounded-2xl p-6 border border-[#4e8f71]/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-[#323e48] mb-1">Complete Your Nutrition Setup</h3>
+              <p className="text-sm text-[#323e48]/70">
+                {setupProgress.stepsCompleted.length}/6 steps completed
+              </p>
+              <div className="h-2 bg-white/60 rounded-full mt-2 w-64">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] rounded-full transition-all"
+                  style={{ width: `${(setupProgress.stepsCompleted.length / 6) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setShowSetupFlow(true)}
+              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
+            >
+              Continue Setup
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -185,6 +227,16 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
             </div>
           </div>
           <div className="flex gap-2">
+            {setupProgress?.isCompleted && (
+              <Button 
+                onClick={() => setShowSetupFlow(true)}
+                variant="outline"
+                className="border-[#4e8f71] text-[#4e8f71] hover:bg-[#4e8f71]/10"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Edit Plan
+              </Button>
+            )}
             <Button 
               onClick={() => setShowFoodAsMedicine(!showFoodAsMedicine)}
               variant="outline"
@@ -565,7 +617,7 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
                   style={{ width: `${waterProgress}%` }}
                 ></div>
               </div>
-              <span className="text-sm font-medium text-[#323e48]">{totalWater}/80 oz</span>
+              <span className="text-sm font-medium text-[#323e48]">{totalWater}/{waterGoalOz} oz</span>
             </div>
           </div>
         </div>
