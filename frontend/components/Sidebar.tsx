@@ -54,29 +54,30 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: "beta" | "coming-soon" | "experimental";
+  tooltip: string;
 }
 
 const mainNavItems: NavItem[] = [
-  { id: "home", label: "Home / Chat", icon: MessageCircle },
-  { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, badge: "beta" },
-  { id: "morning-routine", label: "Morning Routine", icon: Sun },
-  { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, badge: "beta" },
-  { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, badge: "beta" },
-  { id: "mood", label: "How Are You Feeling", icon: Smile, badge: "beta" },
-  { id: "evening-routine", label: "Evening Routine", icon: Moon, badge: "beta" }
+  { id: "home", label: "Home / Chat", icon: MessageCircle, tooltip: "Have a conversation with Emma about anything" },
+  { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, badge: "beta", tooltip: "Track your daily health & wellness journey" },
+  { id: "morning-routine", label: "Morning Routine", icon: Sun, tooltip: "Start your day with a guided check-in" },
+  { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, badge: "beta", tooltip: "Manage medications and treatment plans" },
+  { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, badge: "beta", tooltip: "Log meals and track nutrition goals" },
+  { id: "mood", label: "How Are You Feeling", icon: Smile, badge: "beta", tooltip: "Check in with your emotional wellbeing" },
+  { id: "evening-routine", label: "Evening Routine", icon: Moon, badge: "beta", tooltip: "Wind down with a reflective evening routine" }
 ];
 
 const bottomNavItems: NavItem[] = [
-  { id: "progress", label: "My Progress", icon: TrendingUp, badge: "beta" },
-  { id: "insights", label: "Insights", icon: Sparkles, badge: "beta" },
-  { id: "milestones", label: "Milestones", icon: Trophy, badge: "beta" },
-  { id: "memories", label: "Emma's Memory", icon: Brain },
-  { id: "care-team", label: "Care Team", icon: Users },
-  { id: "notifications", label: "Notifications", icon: Bell, badge: "beta" },
-  { id: "provider-access", label: "Provider Access", icon: Shield, badge: "beta" },
-  { id: "settings", label: "Settings", icon: Settings },
-  { id: "export", label: "Export & Share", icon: Share2 },
-  { id: "help", label: "Help / About Emma", icon: HelpCircle }
+  { id: "progress", label: "My Progress", icon: TrendingUp, badge: "beta", tooltip: "See how your wellness journey is evolving" },
+  { id: "insights", label: "Insights", icon: Sparkles, badge: "beta", tooltip: "Discover patterns in your health data" },
+  { id: "milestones", label: "Milestones", icon: Trophy, badge: "beta", tooltip: "Celebrate achievements in your wellness journey" },
+  { id: "memories", label: "Emma's Memory", icon: Brain, tooltip: "View what Emma remembers about you" },
+  { id: "care-team", label: "Care Team", icon: Users, tooltip: "Manage your support network and caregivers" },
+  { id: "notifications", label: "Notifications", icon: Bell, badge: "beta", tooltip: "Set up reminders for check-ins and medications" },
+  { id: "provider-access", label: "Provider Access", icon: Shield, badge: "beta", tooltip: "Share your data with healthcare providers" },
+  { id: "settings", label: "Settings", icon: Settings, tooltip: "Customize Emma's voice and preferences" },
+  { id: "export", label: "Export & Share", icon: Share2, tooltip: "Download or share your wellness reports" },
+  { id: "help", label: "Help / About Emma", icon: HelpCircle, tooltip: "Learn more about Emma and get support" }
 ];
 
 export default function Sidebar({ currentView, onNavigate, userName }: SidebarProps) {
@@ -146,28 +147,29 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
                 const isActive = currentView === item.id;
                 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigate(item.id)}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                      transition-all duration-200
-                      ${isActive 
-                        ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
-                        : "text-white/90 hover:bg-white/15 hover:shadow-md"
-                      }
-                    `}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
-                    {item.badge && (
-                      <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                        {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Soon" : "Exp"}
-                      </StatusBadge>
-                    )}
-                  </button>
+                  <Tooltip key={item.id} content={item.tooltip} side="right">
+                    <button
+                      onClick={() => handleNavigate(item.id)}
+                      className={`
+                        w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                        transition-all duration-200
+                        ${isActive 
+                          ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
+                          : "text-white/90 hover:bg-white/15 hover:shadow-md"
+                        }
+                      `}
+                      aria-label={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
+                      {item.badge && (
+                        <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
+                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Soon" : "Exp"}
+                        </StatusBadge>
+                      )}
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>
@@ -178,28 +180,29 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
                 const isActive = currentView === item.id;
                 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavigate(item.id)}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                      transition-all duration-200
-                      ${isActive 
-                        ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
-                        : "text-white/90 hover:bg-white/15 hover:shadow-md"
-                      }
-                    `}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
-                    {item.badge && (
-                      <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                        {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Soon" : "Exp"}
-                      </StatusBadge>
-                    )}
-                  </button>
+                  <Tooltip key={item.id} content={item.tooltip} side="right">
+                    <button
+                      onClick={() => handleNavigate(item.id)}
+                      className={`
+                        w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                        transition-all duration-200
+                        ${isActive 
+                          ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
+                          : "text-white/90 hover:bg-white/15 hover:shadow-md"
+                        }
+                      `}
+                      aria-label={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
+                      {item.badge && (
+                        <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
+                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Soon" : "Exp"}
+                        </StatusBadge>
+                      )}
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>
