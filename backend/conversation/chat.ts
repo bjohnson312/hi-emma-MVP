@@ -4,9 +4,9 @@ import db from "../db";
 import type { ChatRequest, ChatResponse, ConversationSession } from "./types";
 import type { UserProfile } from "../profile/types";
 import type { ConversationEntry } from "../profile/types";
+import { addFromConversation } from "../wellness_journal/add_manual";
 import { buildMemoryContext, extractAndStoreMemories } from "./memory";
 import { trackInteraction, getBehaviorPatterns } from "../profile/personalization";
-import { createJournalEntry } from "../wellness_journal/auto_create";
 
 const openAIKey = secret("OpenAIKey");
 
@@ -69,16 +69,11 @@ async function updateMorningPreferences(userId: string, userMessage: string, emm
 }
 
 async function callAI(messages: AIMessage[]): Promise<string> {
-  const apiKey = openAIKey();
-  if (!apiKey) {
-    throw new Error("OpenAI API key not configured. Please set the OpenAIKey secret in Settings.");
-  }
-
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
+      "Authorization": `Bearer ${openAIKey()}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
@@ -200,17 +195,12 @@ export const chat = api<ChatRequest, ChatResponse>(
       cleanedReply = emmaReply.replace(/JOURNAL_ENTRY:\s*.+?(?:\n|$)/s, '').trim();
       
       try {
-        const defaultTitle = `${session_type ? capitalizeFirst(session_type) : 'Personal'} Reflection`;
-        const defaultTags = session_type ? [session_type, 'conversation', 'reflection'] : ['conversation', 'reflection'];
-        
-        const entry = await createJournalEntry({
+        const entry = await addFromConversation({
           user_id,
-          entry_type: "event",
-          title: defaultTitle,
-          content: journalContent,
-          tags: defaultTags,
-          source_type: "conversation",
-          ai_generated: false
+          conversation_text: journalContent,
+          session_type,
+          title: `${session_type ? capitalizeFirst(session_type) : 'Personal'} Reflection`,
+          tags: [session_type, 'conversation', 'reflection']
         });
         journalEntryId = entry.id;
       } catch (error) {

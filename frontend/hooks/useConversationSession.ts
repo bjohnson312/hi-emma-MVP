@@ -147,14 +147,9 @@ export function useConversationSession(
       } else {
         await startConversation(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to load conversation:", error);
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to start conversation. Please try again.",
-        variant: "destructive"
-      });
-      setLoading(false);
+      await startConversation(true);
     }
   };
 

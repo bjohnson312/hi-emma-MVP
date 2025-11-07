@@ -9,11 +9,6 @@ export const generateSpeech = api(
   async (req: TextToSpeechRequest): Promise<{ audioUrl: string }> => {
     const { text, voiceId } = req;
 
-    const apiKey = elevenLabsApiKey();
-    if (!apiKey) {
-      throw new Error("ElevenLabs API key not configured. Please set the ElevenLabsAPIKey secret in Settings.");
-    }
-
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -21,7 +16,7 @@ export const generateSpeech = api(
         headers: {
           "Accept": "audio/mpeg",
           "Content-Type": "application/json",
-          "xi-api-key": apiKey,
+          "xi-api-key": elevenLabsApiKey(),
         },
         body: JSON.stringify({
           text,

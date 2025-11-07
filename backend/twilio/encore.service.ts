@@ -1,3 +1,3 @@
 import { Service } from "encore.dev/service";
 
-export default new Service("health");
+export default new Service("twilio");
