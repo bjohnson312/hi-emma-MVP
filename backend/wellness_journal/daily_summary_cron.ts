@@ -13,6 +13,7 @@ interface GenerateSummariesResponse {
 export const generateDailySummariesHandler = api<void, GenerateSummariesResponse>(
   { expose: false, method: "POST", path: "/internal/generate-daily-summaries" },
   async () => {
+  // Generate summaries for yesterday's activity
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   yesterday.setHours(0, 0, 0, 0);
