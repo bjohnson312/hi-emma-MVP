@@ -20,7 +20,6 @@ export const generateDailySummariesHandler = api<void, GenerateSummariesResponse
   const usersQuery = await db.query<{ user_id: string }>`
     SELECT DISTINCT user_id
     FROM user_profiles
-    WHERE active = true
   `;
   
   const users = [];

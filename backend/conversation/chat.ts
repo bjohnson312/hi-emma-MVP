@@ -69,11 +69,16 @@ async function updateMorningPreferences(userId: string, userMessage: string, emm
 }
 
 async function callAI(messages: AIMessage[]): Promise<string> {
+  const apiKey = openAIKey();
+  if (!apiKey) {
+    throw new Error("OpenAI API key not configured. Please set the OpenAIKey secret in Settings.");
+  }
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${openAIKey()}`,
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
