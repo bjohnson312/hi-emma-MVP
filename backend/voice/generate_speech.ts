@@ -20,7 +20,7 @@ export const generateSpeech = api(
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_monolingual_v1",
+          model_id: "eleven_turbo_v2_5",
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
@@ -30,7 +30,9 @@ export const generateSpeech = api(
     );
 
     if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("ElevenLabs API error response:", errorText);
+      throw new Error(`ElevenLabs API error: ${response.statusText} - ${errorText}`);
     }
 
     const audioBuffer = await response.arrayBuffer();
