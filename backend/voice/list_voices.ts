@@ -28,6 +28,16 @@ export const listVoices = api(
         description: voice.description,
       }));
 
+      const order = ['Trinity', 'Sarah', 'George', 'Will'];
+      voices.sort((a, b) => {
+        const aIndex = order.indexOf(a.name);
+        const bIndex = order.indexOf(b.name);
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
       return { voices };
     } catch (error) {
       console.error("Error fetching ElevenLabs voices:", error);
