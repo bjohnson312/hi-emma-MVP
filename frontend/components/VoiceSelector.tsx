@@ -100,6 +100,9 @@ export default function VoiceSelector({
         <Volume2 className="w-4 h-4" />
         Emma's Voice
       </label>
+      <p className="text-xs text-[#323e48]/60">
+        Click "Test" to hear each voice before selecting. Your choice saves automatically!
+      </p>
       
       <div className="flex gap-2 mb-3">
         <Button
@@ -110,6 +113,7 @@ export default function VoiceSelector({
               ? 'bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white'
               : 'text-[#323e48]'
           }`}
+          title="Premium AI voices - recommended for best quality"
         >
           <Sparkles className="w-4 h-4 mr-2" />
           ElevenLabs
@@ -122,6 +126,7 @@ export default function VoiceSelector({
               ? 'bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white'
               : 'text-[#323e48]'
           }`}
+          title="Your browser's built-in voices - work offline"
         >
           <Volume2 className="w-4 h-4 mr-2" />
           Browser
@@ -147,6 +152,7 @@ export default function VoiceSelector({
                 <button
                   onClick={() => onElevenLabsVoiceChange(voice)}
                   className="flex-1 text-left"
+                  title="Click to select this voice"
                 >
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-3 h-3 text-[#4e8f71]" />
@@ -170,6 +176,7 @@ export default function VoiceSelector({
                   variant="ghost"
                   className="text-[#4e8f71] hover:bg-[#4e8f71]/10 ml-2"
                   disabled={testingVoiceId === voice.id}
+                  title="Click to hear a sample of this voice"
                 >
                   {testingVoiceId === voice.id ? 'Playing...' : 'Test'}
                 </Button>
@@ -200,6 +207,7 @@ export default function VoiceSelector({
                     onVoiceChange(voice);
                   }}
                   className="flex-1 text-left"
+                  title="Click to select this voice"
                 >
                   <p className="text-sm font-medium text-[#323e48]">
                     {getVoiceLabel(voice)}
@@ -217,6 +225,7 @@ export default function VoiceSelector({
                   size="sm"
                   variant="ghost"
                   className="text-[#4e8f71] hover:bg-[#4e8f71]/10 ml-2"
+                  title="Click to hear a sample of this voice"
                 >
                   Test
                 </Button>

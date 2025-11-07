@@ -71,6 +71,7 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
 
           <div>
             <h3 className="font-semibold text-[#323e48] mb-3">Voice Preferences</h3>
+            <p className="text-xs text-[#323e48]/60 mb-3">Choose how Emma sounds when she speaks to you. ElevenLabs voices are higher quality!</p>
             <div className="space-y-3">
               <div className="bg-white/90 rounded-2xl p-4 border border-[#364d89]/20">
                 {isSupported ? (

@@ -231,7 +231,7 @@ export default function ConversationalCheckIn({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-                title="Change voice"
+                title="Click to choose a different voice for Emma"
               >
                 <Settings className="w-4 h-4" />
               </Button>
@@ -240,7 +240,7 @@ export default function ConversationalCheckIn({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-                title={voiceEnabled ? "Mute Emma's voice" : "Enable Emma's voice"}
+                title={voiceEnabled ? "Click to turn off Emma's voice" : "Click to turn on Emma's voice"}
               >
                 {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </Button>
@@ -252,7 +252,7 @@ export default function ConversationalCheckIn({
               variant="ghost"
               size="sm"
               className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-              title="Start new conversation"
+              title="Click to start a fresh conversation"
             >
               <RefreshCw className="w-4 h-4" />
               <span className="text-sm">New</span>
@@ -391,7 +391,7 @@ export default function ConversationalCheckIn({
                   disabled={loading}
                   size="icon"
                   className={`${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
-                  title={isListening ? "Stop listening" : "Start voice input"}
+                  title={isListening ? "Click to stop listening to your voice" : "Click to speak your message instead of typing"}
                 >
                   {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
@@ -401,6 +401,7 @@ export default function ConversationalCheckIn({
                 disabled={loading || !currentInput.trim()}
                 size="icon"
                 className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl border-0 w-14 h-14 rounded-2xl"
+                title="Click to send your message to Emma"
               >
                 <Send className="w-5 h-5" />
               </Button>
