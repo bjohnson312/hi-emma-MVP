@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw } from "lucide-react";
+import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
 import type { WellnessJournalEntry, JournalStats } from "~backend/wellness_journal/types";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +17,10 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "daily_summary" | "event" | "insight">("all");
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [showAddEntry, setShowAddEntry] = useState(false);
+  const [newEntry, setNewEntry] = useState({ title: "", content: "", tags: "" });
+  const [addingEntry, setAddingEntry] = useState(false);
+  const [analyzingTrends, setAnalyzingTrends] = useState(false);
 
   useEffect(() => {
     loadJournalData();
@@ -75,6 +80,82 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
     }
   }
 
+  async function handleAddManualEntry() {
+    if (!newEntry.title.trim() || !newEntry.content.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide both a title and content for your entry.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setAddingEntry(true);
+    try {
+      const tags = newEntry.tags.split(",").map(t => t.trim()).filter(t => t);
+      
+      await backend.wellness_journal.addManualEntry({
+        user_id: userId,
+        entry_type: "event",
+        title: newEntry.title,
+        content: newEntry.content,
+        tags: tags.length > 0 ? tags : undefined
+      });
+
+      toast({
+        title: "Entry Added",
+        description: "Your wellness journal entry has been created.",
+      });
+
+      setShowAddEntry(false);
+      setNewEntry({ title: "", content: "", tags: "" });
+      await loadJournalData();
+    } catch (error) {
+      console.error("Failed to add entry:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create journal entry.",
+        variant: "destructive"
+      });
+    } finally {
+      setAddingEntry(false);
+    }
+  }
+
+  async function handleAnalyzeTrends() {
+    setAnalyzingTrends(true);
+    try {
+      const analysis = await backend.wellness_journal.analyzeTrends({
+        user_id: userId,
+        days: 30
+      });
+
+      let message = `Analyzed ${analysis.insights_generated} trends. `;
+      if (analysis.sleep_trend) {
+        message += `Sleep: ${analysis.sleep_trend.pattern}. `;
+      }
+      if (analysis.mood_trend) {
+        message += `Mood trending ${analysis.mood_trend.improving ? "up" : "stable"}. `;
+      }
+
+      toast({
+        title: "Trend Analysis Complete",
+        description: message,
+      });
+
+      await loadJournalData();
+    } catch (error) {
+      console.error("Failed to analyze trends:", error);
+      toast({
+        title: "Error",
+        description: "Failed to analyze wellness trends.",
+        variant: "destructive"
+      });
+    } finally {
+      setAnalyzingTrends(false);
+    }
+  }
+
   function groupEntriesByDate(entries: WellnessJournalEntry[]): Map<string, WellnessJournalEntry[]> {
     const grouped = new Map<string, WellnessJournalEntry[]>();
     
@@ -130,14 +211,31 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
               <p className="text-sm text-[#4e8f71]">Your ongoing health story</p>
             </div>
           </div>
-          <Button
-            onClick={handleGenerateDailySummary}
-            disabled={generatingSummary}
-            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-xl"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            {generatingSummary ? "Generating..." : "Generate Today's Summary"}
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              onClick={() => setShowAddEntry(!showAddEntry)}
+              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Entry
+            </Button>
+            <Button
+              onClick={handleAnalyzeTrends}
+              disabled={analyzingTrends}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-xl"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              {analyzingTrends ? "Analyzing..." : "Analyze Trends"}
+            </Button>
+            <Button
+              onClick={handleGenerateDailySummary}
+              disabled={generatingSummary}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-xl"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {generatingSummary ? "Generating..." : "Generate Summary"}
+            </Button>
+          </div>
         </div>
 
         {stats && (
@@ -205,6 +303,61 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
             </button>
           ))}
         </div>
+
+        {showAddEntry && (
+          <div className="mt-6 bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 border border-[#4e8f71]/20">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-[#323e48] text-lg">Add Manual Entry</h3>
+              <button
+                onClick={() => setShowAddEntry(false)}
+                className="text-[#323e48]/60 hover:text-[#323e48] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[#323e48] mb-1 block">Title</label>
+                <Input
+                  value={newEntry.title}
+                  onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
+                  placeholder="What happened today?"
+                  className="bg-white/90 border-[#4e8f71]/20"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-[#323e48] mb-1 block">Content</label>
+                <textarea
+                  value={newEntry.content}
+                  onChange={(e) => setNewEntry({ ...newEntry, content: e.target.value })}
+                  placeholder="Describe your experience, feelings, or observations..."
+                  rows={4}
+                  className="w-full px-3 py-2 bg-white/90 border border-[#4e8f71]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4e8f71] resize-none"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-[#323e48] mb-1 block">Tags (comma-separated)</label>
+                <Input
+                  value={newEntry.tags}
+                  onChange={(e) => setNewEntry({ ...newEntry, tags: e.target.value })}
+                  placeholder="wellness, personal, reflection"
+                  className="bg-white/90 border-[#4e8f71]/20"
+                />
+              </div>
+              
+              <Button
+                onClick={handleAddManualEntry}
+                disabled={addingEntry}
+                className="w-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+              >
+                {addingEntry ? "Adding Entry..." : "Add Entry"}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
