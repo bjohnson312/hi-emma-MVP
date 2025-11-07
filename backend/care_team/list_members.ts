@@ -12,7 +12,7 @@ export interface ListMembersResponse {
 }
 
 export const listMembers = api<ListMembersRequest, ListMembersResponse>(
-  { method: "GET", path: "/care-team/members/:userId", expose: true },
+  { method: "GET", path: "/care-team/members", expose: true },
   async (req) => {
     const members = await storage.listMembers(req.userId, req.activeOnly !== false);
     return { members };
