@@ -40,8 +40,8 @@ export function useTextToSpeech(): UseTextToSpeechResult {
             setSelectedElevenLabsVoice(savedVoice);
             setSelectedVoice(null);
           }
-        } else if (!savedVoicePreference) {
-          const trinityVoice = elVoices.find(v => v.id === '2qfp6zPuviqeCOZIE9RZ');
+        } else if (!savedVoicePreference && elVoices.length > 0) {
+          const trinityVoice = elVoices.find(v => v.name === 'Trinity');
           if (trinityVoice) {
             setSelectedElevenLabsVoice(trinityVoice);
             setSelectedVoice(null);
