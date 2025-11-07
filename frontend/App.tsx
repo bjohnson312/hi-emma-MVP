@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import ConversationalCheckIn from "./components/ConversationalCheckIn";
 import MicrophoneSetup from "./components/MicrophoneSetup";
 import Sidebar, { type NavigationView } from "./components/Sidebar";
+import BottomNav from "./components/BottomNav";
+import MobileMenu from "./components/MobileMenu";
 import MorningRoutineView from "./components/views/MorningRoutineView";
 import DoctorsOrdersView from "./components/views/DoctorsOrdersView";
 import DietNutritionView from "./components/views/DietNutritionView";
@@ -30,6 +32,7 @@ export default function App() {
   const [showMicSetup, setShowMicSetup] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [userId, setUserId] = useState(() => {
     const stored = localStorage.getItem("emma_user_id");
@@ -128,6 +131,20 @@ export default function App() {
 
 
 
+  const handleMobileNavigate = (view: string) => {
+    if (view === "chat") {
+      setCurrentView("home");
+    } else if (view === "journal") {
+      setCurrentView("wellness-journal");
+    }
+  };
+
+  const getMobileView = () => {
+    if (currentView === "home") return "chat";
+    if (currentView === "wellness-journal") return "journal";
+    return "menu";
+  };
+
   const renderMainContent = () => {
     const personalizedTitle = userName ? `${userName}'s Daily Check-In` : "Daily Check-In";
     
@@ -194,12 +211,26 @@ export default function App() {
           userName={userName}
         />
         
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <div className="container mx-auto px-4 lg:px-8 py-8">
             {renderMainContent()}
           </div>
         </main>
       </div>
+      
+      <BottomNav 
+        activeView={getMobileView()}
+        onNavigate={handleMobileNavigate}
+        onMenuOpen={() => setIsMobileMenuOpen(true)}
+      />
+      
+      <MobileMenu 
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        activeView={currentView}
+        onNavigate={(view) => setCurrentView(view as NavigationView)}
+      />
+      
       <Toaster />
     </div>
   );

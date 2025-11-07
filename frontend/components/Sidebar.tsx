@@ -97,27 +97,14 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/95 backdrop-blur-md shadow-xl border border-white/40"
-        aria-label="Toggle menu"
-      >
-        {isOpen ? (
-          <X className="w-6 h-6 text-[#4e8f71]" />
-        ) : (
-          <Menu className="w-6 h-6 text-[#4e8f71]" />
-        )}
-      </button>
-
       <div
-        className={`
-          fixed lg:sticky top-0 left-0 h-screen
+        className="
+          hidden md:flex md:flex-col
+          sticky top-0 left-0 h-screen
           bg-gradient-to-b from-[#4e8f71] via-[#364d89] to-[#6656cb]
-          shadow-2xl z-40
-          transition-all duration-300 ease-in-out
-          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          shadow-2xl
           w-72 lg:w-80
-        `}
+        "
       >
         <div className="flex flex-col h-full p-6">
           <div className="mb-8">
@@ -208,13 +195,6 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
         </div>
       </div>
 
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-30"
-          onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
     </>
   );
 }
