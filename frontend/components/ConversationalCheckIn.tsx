@@ -321,12 +321,27 @@ export default function ConversationalCheckIn({
                 </div>
               )}
               
-              <div className={`rounded-3xl px-5 py-3 ${
-                message.sender === "user" 
-                  ? "bg-gradient-to-br from-[#4e8f71] to-[#364d89] text-white rounded-tr-md shadow-xl" 
-                  : "bg-white/95 text-[#323e48] shadow-xl rounded-tl-md border border-white/60 backdrop-blur-sm"
-              }`}>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+              <div className="flex items-start gap-2">
+                <div className={`rounded-3xl px-5 py-3 ${
+                  message.sender === "user" 
+                    ? "bg-gradient-to-br from-[#4e8f71] to-[#364d89] text-white rounded-tr-md shadow-xl" 
+                    : "bg-white/95 text-[#323e48] shadow-xl rounded-tl-md border border-white/60 backdrop-blur-sm"
+                }`}>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                </div>
+                
+                {message.sender === "emma" && index === messages.length - 1 && !loading && isTTSSupported && (
+                  <Tooltip content="Replay message" side="right">
+                    <Button
+                      onClick={() => speak(message.text)}
+                      size="sm"
+                      variant="ghost"
+                      className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
 
               {message.sender === "user" && (
