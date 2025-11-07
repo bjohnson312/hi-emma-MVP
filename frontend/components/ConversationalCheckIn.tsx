@@ -9,6 +9,7 @@ import { useConversationHistory } from "@/hooks/useConversationHistory";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import VoiceSelector from "@/components/VoiceSelector";
+import Tooltip from "@/components/Tooltip";
 
 interface ConversationalCheckInProps {
   userId: string;
@@ -226,37 +227,40 @@ export default function ConversationalCheckIn({
           </div>
           {isTTSSupported && (
             <>
-              <Button
-                onClick={() => setShowVoiceSelector(!showVoiceSelector)}
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-                title="Click to choose a different voice for Emma"
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={toggleVoice}
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-                title={voiceEnabled ? "Click to turn off Emma's voice" : "Click to turn on Emma's voice"}
-              >
-                {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              </Button>
+              <Tooltip content="Choose a different voice for Emma" side="bottom">
+                <Button
+                  onClick={() => setShowVoiceSelector(!showVoiceSelector)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content={voiceEnabled ? "Mute Emma's voice" : "Enable Emma's voice"} side="bottom">
+                <Button
+                  onClick={toggleVoice}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
+                >
+                  {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                </Button>
+              </Tooltip>
             </>
           )}
           {messages.length > 0 && !selectedDate && !showResetConfirm && (
-            <Button
-              onClick={handleResetRequest}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-              title="Click to start a fresh conversation"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="text-sm">New</span>
-            </Button>
+            <Tooltip content="Start a fresh conversation" side="bottom">
+              <Button
+                onClick={handleResetRequest}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm">New</span>
+              </Button>
+            </Tooltip>
           )}
           {showResetConfirm && (
             <div className="flex items-center gap-2 bg-white/20 rounded-xl px-3 py-2">
@@ -386,25 +390,27 @@ export default function ConversationalCheckIn({
                 className="flex-1 border-white/40 focus:border-[#4e8f71] focus:ring-[#4e8f71]/20 rounded-2xl px-4 py-6 bg-white/90 backdrop-blur-sm shadow-lg"
               />
               {isSupported && (
-                <Button 
-                  onClick={toggleListening}
-                  disabled={loading}
-                  size="icon"
-                  className={`${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
-                  title={isListening ? "Click to stop listening to your voice" : "Click to speak your message instead of typing"}
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </Button>
+                <Tooltip content={isListening ? "Stop listening" : "Speak your message"} side="top">
+                  <Button 
+                    onClick={toggleListening}
+                    disabled={loading}
+                    size="icon"
+                    className={`${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
+                  >
+                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </Button>
+                </Tooltip>
               )}
-              <Button 
-                onClick={handleSendMessage}
-                disabled={loading || !currentInput.trim()}
-                size="icon"
-                className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl border-0 w-14 h-14 rounded-2xl"
-                title="Click to send your message to Emma"
-              >
-                <Send className="w-5 h-5" />
-              </Button>
+              <Tooltip content="Send message to Emma" side="top">
+                <Button 
+                  onClick={handleSendMessage}
+                  disabled={loading || !currentInput.trim()}
+                  size="icon"
+                  className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl border-0 w-14 h-14 rounded-2xl"
+                >
+                  <Send className="w-5 h-5" />
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex gap-2">
               <Button
