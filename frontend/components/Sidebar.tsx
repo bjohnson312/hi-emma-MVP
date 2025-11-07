@@ -147,7 +147,7 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
                 const isActive = currentView === item.id;
                 
                 return (
-                  <Tooltip key={item.id} content={item.tooltip} side="right" variant="callout">
+                  <Tooltip key={item.id} content={item.tooltip} side="bottom" variant="callout">
                     <button
                       onClick={() => handleNavigate(item.id)}
                       className={`
@@ -180,7 +180,7 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
                 const isActive = currentView === item.id;
                 
                 return (
-                  <Tooltip key={item.id} content={item.tooltip} side="right" variant="callout">
+                  <Tooltip key={item.id} content={item.tooltip} side="bottom" variant="callout">
                     <button
                       onClick={() => handleNavigate(item.id)}
                       className={`

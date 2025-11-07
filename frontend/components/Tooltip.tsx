@@ -14,7 +14,7 @@ export default function Tooltip({ children, content, side = "top", variant = "de
 
   return (
     <div 
-      className="relative inline-block"
+      className="relative inline-block w-full"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
@@ -23,11 +23,11 @@ export default function Tooltip({ children, content, side = "top", variant = "de
         <div
           className={`absolute z-50 animate-in fade-in-0 zoom-in-95 duration-200 ${
             isCallout 
-              ? `px-4 py-3 max-w-xs text-sm font-medium text-white bg-white/20 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 ${
-                  side === "top" ? "bottom-full left-1/2 -translate-x-1/2 mb-3" :
-                  side === "bottom" ? "top-full left-1/2 -translate-x-1/2 mt-3" :
-                  side === "left" ? "right-full top-1/2 -translate-y-1/2 mr-3" :
-                  "left-full top-1/2 -translate-y-1/2 ml-3"
+              ? `px-3 py-2 w-full text-xs font-normal text-white bg-white/15 backdrop-blur-xl rounded-lg shadow-xl border border-white/20 ${
+                  side === "top" ? "bottom-full left-0 mb-2" :
+                  side === "bottom" ? "top-full left-0 mt-2" :
+                  side === "left" ? "right-full top-1/2 -translate-y-1/2 mr-3 max-w-xs" :
+                  "left-full top-1/2 -translate-y-1/2 ml-3 max-w-xs"
                 }`
               : `px-3 py-2 text-xs font-medium text-white bg-gradient-to-br from-[#4e8f71] to-[#364d89] rounded-xl shadow-2xl whitespace-nowrap ${
                   side === "top" ? "bottom-full left-1/2 -translate-x-1/2 mb-2" :
