@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock } from "lucide-react";
+import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock, Settings } from "lucide-react";
 import backend from "~backend/client";
 import type { SessionType } from "~backend/conversation/types";
 import { useConversationSession } from "@/hooks/useConversationSession";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import VoiceSelector from "@/components/VoiceSelector";
 
 interface ConversationalCheckInProps {
   userId: string;
@@ -27,6 +28,7 @@ export default function ConversationalCheckIn({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastMessageCountRef = useRef(0);
@@ -44,7 +46,13 @@ export default function ConversationalCheckIn({
     speak,
     stop: stopSpeaking,
     isSpeaking,
-    isSupported: isTTSSupported
+    isSupported: isTTSSupported,
+    voices,
+    selectedVoice,
+    setSelectedVoice,
+    elevenLabsVoices,
+    selectedElevenLabsVoice,
+    setSelectedElevenLabsVoice
   } = useTextToSpeech();
 
   const {
@@ -207,15 +215,26 @@ export default function ConversationalCheckIn({
             <p className="text-xs text-white/90">Your wellness companion</p>
           </div>
           {isTTSSupported && (
-            <Button
-              onClick={toggleVoice}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
-              title={voiceEnabled ? "Mute Emma's voice" : "Enable Emma's voice"}
-            >
-              {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </Button>
+            <>
+              <Button
+                onClick={() => setShowVoiceSelector(!showVoiceSelector)}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
+                title="Change voice"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={toggleVoice}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20 rounded-xl flex items-center gap-2"
+                title={voiceEnabled ? "Mute Emma's voice" : "Enable Emma's voice"}
+              >
+                {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </Button>
+            </>
           )}
           {messages.length > 0 && !selectedDate && !showResetConfirm && (
             <Button
@@ -250,6 +269,19 @@ export default function ConversationalCheckIn({
             </div>
           )}
         </div>
+
+      {showVoiceSelector && (
+        <div className="p-4 bg-white/95 backdrop-blur-md border-b border-white/40">
+          <VoiceSelector
+            voices={voices}
+            selectedVoice={selectedVoice}
+            onVoiceChange={setSelectedVoice}
+            elevenLabsVoices={elevenLabsVoices}
+            selectedElevenLabsVoice={selectedElevenLabsVoice}
+            onElevenLabsVoiceChange={setSelectedElevenLabsVoice}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-white/60 to-[#f8fdf9]/80">
         {messages.length === 0 && (
