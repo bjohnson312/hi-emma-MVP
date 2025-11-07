@@ -74,6 +74,13 @@ export interface DietNutritionLog {
   water_intake_oz?: number;
   energy_level?: number;
   notes?: string;
+  image_url?: string;
+  calories?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  fiber_g?: number;
+  analyzed?: boolean;
   created_at: Date;
 }
 
@@ -115,4 +122,89 @@ export interface GetLogsRequest {
   start_date?: Date;
   end_date?: Date;
   limit?: number;
+}
+
+export interface NutritionChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
+export interface StartNutritionChatRequest {
+  user_id: string;
+}
+
+export interface StartNutritionChatResponse {
+  session_id: string;
+  initial_message: string;
+}
+
+export interface NutritionChatRequest {
+  session_id: string;
+  user_id: string;
+  message: string;
+}
+
+export interface NutritionPlan {
+  id: number;
+  user_id: string;
+  plan_name: string;
+  goals: string[];
+  dietary_preferences?: string;
+  calorie_target?: number;
+  protein_target_g?: number;
+  carbs_target_g?: number;
+  fat_target_g?: number;
+  meal_suggestions?: any;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface GetNutritionPlanRequest {
+  user_id: string;
+}
+
+export interface UploadFoodImageRequest {
+  user_id: string;
+  image_type: "meal" | "refrigerator";
+  meal_type?: "breakfast" | "lunch" | "dinner" | "snack";
+}
+
+export interface UploadFoodImageResponse {
+  upload_url: string;
+  image_id: string;
+}
+
+export interface AnalyzeFoodImageRequest {
+  user_id: string;
+  image_id: string;
+  image_type: "meal" | "refrigerator";
+  meal_type?: "breakfast" | "lunch" | "dinner" | "snack";
+}
+
+export interface MealNutritionData {
+  description: string;
+  calories?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  fiber_g?: number;
+  items: string[];
+}
+
+export interface RefrigeratorScanData {
+  detected_items: string[];
+  suggested_meals: Array<{
+    name: string;
+    description: string;
+    ingredients: string[];
+    estimated_prep_time: string;
+  }>;
+}
+
+export interface AnalyzeFoodImageResponse {
+  meal_data?: MealNutritionData;
+  refrigerator_data?: RefrigeratorScanData;
+  image_url: string;
 }

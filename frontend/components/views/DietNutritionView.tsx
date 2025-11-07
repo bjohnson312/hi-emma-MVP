@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Apple, Plus, Coffee, Utensils, Salad, Info } from "lucide-react";
+import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
-import type { DietNutritionLog } from "~backend/wellness/types";
+import type { DietNutritionLog, NutritionPlan } from "~backend/wellness/types";
+import NutritionChatOnboarding from "../NutritionChatOnboarding";
+import FoodImageUpload from "../FoodImageUpload";
 
 interface DietNutritionViewProps {
   userId: string;
@@ -12,8 +14,13 @@ interface DietNutritionViewProps {
 
 export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const [todayLogs, setTodayLogs] = useState<DietNutritionLog[]>([]);
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [showFoodAsMedicine, setShowFoodAsMedicine] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showImageCapture, setShowImageCapture] = useState(false);
+  const [showRefrigeratorScan, setShowRefrigeratorScan] = useState(false);
+  const [refrigeratorSuggestions, setRefrigeratorSuggestions] = useState<any>(null);
   const [mealType, setMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack">("breakfast");
   const [description, setDescription] = useState("");
   const [waterIntake, setWaterIntake] = useState("");
@@ -21,12 +28,23 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadTodayMeals();
+    loadData();
   }, [userId]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        loadTodayMeals(),
+        loadNutritionPlan()
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadTodayMeals = async () => {
     try {
-      setLoading(true);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const response = await backend.wellness.getMealLogs({
@@ -37,13 +55,18 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       setTodayLogs(response.logs);
     } catch (error) {
       console.error("Failed to load meals:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load meal logs",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const loadNutritionPlan = async () => {
+    try {
+      const response = await backend.wellness.getNutritionPlan({ user_id: userId });
+      setNutritionPlan(response.plan || null);
+      if (!response.plan) {
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error("Failed to load nutrition plan:", error);
     }
   };
 
@@ -84,6 +107,32 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     }
   };
 
+  const handleMealImageAnalysis = (data: any) => {
+    setShowImageCapture(false);
+    loadTodayMeals();
+    
+    if (data.meal_data) {
+      toast({
+        title: "Meal Analyzed",
+        description: `${data.meal_data.description} - ${data.meal_data.calories || "?"} calories`,
+        duration: 5000
+      });
+    }
+  };
+
+  const handleRefrigeratorAnalysis = (data: any) => {
+    setShowRefrigeratorScan(false);
+    
+    if (data.refrigerator_data) {
+      setRefrigeratorSuggestions(data.refrigerator_data);
+      toast({
+        title: "Refrigerator Scanned",
+        description: `Found ${data.refrigerator_data.detected_items?.length || 0} items`,
+        duration: 3000
+      });
+    }
+  };
+
   const getMealIcon = (type: string) => {
     switch (type) {
       case "breakfast": return Coffee;
@@ -97,11 +146,28 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const totalWater = todayLogs.reduce((sum, log) => sum + (log.water_intake_oz || 0), 0);
   const waterProgress = Math.min((totalWater / 80) * 100, 100);
 
+  const todayCalories = todayLogs.reduce((sum, log) => sum + (log.calories || 0), 0);
+  const todayProtein = todayLogs.reduce((sum, log) => sum + (log.protein_g || 0), 0);
+  const todayCarbs = todayLogs.reduce((sum, log) => sum + (log.carbs_g || 0), 0);
+  const todayFat = todayLogs.reduce((sum, log) => sum + (log.fat_g || 0), 0);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-[#4e8f71]">Loading...</div>
       </div>
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <NutritionChatOnboarding
+        userId={userId}
+        onComplete={() => {
+          setShowOnboarding(false);
+          loadNutritionPlan();
+        }}
+      />
     );
   }
 
@@ -115,7 +181,7 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#323e48]">Diet & Nutrition</h2>
-              <p className="text-sm text-[#4e8f71]">Today's meals & tracking</p>
+              <p className="text-sm text-[#4e8f71]">Track meals & reach your goals</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -127,17 +193,79 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
               <Info className="w-4 h-4 mr-2" />
               Food as Health
             </Button>
-            {!showAddMeal && (
-              <Button 
-                onClick={() => setShowAddMeal(true)}
-                className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Log Meal
-              </Button>
-            )}
           </div>
         </div>
+
+        {nutritionPlan && (
+          <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="w-5 h-5 text-[#4e8f71]" />
+              <h3 className="text-xl font-bold text-[#323e48]">Your Nutrition Plan</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs text-[#323e48]/60 mb-1">Calories</p>
+                <p className="text-2xl font-bold text-[#323e48]">
+                  {Math.round(todayCalories)}/{nutritionPlan.calorie_target || "?"}
+                </p>
+                <div className="h-2 bg-white/90 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                    style={{ width: `${Math.min((todayCalories / (nutritionPlan.calorie_target || 2000)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs text-[#323e48]/60 mb-1">Protein (g)</p>
+                <p className="text-2xl font-bold text-[#323e48]">
+                  {Math.round(todayProtein)}/{nutritionPlan.protein_target_g || "?"}
+                </p>
+                <div className="h-2 bg-white/90 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                    style={{ width: `${Math.min((todayProtein / (nutritionPlan.protein_target_g || 150)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs text-[#323e48]/60 mb-1">Carbs (g)</p>
+                <p className="text-2xl font-bold text-[#323e48]">
+                  {Math.round(todayCarbs)}/{nutritionPlan.carbs_target_g || "?"}
+                </p>
+                <div className="h-2 bg-white/90 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                    style={{ width: `${Math.min((todayCarbs / (nutritionPlan.carbs_target_g || 200)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs text-[#323e48]/60 mb-1">Fat (g)</p>
+                <p className="text-2xl font-bold text-[#323e48]">
+                  {Math.round(todayFat)}/{nutritionPlan.fat_target_g || "?"}
+                </p>
+                <div className="h-2 bg-white/90 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                    style={{ width: `${Math.min((todayFat / (nutritionPlan.fat_target_g || 65)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            {nutritionPlan.goals && nutritionPlan.goals.length > 0 && (
+              <div className="bg-white/60 rounded-xl p-4">
+                <p className="text-sm font-semibold text-[#4e8f71] mb-2">Your Goals:</p>
+                <div className="flex flex-wrap gap-2">
+                  {nutritionPlan.goals.map((goal, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-[#4e8f71]/20 rounded-full text-sm text-[#323e48]">
+                      {goal}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {showFoodAsMedicine && (
           <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 mb-6">
@@ -183,6 +311,138 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
               </div>
             </div>
           </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <Button 
+              onClick={() => setShowImageCapture(!showImageCapture)}
+              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white w-full"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Photo Track Meal
+            </Button>
+            {showImageCapture && (
+              <div className="mt-3 space-y-3">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setMealType("breakfast")}
+                    variant={mealType === "breakfast" ? "default" : "outline"}
+                    size="sm"
+                    className={mealType === "breakfast" ? "bg-[#4e8f71] text-white" : ""}
+                  >
+                    Breakfast
+                  </Button>
+                  <Button
+                    onClick={() => setMealType("lunch")}
+                    variant={mealType === "lunch" ? "default" : "outline"}
+                    size="sm"
+                    className={mealType === "lunch" ? "bg-[#4e8f71] text-white" : ""}
+                  >
+                    Lunch
+                  </Button>
+                  <Button
+                    onClick={() => setMealType("dinner")}
+                    variant={mealType === "dinner" ? "default" : "outline"}
+                    size="sm"
+                    className={mealType === "dinner" ? "bg-[#4e8f71] text-white" : ""}
+                  >
+                    Dinner
+                  </Button>
+                  <Button
+                    onClick={() => setMealType("snack")}
+                    variant={mealType === "snack" ? "default" : "outline"}
+                    size="sm"
+                    className={mealType === "snack" ? "bg-[#4e8f71] text-white" : ""}
+                  >
+                    Snack
+                  </Button>
+                </div>
+                <FoodImageUpload
+                  userId={userId}
+                  imageType="meal"
+                  mealType={mealType}
+                  onAnalysisComplete={handleMealImageAnalysis}
+                />
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <Button 
+              onClick={() => setShowRefrigeratorScan(!showRefrigeratorScan)}
+              variant="outline"
+              className="border-[#4e8f71] text-[#4e8f71] hover:bg-[#4e8f71]/10 w-full"
+            >
+              <Refrigerator className="w-4 h-4 mr-2" />
+              Scan Refrigerator
+            </Button>
+            {showRefrigeratorScan && (
+              <div className="mt-3">
+                <FoodImageUpload
+                  userId={userId}
+                  imageType="refrigerator"
+                  onAnalysisComplete={handleRefrigeratorAnalysis}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {refrigeratorSuggestions && (
+          <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-[#323e48]">Meal Suggestions</h3>
+              <Button 
+                onClick={() => setRefrigeratorSuggestions(null)}
+                variant="ghost"
+                size="sm"
+                className="text-[#323e48]/60 hover:text-[#323e48]"
+              >
+                ✕
+              </Button>
+            </div>
+            
+            {refrigeratorSuggestions.detected_items && refrigeratorSuggestions.detected_items.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-[#4e8f71] mb-2">Detected Items:</p>
+                <div className="flex flex-wrap gap-2">
+                  {refrigeratorSuggestions.detected_items.map((item: string, idx: number) => (
+                    <span key={idx} className="px-2 py-1 bg-white/60 rounded-lg text-xs text-[#323e48]">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {refrigeratorSuggestions.suggested_meals?.map((meal: any, idx: number) => (
+                <div key={idx} className="bg-white/60 rounded-xl p-4">
+                  <h4 className="font-semibold text-[#323e48] mb-1">{meal.name}</h4>
+                  <p className="text-sm text-[#323e48]/80 mb-2">{meal.description}</p>
+                  <p className="text-xs text-[#4e8f71] mb-2">⏱️ {meal.estimated_prep_time}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {meal.ingredients?.map((ingredient: string, i: number) => (
+                      <span key={i} className="px-2 py-1 bg-[#4e8f71]/10 rounded text-xs text-[#323e48]">
+                        {ingredient}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!showAddMeal && (
+          <Button 
+            onClick={() => setShowAddMeal(true)}
+            className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white w-full mb-6"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Manual Log Meal
+          </Button>
         )}
 
         {showAddMeal && (
@@ -259,6 +519,7 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
         )}
 
         <div className="space-y-4">
+          <h3 className="font-semibold text-[#323e48]">Today's Meals</h3>
           {todayLogs.length === 0 ? (
             <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 text-center">
               <p className="text-[#323e48]/60">No meals logged today</p>
@@ -276,8 +537,17 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
                         {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
+                    {log.analyzed && <span className="text-xs text-[#4e8f71]">📸 AI Analyzed</span>}
                   </div>
-                  <p className="text-sm text-[#323e48]">{log.description}</p>
+                  <p className="text-sm text-[#323e48] mb-2">{log.description}</p>
+                  {(log.calories || log.protein_g || log.carbs_g || log.fat_g) && (
+                    <div className="flex gap-3 text-xs text-[#4e8f71]">
+                      {log.calories && <span>Cal: {Math.round(log.calories)}</span>}
+                      {log.protein_g && <span>Protein: {Math.round(log.protein_g)}g</span>}
+                      {log.carbs_g && <span>Carbs: {Math.round(log.carbs_g)}g</span>}
+                      {log.fat_g && <span>Fat: {Math.round(log.fat_g)}g</span>}
+                    </div>
+                  )}
                   {log.water_intake_oz && (
                     <p className="text-xs text-[#4e8f71] mt-2">Water: {log.water_intake_oz}oz</p>
                   )}
