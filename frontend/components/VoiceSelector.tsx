@@ -95,12 +95,32 @@ export default function VoiceSelector({
     return `${name} ${lang}`;
   };
 
+  const getCurrentVoiceName = () => {
+    if (selectedElevenLabsVoice) {
+      return selectedElevenLabsVoice.name;
+    }
+    if (selectedVoice) {
+      return getVoiceLabel(selectedVoice);
+    }
+    return 'None selected';
+  };
+
+  const sortedElevenLabsVoices = [...elevenLabsVoices].sort((a, b) => {
+    if (a.name === 'Trinity') return -1;
+    if (b.name === 'Trinity') return 1;
+    return 0;
+  });
+
   return (
     <div className="space-y-3">
       <label className="flex items-center gap-2 text-sm font-medium text-[#323e48]">
         <Volume2 className="w-4 h-4" />
         Emma's Voice
       </label>
+      <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-lg p-3 border border-[#4e8f71]/20">
+        <p className="text-xs text-[#323e48]/60 mb-1">Current Voice</p>
+        <p className="text-sm font-medium text-[#323e48]">{getCurrentVoiceName()}</p>
+      </div>
       <p className="text-xs text-[#323e48]/60">
         Test voices before selecting. Your choice saves automatically!
       </p>
@@ -143,7 +163,7 @@ export default function VoiceSelector({
               Loading ElevenLabs voices...
             </p>
           ) : (
-            elevenLabsVoices.map((voice) => (
+            sortedElevenLabsVoices.map((voice) => (
               <div
                 key={voice.id}
                 className={`flex items-center justify-between p-3 rounded-lg transition-all ${
