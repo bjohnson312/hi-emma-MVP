@@ -14,8 +14,9 @@ export function useVoicePreference() {
     if (typeof window === 'undefined') return null;
     const name = localStorage.getItem(VOICE_PREFERENCE_KEY);
     const type = localStorage.getItem(VOICE_TYPE_KEY) as 'browser' | 'elevenlabs' | null;
+    const id = localStorage.getItem('emma-voice-id') || undefined;
     if (!name || !type) return null;
-    return { name, type };
+    return { name, type, id };
   });
 
   const saveVoicePreference = (name: string, type: 'browser' | 'elevenlabs', id?: string) => {
