@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, Settings } from "lucide-react";
+import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, Settings, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -7,6 +7,7 @@ import backend from "~backend/client";
 import type { DietNutritionLog, NutritionPlan, NutritionSetupProgress } from "~backend/wellness/types";
 import { NutritionSetupFlow } from "../NutritionSetupFlow";
 import FoodImageUpload from "../FoodImageUpload";
+import NutritionChatWithEmma from "../NutritionChatWithEmma";
 
 interface DietNutritionViewProps {
   userId: string;
@@ -24,6 +25,7 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const [showImageCapture, setShowImageCapture] = useState(false);
   const [showRefrigeratorScan, setShowRefrigeratorScan] = useState(false);
   const [showDetailedStats, setShowDetailedStats] = useState(false);
+  const [showEmmaChat, setShowEmmaChat] = useState(false);
   const [refrigeratorSuggestions, setRefrigeratorSuggestions] = useState<any>(null);
   const [mealType, setMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack">("breakfast");
   const [description, setDescription] = useState("");
@@ -233,6 +235,20 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
 
   return (
     <div className="space-y-6">
+      {showEmmaChat && (
+        <NutritionChatWithEmma
+          userId={userId}
+          onClose={() => setShowEmmaChat(false)}
+          onMealLogged={() => {
+            loadTodayMeals();
+            calculateDailyAchievement();
+          }}
+          onGoalsUpdated={() => {
+            loadNutritionPlan();
+          }}
+        />
+      )}
+
       {setupProgress && !setupProgress.isCompleted && (
         <div className="bg-gradient-to-r from-[#4e8f71]/20 to-[#364d89]/20 rounded-2xl p-6 border border-[#4e8f71]/30">
           <div className="flex items-center justify-between">
@@ -270,6 +286,13 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowEmmaChat(true)}
+              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Chat with Emma
+            </Button>
             {setupProgress?.isCompleted && (
               <Button 
                 onClick={() => setShowSetupFlow(true)}

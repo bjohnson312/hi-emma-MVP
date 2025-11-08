@@ -1,4 +1,4 @@
-export type SessionType = "morning" | "evening" | "mood" | "diet" | "doctors_orders" | "general";
+export type SessionType = "morning" | "evening" | "mood" | "diet" | "doctors_orders" | "general" | "nutrition";
 
 export interface ConversationSession {
   id: number;
@@ -27,6 +27,8 @@ export interface ChatResponse {
   conversation_complete?: boolean;
   data_to_log?: Record<string, any>;
   journal_entry_created?: boolean;
+  meal_logged?: boolean;
+  goals_updated?: boolean;
 }
 
 export interface GetOrCreateSessionRequest {

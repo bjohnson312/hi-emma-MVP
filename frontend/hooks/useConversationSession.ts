@@ -69,6 +69,9 @@ export function useConversationSession(
         doctors_orders: userName
           ? `${timeGreeting} ${userName}! How are you feeling today?`
           : "Hi, Emma here, your personal wellness companion. What's your name?",
+        nutrition: userName
+          ? `${timeGreeting} ${userName}! I'm here to help with your nutrition. What's on your mind?`
+          : "Hi, Emma here, your personal wellness companion. What's your name?",
         general: userName
           ? `${timeGreeting} ${userName}! What's on your mind?`
           : "Hi, Emma here, your personal wellness companion. What's your name?"
@@ -89,6 +92,9 @@ export function useConversationSession(
           : "Hi, Emma here, your personal wellness companion. What's your name?",
         doctors_orders: userName
           ? `Hi again ${userName}! What can I help you with?`
+          : "Hi, Emma here, your personal wellness companion. What's your name?",
+        nutrition: userName
+          ? `Welcome back ${userName}! Let's talk about your nutrition.`
           : "Hi, Emma here, your personal wellness companion. What's your name?",
         general: userName
           ? `Welcome back ${userName}! What can I help you with?`
