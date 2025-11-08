@@ -16,11 +16,14 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const [todayLogs, setTodayLogs] = useState<DietNutritionLog[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [setupProgress, setSetupProgress] = useState<NutritionSetupProgress | null>(null);
+  const [nutritionStats, setNutritionStats] = useState<any>(null);
+  const [dailyAchievement, setDailyAchievement] = useState<any>(null);
   const [showSetupFlow, setShowSetupFlow] = useState(false);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [showFoodAsMedicine, setShowFoodAsMedicine] = useState(false);
   const [showImageCapture, setShowImageCapture] = useState(false);
   const [showRefrigeratorScan, setShowRefrigeratorScan] = useState(false);
+  const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [refrigeratorSuggestions, setRefrigeratorSuggestions] = useState<any>(null);
   const [mealType, setMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack">("breakfast");
   const [description, setDescription] = useState("");
@@ -38,7 +41,8 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       await Promise.all([
         loadTodayMeals(),
         loadNutritionPlan(),
-        loadSetupProgress()
+        loadSetupProgress(),
+        loadNutritionStats()
       ]);
     } finally {
       setLoading(false);
@@ -81,6 +85,15 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     }
   };
 
+  const loadNutritionStats = async () => {
+    try {
+      const stats = await backend.wellness.getNutritionStats({ user_id: userId });
+      setNutritionStats(stats);
+    } catch (error) {
+      console.error("Failed to load nutrition stats:", error);
+    }
+  };
+
   const logMeal = async () => {
     if (!description.trim()) {
       toast({
@@ -107,7 +120,8 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       setDescription("");
       setWaterIntake("");
       setShowAddMeal(false);
-      loadTodayMeals();
+      await loadTodayMeals();
+      await calculateDailyAchievement();
     } catch (error) {
       console.error("Failed to log meal:", error);
       toast({
@@ -118,9 +132,10 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     }
   };
 
-  const handleMealImageAnalysis = (data: any) => {
+  const handleMealImageAnalysis = async (data: any) => {
     setShowImageCapture(false);
-    loadTodayMeals();
+    await loadTodayMeals();
+    await calculateDailyAchievement();
     
     if (data.meal_data) {
       toast({
@@ -128,6 +143,34 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
         description: `${data.meal_data.description} - ${data.meal_data.calories || "?"} calories`,
         duration: 5000
       });
+    }
+  };
+
+  const calculateDailyAchievement = async () => {
+    if (!nutritionPlan) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      const achievement = await backend.wellness.calculateDailyAchievement({
+        user_id: userId,
+        date: today,
+        calories: todayCalories,
+        protein_g: todayProtein,
+        carbs_g: todayCarbs,
+        fat_g: todayFat,
+        water_oz: totalWater,
+        calorie_target: nutritionPlan.calorie_target || 2000,
+        protein_target: nutritionPlan.protein_target_g || 150,
+        carbs_target: nutritionPlan.carbs_target_g || 200,
+        fat_target: nutritionPlan.fat_target_g || 65,
+        water_target: 80
+      });
+      setDailyAchievement(achievement);
+      await loadNutritionStats();
+    } catch (error) {
+      console.error("Failed to calculate daily achievement:", error);
     }
   };
 
@@ -250,11 +293,48 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
 
         {nutritionPlan && (
           <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-[#4e8f71]" />
-              <h3 className="text-xl font-bold text-[#323e48]">Your Nutrition Plan</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-[#4e8f71]" />
+                <h3 className="text-xl font-bold text-[#323e48]">Your Nutrition Plan</h3>
+              </div>
+              <Button
+                onClick={() => setShowDetailedStats(!showDetailedStats)}
+                variant="ghost"
+                size="sm"
+                className="text-[#4e8f71] hover:bg-[#4e8f71]/10"
+              >
+                {showDetailedStats ? "Hide Details" : "View Details"}
+              </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              {nutritionStats && (
+                <>
+                  <div className="bg-white/60 rounded-xl p-3 text-center">
+                    <p className="text-xs text-[#323e48]/60 mb-1">Days Achieved</p>
+                    <p className="text-2xl font-bold text-[#4e8f71]">
+                      {nutritionStats.days_achieved}/{nutritionStats.total_days_tracked}
+                    </p>
+                  </div>
+                  <div className="bg-white/60 rounded-xl p-3 text-center">
+                    <p className="text-xs text-[#323e48]/60 mb-1">Current Streak</p>
+                    <p className="text-2xl font-bold text-[#364d89]">
+                      {nutritionStats.current_streak} 🔥
+                    </p>
+                  </div>
+                  <div className="bg-white/60 rounded-xl p-3 text-center">
+                    <p className="text-xs text-[#323e48]/60 mb-1">Today's Progress</p>
+                    <p className="text-2xl font-bold text-[#323e48]">
+                      {dailyAchievement?.overall_percentage || 0}%
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {showDetailedStats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div className="bg-white/60 rounded-xl p-3">
                 <p className="text-xs text-[#323e48]/60 mb-1">Calories</p>
                 <p className="text-2xl font-bold text-[#323e48]">
@@ -303,8 +383,10 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
                   ></div>
                 </div>
               </div>
-            </div>
-            {nutritionPlan.goals && nutritionPlan.goals.length > 0 && (
+              </div>
+            )}
+
+            {showDetailedStats && nutritionPlan.goals && nutritionPlan.goals.length > 0 && (
               <div className="bg-white/60 rounded-xl p-4">
                 <p className="text-sm font-semibold text-[#4e8f71] mb-2">Your Goals:</p>
                 <div className="flex flex-wrap gap-2">
