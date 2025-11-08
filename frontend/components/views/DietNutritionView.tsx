@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, Settings, MessageCircle } from "lucide-react";
+import { Apple, Plus, Coffee, Utensils, Salad, Info, Camera, Refrigerator, Target, Settings, MessageCircle, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -8,6 +8,7 @@ import type { DietNutritionLog, NutritionPlan, NutritionSetupProgress } from "~b
 import { NutritionSetupFlow } from "../NutritionSetupFlow";
 import FoodImageUpload from "../FoodImageUpload";
 import NutritionChatWithEmma from "../NutritionChatWithEmma";
+import WeeklyMealPlanView from "./WeeklyMealPlanView";
 
 interface DietNutritionViewProps {
   userId: string;
@@ -26,6 +27,7 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const [showRefrigeratorScan, setShowRefrigeratorScan] = useState(false);
   const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [showEmmaChat, setShowEmmaChat] = useState(false);
+  const [showMealPlan, setShowMealPlan] = useState(false);
   const [refrigeratorSuggestions, setRefrigeratorSuggestions] = useState<any>(null);
   const [mealType, setMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack">("breakfast");
   const [description, setDescription] = useState("");
@@ -233,6 +235,10 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
     );
   }
 
+  if (showMealPlan) {
+    return <WeeklyMealPlanView userId={userId} onBack={() => setShowMealPlan(false)} />;
+  }
+
   return (
     <div className="space-y-6">
       {showEmmaChat && (
@@ -286,6 +292,13 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowMealPlan(true)}
+              className="bg-gradient-to-r from-[#364d89] to-[#6656cb] text-white"
+            >
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Meal Plan
+            </Button>
             <Button 
               onClick={() => setShowEmmaChat(true)}
               className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
