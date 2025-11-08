@@ -41,6 +41,7 @@ export default function NutritionChatWithEmma({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef(0);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [hasSpokenInitial, setHasSpokenInitial] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -61,6 +62,16 @@ export default function NutritionChatWithEmma({
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (voiceEnabled && messages.length > 0 && !hasSpokenInitial) {
+      const firstMessage = messages[0];
+      if (firstMessage.sender === "emma") {
+        speak(firstMessage.text);
+        setHasSpokenInitial(true);
+      }
+    }
+  }, [voiceEnabled, messages.length]);
 
   useEffect(() => {
     scrollToBottom();
@@ -161,6 +172,7 @@ export default function NutritionChatWithEmma({
     ]);
     setSessionId(null);
     setConversationComplete(false);
+    setHasSpokenInitial(false);
   };
 
   const toggleVoiceInput = () => {
