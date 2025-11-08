@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, RefreshCw, ShoppingCart, Edit2, Save, X, Sparkles } from "lucide-react";
+import { ChevronLeft, RefreshCw, ShoppingCart, Edit2, Save, X, Sparkles, Download, Star, Heart, List } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { WeeklyMealPlan, MealItem, DayMealPlan, ShoppingList } from "~backend/wellness/meal_plan_types";
@@ -22,6 +22,9 @@ export default function WeeklyMealPlanView({ userId, onBack }: WeeklyMealPlanVie
   const [editedMealData, setEditedMealData] = useState<MealItem | null>(null);
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
   const [showShoppingList, setShowShoppingList] = useState(false);
+  const [showSavedItems, setShowSavedItems] = useState(false);
+  const [savedMealPlans, setSavedMealPlans] = useState<any[]>([]);
+  const [savedShoppingLists, setSavedShoppingLists] = useState<any[]>([]);
   const { toast } = useToast();
 
   const days = [
@@ -164,6 +167,230 @@ export default function WeeklyMealPlanView({ userId, onBack }: WeeklyMealPlanVie
     }
   };
 
+  const saveMealPlan = async () => {
+    if (!mealPlan) return;
+    
+    try {
+      await backend.wellness.saveMealPlan({
+        user_id: userId,
+        title: `Meal Plan - ${new Date(weekStartDate).toLocaleDateString()}`,
+        mealPlanId: planId || undefined,
+        mealPlanData: mealPlan
+      });
+      
+      toast({
+        title: "Saved!",
+        description: "Meal plan saved successfully",
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to save meal plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save meal plan",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveShoppingList = async () => {
+    if (!shoppingList) return;
+    
+    try {
+      await backend.wellness.saveShoppingList({
+        user_id: userId,
+        title: `Shopping List - ${new Date(weekStartDate).toLocaleDateString()}`,
+        mealPlanId: planId || undefined,
+        shoppingListData: shoppingList
+      });
+      
+      toast({
+        title: "Saved!",
+        description: "Shopping list saved successfully",
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to save shopping list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save shopping list",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadMealPlan = async (format: "pdf" | "csv") => {
+    if (!mealPlan) return;
+    
+    try {
+      const response = await backend.wellness.downloadMealPlan({
+        mealPlanData: mealPlan,
+        format
+      });
+      
+      const blob = new Blob([response.content], { type: response.contentType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = response.filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Downloaded!",
+        description: `Meal plan downloaded as ${format.toUpperCase()}`,
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to download meal plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download meal plan",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadShoppingList = async (format: "pdf" | "csv") => {
+    if (!shoppingList) return;
+    
+    try {
+      const response = await backend.wellness.downloadShoppingList({
+        shoppingListData: shoppingList,
+        format
+      });
+      
+      const blob = new Blob([response.content], { type: response.contentType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = response.filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Downloaded!",
+        description: `Shopping list downloaded as ${format.toUpperCase()}`,
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to download shopping list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download shopping list",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadSavedItems = async () => {
+    try {
+      const [plansResponse, listsResponse] = await Promise.all([
+        backend.wellness.listSavedMealPlans({ user_id: userId, favoritesOnly: false }),
+        backend.wellness.listSavedShoppingLists({ user_id: userId, favoritesOnly: false })
+      ]);
+      setSavedMealPlans(plansResponse.plans);
+      setSavedShoppingLists(listsResponse.lists);
+    } catch (error) {
+      console.error("Failed to load saved items:", error);
+    }
+  };
+
+  const toggleFavoriteMealPlan = async (id: number, isFavorite: boolean) => {
+    try {
+      await backend.wellness.toggleFavoriteMealPlan({ user_id: userId, id, isFavorite });
+      await loadSavedItems();
+      toast({
+        title: isFavorite ? "Added to favorites" : "Removed from favorites",
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update favorite",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleFavoriteShoppingList = async (id: number, isFavorite: boolean) => {
+    try {
+      await backend.wellness.toggleFavoriteShoppingList({ user_id: userId, id, isFavorite });
+      await loadSavedItems();
+      toast({
+        title: isFavorite ? "Added to favorites" : "Removed from favorites",
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update favorite",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteSavedMealPlan = async (id: number) => {
+    try {
+      await backend.wellness.deleteSavedMealPlan({ user_id: userId, id });
+      await loadSavedItems();
+      toast({
+        title: "Deleted",
+        description: "Meal plan removed",
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete meal plan",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteSavedShoppingList = async (id: number) => {
+    try {
+      await backend.wellness.deleteSavedShoppingList({ user_id: userId, id });
+      await loadSavedItems();
+      toast({
+        title: "Deleted",
+        description: "Shopping list removed",
+        duration: 2000
+      });
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete shopping list",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadSavedMealPlan = (plan: any) => {
+    setMealPlan(plan.mealPlanData);
+    setShowSavedItems(false);
+    toast({
+      title: "Loaded!",
+      description: "Meal plan loaded successfully",
+      duration: 2000
+    });
+  };
+
+  const loadSavedShoppingList = (list: any) => {
+    setShoppingList(list.shoppingListData);
+    setShowShoppingList(true);
+    setShowSavedItems(false);
+    toast({
+      title: "Loaded!",
+      description: "Shopping list loaded successfully",
+      duration: 2000
+    });
+  };
+
   const getMealTypeLabel = (type: string) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
@@ -253,14 +480,121 @@ export default function WeeklyMealPlanView({ userId, onBack }: WeeklyMealPlanVie
     );
   }
 
-  if (showShoppingList && shoppingList) {
+  if (showSavedItems) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button onClick={() => setShowShoppingList(false)} variant="ghost" className="text-[#4e8f71]">
+          <Button onClick={() => setShowSavedItems(false)} variant="ghost" className="text-[#4e8f71]">
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <h2 className="text-2xl font-bold text-[#323e48]">Shopping List</h2>
+          <h2 className="text-2xl font-bold text-[#323e48]">Saved Items</h2>
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-xl font-semibold text-[#4e8f71] mb-4">Saved Meal Plans</h3>
+            {savedMealPlans.length === 0 ? (
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center text-[#323e48]/60">
+                No saved meal plans yet
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedMealPlans.map((plan) => (
+                  <div key={plan.id} className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-white/60">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-[#323e48] mb-1">{plan.title}</h4>
+                        <p className="text-xs text-[#323e48]/60">Saved {new Date(plan.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <Button
+                        onClick={() => toggleFavoriteMealPlan(plan.id, !plan.isFavorite)}
+                        size="sm"
+                        variant="ghost"
+                        className="text-[#e85d75]"
+                      >
+                        <Heart className={`w-4 h-4 ${plan.isFavorite ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => loadSavedMealPlan(plan)} size="sm" className="flex-1 bg-[#4e8f71] hover:bg-[#3d7259]">
+                        Load
+                      </Button>
+                      <Button onClick={() => deleteSavedMealPlan(plan.id)} size="sm" variant="outline" className="text-red-600 border-red-600">
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold text-[#4e8f71] mb-4">Saved Shopping Lists</h3>
+            {savedShoppingLists.length === 0 ? (
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center text-[#323e48]/60">
+                No saved shopping lists yet
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedShoppingLists.map((list) => (
+                  <div key={list.id} className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-white/60">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-[#323e48] mb-1">{list.title}</h4>
+                        <p className="text-xs text-[#323e48]/60">Saved {new Date(list.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <Button
+                        onClick={() => toggleFavoriteShoppingList(list.id, !list.isFavorite)}
+                        size="sm"
+                        variant="ghost"
+                        className="text-[#e85d75]"
+                      >
+                        <Heart className={`w-4 h-4 ${list.isFavorite ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => loadSavedShoppingList(list)} size="sm" className="flex-1 bg-[#4e8f71] hover:bg-[#3d7259]">
+                        Load
+                      </Button>
+                      <Button onClick={() => deleteSavedShoppingList(list.id)} size="sm" variant="outline" className="text-red-600 border-red-600">
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showShoppingList && shoppingList) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button onClick={() => setShowShoppingList(false)} variant="ghost" className="text-[#4e8f71]">
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <h2 className="text-2xl font-bold text-[#323e48]">Shopping List</h2>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={saveShoppingList} variant="outline" className="border-[#4e8f71] text-[#4e8f71]">
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
+            <Button onClick={() => downloadShoppingList("csv")} variant="outline" className="border-[#364d89] text-[#364d89]">
+              <Download className="w-4 h-4 mr-2" />
+              CSV
+            </Button>
+            <Button onClick={() => downloadShoppingList("pdf")} variant="outline" className="border-[#364d89] text-[#364d89]">
+              <Download className="w-4 h-4 mr-2" />
+              HTML
+            </Button>
+          </div>
         </div>
 
         <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-6 border border-white/40">
@@ -271,7 +605,7 @@ export default function WeeklyMealPlanView({ userId, onBack }: WeeklyMealPlanVie
               <div key={category} className="mb-6">
                 <h3 className="text-lg font-semibold text-[#4e8f71] mb-3 capitalize">{category}</h3>
                 <div className="space-y-2">
-                  {items.map((item, idx) => (
+                  {items.map((item: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-3 p-3 bg-white/80 rounded-lg">
                       <input type="checkbox" className="w-4 h-4 rounded border-[#4e8f71]" />
                       <span className="flex-1 text-[#323e48]">{item.item}</span>
@@ -339,6 +673,29 @@ export default function WeeklyMealPlanView({ userId, onBack }: WeeklyMealPlanVie
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              loadSavedItems();
+              setShowSavedItems(true);
+            }}
+            variant="outline"
+            className="border-[#6656cb] text-[#6656cb]"
+          >
+            <List className="w-4 h-4 mr-2" />
+            Saved
+          </Button>
+          <Button onClick={saveMealPlan} variant="outline" className="border-[#4e8f71] text-[#4e8f71]">
+            <Save className="w-4 h-4 mr-2" />
+            Save
+          </Button>
+          <Button onClick={() => downloadMealPlan("csv")} variant="outline" className="border-[#364d89] text-[#364d89]">
+            <Download className="w-4 h-4 mr-2" />
+            CSV
+          </Button>
+          <Button onClick={() => downloadMealPlan("pdf")} variant="outline" className="border-[#364d89] text-[#364d89]">
+            <Download className="w-4 h-4 mr-2" />
+            HTML
+          </Button>
           <Button
             onClick={generateShoppingList}
             disabled={loading}
