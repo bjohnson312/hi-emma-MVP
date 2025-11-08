@@ -33,12 +33,18 @@ export const downloadShoppingList = api<DownloadShoppingListRequest, DownloadRes
 );
 
 function generateShoppingListCSV(shoppingList: any): string {
-  let csv = "Category,Item,Quantity,Notes\n";
+  let csv = "Category,Item,Quantity\n";
   
-  for (const [category, items] of Object.entries(shoppingList.items || {})) {
-    const itemsList = items as any[];
-    for (const item of itemsList) {
-      csv += `${category},"${item.name}","${item.quantity || ''}","${item.notes || ''}"\n`;
+  const categories = ['produce', 'proteins', 'dairy', 'grains', 'pantry', 'other'];
+  
+  for (const category of categories) {
+    const items = shoppingList[category];
+    if (!items || !Array.isArray(items)) continue;
+    
+    const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
+    
+    for (const item of items) {
+      csv += `"${categoryLabel}","${item.item || ''}","${item.quantity || ''}"\n`;
     }
   }
   
@@ -46,7 +52,7 @@ function generateShoppingListCSV(shoppingList: any): string {
 }
 
 function generateShoppingListHTML(shoppingList: any): string {
-  const categories = Object.keys(shoppingList.items || {});
+  const categories = ['produce', 'proteins', 'dairy', 'grains', 'pantry', 'other'];
   
   let html = `
 <!DOCTYPE html>
@@ -58,14 +64,13 @@ function generateShoppingListHTML(shoppingList: any): string {
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
     h1 { color: #333; }
     .category { margin-bottom: 25px; page-break-inside: avoid; }
-    .category h2 { color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 5px; }
+    .category h2 { color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 5px; text-transform: capitalize; }
     .items { background: #f9fafb; padding: 15px; border-radius: 8px; }
     .item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
     .item:last-child { border-bottom: none; }
-    .checkbox { width: 20px; height: 20px; border: 2px solid #d1d5db; border-radius: 4px; margin-right: 12px; }
+    .checkbox { width: 20px; height: 20px; border: 2px solid #d1d5db; border-radius: 4px; margin-right: 12px; flex-shrink: 0; }
     .item-name { flex: 1; font-weight: 500; }
-    .item-quantity { color: #6b7280; margin-right: 10px; }
-    .item-notes { color: #9ca3af; font-size: 14px; font-style: italic; }
+    .item-quantity { color: #6b7280; margin-left: 10px; white-space: nowrap; }
     @media print { .category { page-break-after: auto; } }
   </style>
 </head>
@@ -75,10 +80,13 @@ function generateShoppingListHTML(shoppingList: any): string {
 `;
 
   for (const category of categories) {
-    const items = shoppingList.items[category] || [];
+    const items = shoppingList[category];
+    if (!items || !Array.isArray(items) || items.length === 0) continue;
+    
+    const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
     html += `
   <div class="category">
-    <h2>${category}</h2>
+    <h2>${categoryLabel}</h2>
     <div class="items">
 `;
     
@@ -86,9 +94,8 @@ function generateShoppingListHTML(shoppingList: any): string {
       html += `
       <div class="item">
         <div class="checkbox"></div>
-        <span class="item-name">${item.name}</span>
+        <span class="item-name">${item.item || 'Unknown item'}</span>
         ${item.quantity ? `<span class="item-quantity">${item.quantity}</span>` : ''}
-        ${item.notes ? `<span class="item-notes">${item.notes}</span>` : ''}
       </div>
 `;
     }
