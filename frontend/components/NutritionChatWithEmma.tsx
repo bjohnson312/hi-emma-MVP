@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import Tooltip from "@/components/Tooltip";
 
 interface NutritionChatWithEmmaProps {
   userId: string;
@@ -226,20 +227,35 @@ export default function NutritionChatWithEmma({
               key={index}
               className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div
-                className={`max-w-[80%] rounded-2xl p-4 ${
-                  message.sender === "user"
-                    ? "bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
-                    : "bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 text-[#323e48]"
-                }`}
-              >
-                <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                <p className="text-xs opacity-60 mt-2">
-                  {message.timestamp.toLocaleTimeString([], { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </p>
+              <div className="flex items-start gap-2">
+                <div
+                  className={`max-w-[80%] rounded-2xl p-4 ${
+                    message.sender === "user"
+                      ? "bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
+                      : "bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 text-[#323e48]"
+                  }`}
+                >
+                  <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                  <p className="text-xs opacity-60 mt-2">
+                    {message.timestamp.toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+                
+                {message.sender === "emma" && index === messages.length - 1 && !loading && (
+                  <Tooltip content="Replay message" side="right">
+                    <Button
+                      onClick={() => speak(message.text)}
+                      size="sm"
+                      variant="ghost"
+                      className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
             </div>
           ))}
