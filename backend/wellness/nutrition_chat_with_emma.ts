@@ -58,8 +58,11 @@ export const nutritionChat = api<ChatRequest, ChatResponse>(
     const profile = await db.queryRow<{
       name: string;
       interaction_count?: number;
+      age?: number;
+      health_conditions?: string[];
+      fitness_level?: string;
     }>`
-      SELECT name, interaction_count
+      SELECT name, interaction_count, age, health_conditions, fitness_level
       FROM user_profiles
       WHERE user_id = ${user_id}
     `;
@@ -77,6 +80,41 @@ export const nutritionChat = api<ChatRequest, ChatResponse>(
       WHERE user_id = ${user_id} AND active = true
       ORDER BY created_at DESC
       LIMIT 1
+    `;
+
+    const dietPreferences = await db.queryRow<{
+      dietary_restrictions?: string[];
+      allergies?: string[];
+      meal_goals?: string[];
+      water_goal_oz?: number;
+    }>`
+      SELECT dietary_restrictions, allergies, meal_goals, water_goal_oz
+      FROM diet_preferences
+      WHERE user_id = ${user_id}
+    `;
+
+    const nutritionStats = await db.queryRow<{
+      current_streak?: number;
+      days_achieved?: number;
+      total_days_tracked?: number;
+    }>`
+      SELECT 
+        COUNT(*) FILTER (WHERE achieved = true) as days_achieved,
+        COUNT(*) as total_days_tracked
+      FROM nutrition_daily_achievements
+      WHERE user_id = ${user_id}
+    `;
+
+    const recentMeals = await db.queryAll<{
+      meal_type: string;
+      description: string;
+      date: Date;
+    }>`
+      SELECT meal_type, description, date
+      FROM diet_nutrition_logs
+      WHERE user_id = ${user_id} AND date >= CURRENT_DATE - INTERVAL '7 days'
+      ORDER BY created_at DESC
+      LIMIT 20
     `;
 
     const todayMeals = await db.queryAll<{
@@ -123,9 +161,13 @@ export const nutritionChat = api<ChatRequest, ChatResponse>(
       profile?.name || "there",
       nutritionPlan,
       todayMeals,
+      dietPreferences,
+      nutritionStats,
+      recentMeals,
       memoryContext,
       behaviorPatterns,
-      profile?.interaction_count
+      profile?.interaction_count,
+      profile
     );
 
     const conversationHistory: AIMessage[] = [
@@ -251,21 +293,41 @@ function buildNutritionSystemPrompt(
   userName: string,
   nutritionPlan: any,
   todayMeals: any[],
+  dietPreferences: any,
+  nutritionStats: any,
+  recentMeals: any[],
   memoryContext?: string,
   behaviorPatterns?: any[],
-  interactionCount?: number
+  interactionCount?: number,
+  profile?: any
 ): string {
   let personalizationContext = "";
   
   if (interactionCount && interactionCount > 1) {
     personalizationContext += `\n\nYou've had ${interactionCount} interactions with ${userName}. `;
+    if (interactionCount >= 7) {
+      personalizationContext += `They've been consistently engaged - acknowledge this dedication warmly. `;
+    }
+  }
+
+  if (profile) {
+    personalizationContext += `\n\nAbout ${userName}:`;
+    if (profile.age) {
+      personalizationContext += `\n- Age: ${profile.age}`;
+    }
+    if (profile.health_conditions && profile.health_conditions.length > 0) {
+      personalizationContext += `\n- Health conditions: ${profile.health_conditions.join(", ")}`;
+    }
+    if (profile.fitness_level) {
+      personalizationContext += `\n- Fitness level: ${profile.fitness_level}`;
+    }
   }
 
   if (behaviorPatterns && behaviorPatterns.length > 0) {
-    personalizationContext += `\n\nPersonalization insights about ${userName}:`;
+    personalizationContext += `\n\nBehavior patterns:`;
     behaviorPatterns.forEach(pattern => {
-      if (pattern.pattern_type === "nutrition_preference") {
-        personalizationContext += `\n- Prefers ${pattern.pattern_data.preference}`;
+      if (pattern.pattern_type === "nutrition_preference" && pattern.confidence_score > 0.6) {
+        personalizationContext += `\n- ${pattern.pattern_data.preference}`;
       }
     });
   }
@@ -284,6 +346,33 @@ function buildNutritionSystemPrompt(
     }
   }
 
+  if (dietPreferences) {
+    if (dietPreferences.dietary_restrictions && dietPreferences.dietary_restrictions.length > 0) {
+      nutritionContext += `\n- Dietary restrictions: ${dietPreferences.dietary_restrictions.join(", ")}`;
+    }
+    if (dietPreferences.allergies && dietPreferences.allergies.length > 0) {
+      nutritionContext += `\n- ALLERGIES (IMPORTANT): ${dietPreferences.allergies.join(", ")} - NEVER suggest these foods!`;
+    }
+    if (dietPreferences.water_goal_oz) {
+      nutritionContext += `\n- Water goal: ${dietPreferences.water_goal_oz}oz daily`;
+    }
+  }
+
+  let achievementContext = "";
+  if (nutritionStats) {
+    achievementContext = `\n\nNutrition achievements:`;
+    if (nutritionStats.days_achieved && nutritionStats.total_days_tracked) {
+      const percentage = Math.round((nutritionStats.days_achieved / nutritionStats.total_days_tracked) * 100);
+      achievementContext += `\n- Hit nutrition goals ${nutritionStats.days_achieved}/${nutritionStats.total_days_tracked} days (${percentage}%)`;
+    }
+    if (nutritionStats.current_streak && nutritionStats.current_streak > 0) {
+      achievementContext += `\n- Current streak: ${nutritionStats.current_streak} days 🔥`;
+      if (nutritionStats.current_streak >= 7) {
+        achievementContext += ` - This is amazing! Acknowledge their consistency!`;
+      }
+    }
+  }
+
   let todayMealsContext = "";
   if (todayMeals && todayMeals.length > 0) {
     todayMealsContext = `\n\nWhat they've eaten today:`;
@@ -293,9 +382,33 @@ function buildNutritionSystemPrompt(
         todayMealsContext += ` (${meal.calories} cal)`;
       }
     });
+  } else {
+    todayMealsContext = `\n\nThey haven't logged any meals yet today.`;
   }
 
-  return `You are Emma, a warm, empathetic nutrition coach having a conversation with ${userName}.${memoryContext || ""}${personalizationContext}${nutritionContext}${todayMealsContext}
+  let recentMealsPattern = "";
+  if (recentMeals && recentMeals.length > 0) {
+    recentMealsPattern = `\n\nRecent eating patterns (last 7 days):`;
+    const mealTypes: Record<string, number> = {};
+    const commonFoods: string[] = [];
+    
+    recentMeals.forEach(meal => {
+      mealTypes[meal.meal_type] = (mealTypes[meal.meal_type] || 0) + 1;
+      if (meal.description) {
+        const foods = meal.description.toLowerCase();
+        if (foods.includes("chicken")) commonFoods.push("chicken");
+        if (foods.includes("salad")) commonFoods.push("salad");
+        if (foods.includes("oatmeal")) commonFoods.push("oatmeal");
+      }
+    });
+    
+    if (commonFoods.length > 0) {
+      const uniqueFoods = [...new Set(commonFoods)];
+      recentMealsPattern += `\n- Often eats: ${uniqueFoods.slice(0, 3).join(", ")}`;
+    }
+  }
+
+  return `You are Emma, a warm, empathetic nutrition coach having a conversation with ${userName}.${memoryContext || ""}${personalizationContext}${nutritionContext}${achievementContext}${todayMealsContext}${recentMealsPattern}
 
 Your personality:
 - Warm, caring, and non-judgmental

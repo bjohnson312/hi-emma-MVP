@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, X, RefreshCw, Sparkles } from "lucide-react";
+import { Send, X, RefreshCw, Sparkles, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 
 interface NutritionChatWithEmmaProps {
   userId: string;
@@ -36,7 +38,24 @@ export default function NutritionChatWithEmma({
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [conversationComplete, setConversationComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(0);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const { toast } = useToast();
+
+  const {
+    transcript,
+    isListening,
+    isSupported,
+    startListening,
+    stopListening,
+    resetTranscript
+  } = useSpeechRecognition();
+
+  const {
+    speak,
+    stop: stopSpeaking,
+    isSpeaking
+  } = useTextToSpeech();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,7 +63,21 @@ export default function NutritionChatWithEmma({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+
+    if (voiceEnabled && messages.length > lastMessageCountRef.current) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.sender === "emma") {
+        speak(lastMessage.text);
+      }
+    }
+    lastMessageCountRef.current = messages.length;
+  }, [messages, voiceEnabled]);
+
+  useEffect(() => {
+    if (transcript) {
+      setCurrentInput(transcript);
+    }
+  }, [transcript]);
 
   const sendMessage = async () => {
     if (!currentInput.trim() || loading) return;
@@ -117,6 +150,7 @@ export default function NutritionChatWithEmma({
   };
 
   const resetConversation = () => {
+    stopSpeaking();
     setMessages([
       {
         sender: "emma",
@@ -126,6 +160,22 @@ export default function NutritionChatWithEmma({
     ]);
     setSessionId(null);
     setConversationComplete(false);
+  };
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      startListening();
+    }
+  };
+
+  const toggleVoiceOutput = () => {
+    if (voiceEnabled) {
+      stopSpeaking();
+    }
+    setVoiceEnabled(!voiceEnabled);
   };
 
   return (
@@ -142,6 +192,15 @@ export default function NutritionChatWithEmma({
             </div>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={toggleVoiceOutput}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/20"
+              title={voiceEnabled ? "Mute Emma's voice" : "Enable Emma's voice"}
+            >
+              {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </Button>
             <Button
               onClick={resetConversation}
               variant="ghost"
@@ -213,11 +272,21 @@ export default function NutritionChatWithEmma({
         ) : (
           <div className="p-6 border-t border-[#4e8f71]/20">
             <div className="flex gap-2">
+              {isSupported && (
+                <Button
+                  onClick={toggleVoiceInput}
+                  variant={isListening ? "default" : "outline"}
+                  className={isListening ? "bg-red-500 hover:bg-red-600 text-white" : ""}
+                  title={isListening ? "Stop recording" : "Start voice input"}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
               <Input
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message to Emma..."
+                placeholder={isListening ? "Listening..." : "Type your message to Emma..."}
                 disabled={loading}
                 className="flex-1 bg-white/90"
               />
