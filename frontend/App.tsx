@@ -17,6 +17,7 @@ import SettingsView from "./components/views/SettingsView";
 import HelpView from "./components/views/HelpView";
 import ExportView from "./components/views/ExportView";
 import SharedReportView from "./components/views/SharedReportView";
+import { LoginPage } from "./components/LoginPage";
 import { InsightsView } from "./components/views/InsightsView";
 import { MilestonesView } from "./components/views/MilestonesView";
 import { ProviderAccessView } from "./components/views/ProviderAccessView";
@@ -29,17 +30,47 @@ export default function App() {
   const [userName, setUserName] = useState<string>("");
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [showMicSetup, setShowMicSetup] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const userId = "";
-  const userEmail = "";
-  const isSignedIn = true;
+  const [userId, setUserId] = useState(() => {
+    const stored = localStorage.getItem("emma_user_id");
+    return stored || "";
+  });
 
-  useNotificationPolling(userId, isSignedIn);
+  useEffect(() => {
+    const storedAuth = localStorage.getItem("emma_authenticated");
+    const storedEmail = localStorage.getItem("emma_user_email");
+    const storedUserId = localStorage.getItem("emma_user_id");
+    
+    if (storedAuth === "true" && storedUserId) {
+      setIsAuthenticated(true);
+      setUserId(storedUserId);
+      setUserEmail(storedEmail || "");
+    }
+  }, []);
+
+  useNotificationPolling(userId, isAuthenticated);
+
+  const handleLoginSuccess = (userId: string, email: string) => {
+    setUserId(userId);
+    setUserEmail(email);
+    setIsAuthenticated(true);
+    localStorage.setItem("emma_user_id", userId);
+    localStorage.setItem("emma_user_email", email);
+    localStorage.setItem("emma_authenticated", "true");
+  };
 
   const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserId("");
+    setUserEmail("");
     setUserName("");
     setCurrentView("home");
+    localStorage.removeItem("emma_user_id");
+    localStorage.removeItem("emma_user_email");
+    localStorage.removeItem("emma_authenticated");
   };
 
   useEffect(() => {
@@ -70,7 +101,14 @@ export default function App() {
     );
   }
 
-
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
+        <Toaster />
+      </>
+    );
+  }
 
   if (showMicSetup) {
     return (
