@@ -23,23 +23,19 @@ import { ProviderAccessView } from "./components/views/ProviderAccessView";
 import { CareTeamView } from "./components/views/CareTeamView";
 import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
+import { ClerkProvider, SignedIn, SignedOut, SignIn, useClerk } from "./lib/clerk";
 
-export default function App() {
+function AppInner() {
+  const { user } = useClerk();
   const [currentView, setCurrentView] = useState<NavigationView>("home");
   const [userName, setUserName] = useState<string>("");
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [showMicSetup, setShowMicSetup] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [userId] = useState(() => {
-    let stored = localStorage.getItem("emma_user_id");
-    if (!stored) {
-      stored = crypto.randomUUID();
-      localStorage.setItem("emma_user_id", stored);
-    }
-    return stored;
-  });
 
-  useNotificationPolling(userId, true);
+  const userId = user?.id || "";
+
+  useNotificationPolling(userId, !!user);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -197,5 +193,37 @@ export default function App() {
       
       <Toaster />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ClerkProvider>
+      <SignedOut>
+        <div 
+          className="min-h-screen flex items-center justify-center px-4 relative"
+          style={{
+            backgroundImage: "url('/background.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            backgroundAttachment: "fixed"
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
+          <div className="relative z-10">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-[#6656cb] mb-2">Hi, Emma</h1>
+              <p className="text-[#4e8f71]">Your personal wellness companion</p>
+            </div>
+            <SignIn />
+          </div>
+          <Toaster />
+        </div>
+      </SignedOut>
+      <SignedIn>
+        <AppInner />
+      </SignedIn>
+    </ClerkProvider>
   );
 }
