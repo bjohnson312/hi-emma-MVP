@@ -17,41 +17,75 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   const [stats, setStats] = useState<RoutineStats | null>(null);
   const [todayCompleted, setTodayCompleted] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId) {
+    const initialize = async () => {
+      if (!userId) {
+        setError("No user ID provided");
+        setInitializing(false);
+        setLoading(false);
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setInitializing(false);
       loadRoutineData();
-    }
+    };
+
+    initialize();
   }, [userId]);
 
   async function loadRoutineData() {
+    if (!userId) {
+      setError("No user ID available");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    
     try {
       console.log("Loading routine data for user:", userId);
       
-      const [templatesResult, preferenceResult, statsResult, todayResult] = await Promise.all([
-        backend.morning.getRoutineTemplates(),
-        backend.morning.getRoutinePreference({ user_id: userId }),
-        backend.morning.getRoutineStats({ user_id: userId, days: 30 }),
-        backend.morning.getTodayCompletion({ user_id: userId })
-      ]);
+      let templatesResult, preferenceResult, statsResult, todayResult;
+      
+      try {
+        [templatesResult, preferenceResult, statsResult, todayResult] = await Promise.all([
+          backend.morning.getRoutineTemplates(),
+          backend.morning.getRoutinePreference({ user_id: userId }),
+          backend.morning.getRoutineStats({ user_id: userId, days: 30 }),
+          backend.morning.getTodayCompletion({ user_id: userId })
+        ]);
+      } catch (apiError) {
+        console.error("API call failed:", apiError);
+        throw new Error("Failed to connect to the server. Please check your connection.");
+      }
 
-      console.log("Data loaded:", { templates: templatesResult, preference: preferenceResult, stats: statsResult });
+      console.log("Data loaded:", { 
+        templatesCount: templatesResult?.templates?.length, 
+        hasPreference: !!preferenceResult?.preference, 
+        hasStats: !!statsResult 
+      });
 
-      setTemplates(templatesResult.templates || []);
-      setPreference(preferenceResult.preference);
-      setStats(statsResult);
+      if (!templatesResult || !templatesResult.templates) {
+        throw new Error("Failed to load routine templates");
+      }
 
-      if (todayResult.completion?.activities_completed) {
+      setTemplates(templatesResult.templates);
+      setPreference(preferenceResult?.preference || null);
+      setStats(statsResult || null);
+
+      if (todayResult?.completion?.activities_completed) {
         try {
           const activities = typeof todayResult.completion.activities_completed === 'string'
             ? JSON.parse(todayResult.completion.activities_completed)
             : todayResult.completion.activities_completed;
-          setTodayCompleted(activities || []);
+          setTodayCompleted(Array.isArray(activities) ? activities : []);
         } catch (e) {
           console.error("Failed to parse activities:", e);
           setTodayCompleted([]);
@@ -60,15 +94,16 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         setTodayCompleted([]);
       }
 
-      if (!preferenceResult.preference) {
+      if (!preferenceResult?.preference) {
         setShowTemplates(true);
       }
     } catch (error) {
       console.error("Failed to load routine data:", error);
-      setError(error instanceof Error ? error.message : "Failed to load morning routine data.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to load morning routine data.";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to load morning routine data.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -158,6 +193,20 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     }
   }
 
+  if (initializing) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#4e8f71] to-[#364d89] flex items-center justify-center mx-auto mb-4">
+            <Sun className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <h3 className="text-xl font-bold text-[#323e48] mb-2">Morning Routine</h3>
+          <p className="text-[#323e48]/60">Preparing your wellness journey...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!userId) {
     return (
       <div className="space-y-6">
@@ -175,7 +224,14 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           <p className="text-red-600 mb-4">Error loading morning routine</p>
           <p className="text-sm text-[#323e48]/60 mb-4">{error}</p>
           <button
-            onClick={() => loadRoutineData()}
+            onClick={() => {
+              setError(null);
+              setInitializing(true);
+              setTimeout(() => {
+                setInitializing(false);
+                loadRoutineData();
+              }, 500);
+            }}
             className="px-4 py-2 bg-[#4e8f71] text-white rounded-lg hover:bg-[#3d7259]"
           >
             Try Again
@@ -226,6 +282,17 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   }
 
   if (showTemplates || !preference) {
+    if (!templates || templates.length === 0) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+            <p className="text-[#323e48]/60 mb-4">Loading routine templates...</p>
+            <RefreshCw className="w-6 h-6 text-[#4e8f71] animate-spin mx-auto" />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
@@ -235,12 +302,14 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                onClick={() => handleSelectTemplate(template)}
-                className="text-left p-6 rounded-2xl border-2 border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50 transition-all hover:shadow-lg"
-              >
+            {templates.map((template) => {
+              if (!template || !template.id) return null;
+              return (
+                <button
+                  key={template.id}
+                  onClick={() => handleSelectTemplate(template)}
+                  className="text-left p-6 rounded-2xl border-2 border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50 transition-all hover:shadow-lg"
+                >
                 <div className="flex items-start gap-3 mb-3">
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${template.color} flex items-center justify-center flex-shrink-0`}>
                     <span className="text-2xl">{template.icon}</span>
@@ -274,8 +343,9 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
                 {template.id === "custom" && (
                   <p className="text-sm text-[#323e48]/70">Build a routine from scratch with Emma's guidance</p>
                 )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           {preference && (
