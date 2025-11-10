@@ -1,4 +1,5 @@
 import { CLERK_PUBLISHABLE_KEY } from "../config";
+import backend from "~backend/client";
 
 interface ClerkUser {
   id: string;
@@ -48,100 +49,47 @@ class ClerkClient {
   }
 
   async signUp(emailAddress: string, password: string): Promise<ClerkUser> {
-    const response = await fetch(`https://api.clerk.com/v1/client/sign_ups`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.publishableKey}`,
-      },
-      body: JSON.stringify({
-        email_address: emailAddress,
-        password,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.errors?.[0]?.message || 'Sign up failed');
-    }
-
-    const data = await response.json();
+    const data = await backend.auth.signup({ email: emailAddress, password });
     
-    if (data.status === 'complete' && data.created_session_id) {
-      await this.activateSession(data.created_session_id);
-    }
+    this.saveSession(data.userId);
+    localStorage.setItem('emma_user_email', data.email);
 
-    return data.user;
+    return {
+      id: data.userId,
+      email_addresses: [{ email_address: data.email }],
+    };
   }
 
   async signIn(emailAddress: string, password: string): Promise<ClerkUser> {
-    const response = await fetch(`https://api.clerk.com/v1/client/sign_ins`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.publishableKey}`,
-      },
-      body: JSON.stringify({
-        identifier: emailAddress,
-        password,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.errors?.[0]?.message || 'Sign in failed');
-    }
-
-    const data = await response.json();
+    const data = await backend.auth.login({ email: emailAddress, password });
     
-    if (data.status === 'complete' && data.created_session_id) {
-      await this.activateSession(data.created_session_id);
-    }
+    this.saveSession(data.userId);
+    localStorage.setItem('emma_user_email', data.email);
 
-    return data.user;
+    return {
+      id: data.userId,
+      email_addresses: [{ email_address: data.email }],
+    };
   }
 
-  private async activateSession(sessionId: string) {
-    const response = await fetch(`https://api.clerk.com/v1/client/sessions/${sessionId}/tokens`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.publishableKey}`,
-      },
-    });
 
-    if (!response.ok) {
-      throw new Error('Failed to activate session');
-    }
-
-    const data = await response.json();
-    if (data.jwt) {
-      this.saveSession(data.jwt);
-    }
-  }
 
   async getCurrentUser(): Promise<ClerkUser | null> {
     if (!this.sessionToken) {
       return null;
     }
 
-    try {
-      const response = await fetch(`https://api.clerk.com/v1/client/sessions/${this.sessionToken}/user`, {
-        headers: {
-          'Authorization': `Bearer ${this.publishableKey}`,
-        },
-      });
-
-      if (!response.ok) {
-        this.clearSession();
-        return null;
-      }
-
-      this.user = await response.json();
+    const storedEmail = localStorage.getItem('emma_user_email');
+    
+    if (storedEmail) {
+      this.user = {
+        id: this.sessionToken,
+        email_addresses: [{ email_address: storedEmail }],
+      };
       return this.user;
-    } catch (error) {
-      this.clearSession();
-      return null;
     }
+
+    return null;
   }
 
   getToken(): string | null {
