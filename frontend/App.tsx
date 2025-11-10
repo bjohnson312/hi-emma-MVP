@@ -17,25 +17,50 @@ import SettingsView from "./components/views/SettingsView";
 import HelpView from "./components/views/HelpView";
 import ExportView from "./components/views/ExportView";
 import SharedReportView from "./components/views/SharedReportView";
+import { LoginPage } from "./components/LoginPage";
 import { InsightsView } from "./components/views/InsightsView";
 import { MilestonesView } from "./components/views/MilestonesView";
 import { ProviderAccessView } from "./components/views/ProviderAccessView";
 import { CareTeamView } from "./components/views/CareTeamView";
 import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
-import { ClerkProvider, SignedIn, SignedOut, SignIn, useClerk } from "./lib/clerk";
 
-function AppInner() {
-  const { user } = useClerk();
+export default function App() {
   const [currentView, setCurrentView] = useState<NavigationView>("home");
   const [userName, setUserName] = useState<string>("");
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [showMicSetup, setShowMicSetup] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const userId = user?.id || "";
+  const [userId, setUserId] = useState(() => {
+    const stored = localStorage.getItem("emma_user_id");
+    return stored || "";
+  });
 
-  useNotificationPolling(userId, !!user);
+  useEffect(() => {
+    const storedAuth = localStorage.getItem("emma_authenticated");
+    const storedEmail = localStorage.getItem("emma_user_email");
+    const storedUserId = localStorage.getItem("emma_user_id");
+    
+    if (storedAuth === "true" && storedUserId) {
+      setIsAuthenticated(true);
+      setUserId(storedUserId);
+      setUserEmail(storedEmail || "");
+    }
+  }, []);
+
+  useNotificationPolling(userId, isAuthenticated);
+
+  const handleLoginSuccess = (userId: string, email: string) => {
+    setUserId(userId);
+    setUserEmail(email);
+    setIsAuthenticated(true);
+    localStorage.setItem("emma_user_id", userId);
+    localStorage.setItem("emma_user_email", email);
+    localStorage.setItem("emma_authenticated", "true");
+  };
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -60,6 +85,15 @@ function AppInner() {
     return (
       <>
         <SharedReportView shareToken={shareToken} />
+        <Toaster />
+      </>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
         <Toaster />
       </>
     );
@@ -193,37 +227,5 @@ function AppInner() {
       
       <Toaster />
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <ClerkProvider>
-      <SignedOut>
-        <div 
-          className="min-h-screen flex items-center justify-center px-4 relative"
-          style={{
-            backgroundImage: "url('/background.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            backgroundAttachment: "fixed"
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
-          <div className="relative z-10">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-[#6656cb] mb-2">Hi, Emma</h1>
-              <p className="text-[#4e8f71]">Your personal wellness companion</p>
-            </div>
-            <SignIn />
-          </div>
-          <Toaster />
-        </div>
-      </SignedOut>
-      <SignedIn>
-        <AppInner />
-      </SignedIn>
-    </ClerkProvider>
   );
 }
