@@ -183,11 +183,11 @@ export default function App() {
       case "evening-routine":
         return <EveningRoutineView userId={userId} />;
       case "wellness-journal":
-        return <WellnessJournalView userId={userId} />;
+        return <WellnessJournalView userId={userId} onNavigate={(view) => setCurrentView(view as NavigationView)} />;
       case "memories":
         return <MemoriesView userId={userId} />;
       case "progress":
-        return <ProgressView />;
+        return <ProgressView onNavigate={(view) => setCurrentView(view as NavigationView)} />;
       case "insights":
         return <InsightsView />;
       case "milestones":

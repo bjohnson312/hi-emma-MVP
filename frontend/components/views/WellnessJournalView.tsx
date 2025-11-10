@@ -11,11 +11,12 @@ import ChapterInsightsPanel from "../ChapterInsightsPanel";
 
 interface WellnessJournalViewProps {
   userId: string;
+  onNavigate?: (view: string) => void;
 }
 
 type ViewMode = "journal" | "chapters";
 
-export default function WellnessJournalView({ userId }: WellnessJournalViewProps) {
+export default function WellnessJournalView({ userId, onNavigate }: WellnessJournalViewProps) {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>("journal");
   const [chapters, setChapters] = useState<(WellnessChapter & { section_count?: number; progress_percentage?: number })[]>([]);
@@ -236,6 +237,33 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
     }
   }
 
+  function navigateToIncompleteStep() {
+    if (!journeySetup || !onNavigate) return;
+
+    const setup = journeySetup.setup;
+
+    if (!setup.first_conversation) {
+      onNavigate("home");
+    } else if (!setup.user_profile_completed) {
+      onNavigate("settings");
+    } else if (!setup.wellness_journal_setup || !setup.wellness_journal_chapter_created) {
+      setViewMode("chapters");
+      setShowOnboarding(true);
+    } else if (!setup.morning_routine_completed) {
+      onNavigate("morning-routine");
+    } else if (!setup.evening_routine_completed) {
+      onNavigate("evening-routine");
+    } else if (!setup.diet_nutrition_setup) {
+      onNavigate("diet-nutrition");
+    } else if (!setup.doctors_orders_added) {
+      onNavigate("doctors-orders");
+    } else if (!setup.care_team_added) {
+      onNavigate("care-team");
+    } else if (!setup.notifications_configured) {
+      onNavigate("notifications");
+    }
+  }
+
   function getChapterBadge(entry: WellnessJournalEntry) {
     if (!entry.chapter_id) return null;
     
@@ -358,12 +386,7 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
 
               <div className="flex gap-3">
                 <Button
-                  onClick={() => {
-                    if (!journeySetup.setup.wellness_journal_chapter_created) {
-                      setViewMode("chapters");
-                      setShowOnboarding(true);
-                    }
-                  }}
+                  onClick={navigateToIncompleteStep}
                   className="bg-white text-purple-600 hover:bg-white/90 font-bold shadow-lg"
                 >
                   <Rocket className="w-4 h-4 mr-2" />

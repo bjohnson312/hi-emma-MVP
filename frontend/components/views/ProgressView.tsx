@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import backend from "~backend/client";
 import type { GetJourneySetupResponse, WellnessMilestone } from "~backend/journey/types";
 
-export default function ProgressView() {
+export default function ProgressView({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [lastAnalyzed, setLastAnalyzed] = useState<Date | null>(null);
   const [journeySetup, setJourneySetup] = useState<GetJourneySetupResponse | null>(null);
@@ -52,70 +52,80 @@ export default function ProgressView() {
       label: 'Wellness Journal',
       description: 'Track your health journey',
       icon: '📖',
-      color: 'from-green-500 to-green-600'
+      color: 'from-green-500 to-green-600',
+      view: 'wellness-journal'
     },
     {
       key: 'wellness_journal_chapter_created',
       label: 'Wellness Chapter',
       description: 'Create your first goal chapter',
       icon: '📚',
-      color: 'from-teal-500 to-teal-600'
+      color: 'from-teal-500 to-teal-600',
+      view: 'wellness-journal'
     },
     {
       key: 'morning_routine_completed',
       label: 'Morning Routine',
       description: 'Start your day with Emma',
       icon: '🌅',
-      color: 'from-orange-500 to-orange-600'
+      color: 'from-orange-500 to-orange-600',
+      view: 'morning-routine'
     },
     {
       key: 'evening_routine_completed',
       label: 'Evening Routine',
       description: 'Wind down before bed',
       icon: '🌙',
-      color: 'from-indigo-500 to-indigo-600'
+      color: 'from-indigo-500 to-indigo-600',
+      view: 'evening-routine'
     },
     {
       key: 'diet_nutrition_setup',
       label: 'Diet & Nutrition',
       description: 'Track meals and nutrition',
       icon: '🥗',
-      color: 'from-lime-500 to-lime-600'
+      color: 'from-lime-500 to-lime-600',
+      view: 'diet-nutrition'
     },
     {
       key: 'doctors_orders_added',
       label: "Doctor's Orders",
       description: 'Add medical guidance',
       icon: '💊',
-      color: 'from-red-500 to-red-600'
+      color: 'from-red-500 to-red-600',
+      view: 'doctors-orders'
     },
     {
       key: 'care_team_added',
       label: 'Care Team',
       description: 'Connect with your providers',
       icon: '👥',
-      color: 'from-pink-500 to-pink-600'
+      color: 'from-pink-500 to-pink-600',
+      view: 'care-team'
     },
     {
       key: 'notifications_configured',
       label: 'Notifications',
       description: 'Stay on track with reminders',
       icon: '🔔',
-      color: 'from-yellow-500 to-yellow-600'
+      color: 'from-yellow-500 to-yellow-600',
+      view: 'notifications'
     },
     {
       key: 'user_profile_completed',
       label: 'User Profile',
       description: 'Complete your information',
       icon: '👤',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-purple-600',
+      view: 'settings'
     },
     {
       key: 'first_conversation',
       label: 'First Conversation',
       description: 'Chat with Emma',
       icon: '💬',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-blue-500 to-blue-600',
+      view: 'home'
     }
   ];
 
@@ -199,12 +209,18 @@ export default function ProgressView() {
                 {setupSections.map((section) => {
                   const isComplete = journeySetup.setup && (journeySetup.setup as any)[section.key] === true;
                   return (
-                    <div
+                    <button
                       key={section.key}
-                      className={`rounded-xl p-4 border-2 transition-all ${
+                      onClick={() => {
+                        if (!isComplete && onNavigate) {
+                          onNavigate(section.view);
+                        }
+                      }}
+                      disabled={isComplete}
+                      className={`rounded-xl p-4 border-2 transition-all text-left ${
                         isComplete
-                          ? "bg-white/90 border-green-200"
-                          : "bg-white/60 border-[#323e48]/10"
+                          ? "bg-white/90 border-green-200 cursor-default"
+                          : "bg-white/60 border-[#323e48]/10 hover:border-[#4e8f71] hover:shadow-md cursor-pointer"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -221,9 +237,12 @@ export default function ProgressView() {
                             )}
                           </div>
                           <p className="text-xs text-[#323e48]/60">{section.description}</p>
+                          {!isComplete && (
+                            <p className="text-xs text-[#4e8f71] mt-1 font-medium">Click to complete →</p>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
