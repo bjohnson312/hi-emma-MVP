@@ -16,6 +16,8 @@ export interface WellnessJournalEntry {
   source_type?: SourceType;
   source_id?: number;
   ai_generated: boolean;
+  chapter_id?: number;
+  section_id?: number;
   created_at: Date;
   updated_at: Date;
 }

@@ -17,7 +17,7 @@ export const getJournalEntries = api<GetJournalEntriesRequest, GetJournalEntries
     let query = `
       SELECT id, user_id, entry_date, entry_type, title, content, mood_rating,
              energy_level, sleep_quality, tags, metadata, source_type, source_id,
-             ai_generated, created_at, updated_at
+             ai_generated, chapter_id, section_id, created_at, updated_at
       FROM wellness_journal_entries
       WHERE user_id = $1
     `;
