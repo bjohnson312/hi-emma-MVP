@@ -11,6 +11,21 @@ interface MorningRoutineViewProps {
   userId: string;
 }
 
+function parseActivities(activities: any): MorningRoutineActivity[] {
+  if (Array.isArray(activities)) {
+    return activities;
+  }
+  if (typeof activities === 'string') {
+    try {
+      const parsed = JSON.parse(activities);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export default function MorningRoutineView({ userId }: MorningRoutineViewProps) {
   const { toast } = useToast();
   const [showChat, setShowChat] = useState(false);
@@ -36,7 +51,16 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       ]);
 
       setTemplates(templatesRes.templates || []);
-      setRoutine(preferenceRes.preference || null);
+      
+      if (preferenceRes.preference) {
+        const parsed = {
+          ...preferenceRes.preference,
+          activities: parseActivities(preferenceRes.preference.activities)
+        };
+        setRoutine(parsed);
+      } else {
+        setRoutine(null);
+      }
 
       if (todayRes.completion?.activities_completed) {
         try {
@@ -70,7 +94,11 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         duration_minutes: template.duration_minutes
       });
 
-      setRoutine(saved);
+      const parsed = {
+        ...saved,
+        activities: parseActivities(saved.activities)
+      };
+      setRoutine(parsed);
       setShowTemplates(false);
       toast({
         title: "Routine Saved!",
@@ -87,7 +115,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   }
 
   async function toggleActivity(activityId: string) {
-    if (!routine) return;
+    if (!routine || !Array.isArray(routine.activities)) return;
 
     const newCompleted = completedToday.includes(activityId)
       ? completedToday.filter(id => id !== activityId)
@@ -116,7 +144,8 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   function startEdit() {
     if (!routine) return;
     setEditMode(true);
-    setEditedActivities([...routine.activities]);
+    const activities = Array.isArray(routine.activities) ? routine.activities : [];
+    setEditedActivities([...activities]);
     setRoutineName(routine.routine_name || "");
   }
 
@@ -167,7 +196,11 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         duration_minutes: totalDuration
       });
 
-      setRoutine(saved);
+      const parsed = {
+        ...saved,
+        activities: parseActivities(saved.activities)
+      };
+      setRoutine(parsed);
       setEditMode(false);
       toast({
         title: "Routine Updated!",
@@ -406,7 +439,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           </Button>
         </div>
 
-        {routine && routine.activities && routine.activities.length > 0 && (
+        {routine && routine.activities && Array.isArray(routine.activities) && routine.activities.length > 0 && (
           <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 border border-[#4e8f71]/20 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -478,7 +511,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
               })}
             </div>
 
-            {completedToday.length === routine.activities.length && routine.activities.length > 0 && (
+            {Array.isArray(routine.activities) && completedToday.length === routine.activities.length && routine.activities.length > 0 && (
               <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-green-500 to-teal-500 text-white text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Sparkles className="w-5 h-5" />
@@ -491,7 +524,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           </div>
         )}
 
-        {(!routine || !routine.activities || routine.activities.length === 0) && (
+        {(!routine || !routine.activities || !Array.isArray(routine.activities) || routine.activities.length === 0) && (
           <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 border border-[#4e8f71]/20 mb-6">
             <h3 className="font-semibold text-[#323e48] mb-4">Set Up Your Routine</h3>
             <p className="text-sm text-[#323e48]/70 mb-4">
