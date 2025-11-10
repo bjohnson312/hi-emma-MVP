@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Sun, Flame, TrendingUp, Calendar, CheckCircle2, Circle, Sparkles, MessageSquare, X, Clock, Target, RefreshCw } from "lucide-react";
+import { Sun, Flame, TrendingUp, Calendar, CheckCircle2, Circle, Sparkles, MessageSquare, X, Clock, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
-import type { RoutineTemplate, MorningRoutinePreference, RoutineStats, MorningRoutineActivity } from "~backend/morning/routine_types";
+import type { RoutineTemplate, MorningRoutinePreference, RoutineStats } from "~backend/morning/routine_types";
 import { useToast } from "@/components/ui/use-toast";
 import ConversationalCheckIn from "../ConversationalCheckIn";
 
@@ -14,22 +13,18 @@ interface MorningRoutineViewProps {
 export default function MorningRoutineView({ userId }: MorningRoutineViewProps) {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<RoutineTemplate | null>(null);
   const [preference, setPreference] = useState<MorningRoutinePreference | null>(null);
   const [stats, setStats] = useState<RoutineStats | null>(null);
   const [todayCompleted, setTodayCompleted] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [wakeTime, setWakeTime] = useState("");
 
   useEffect(() => {
     loadRoutineData();
   }, [userId]);
 
   async function loadRoutineData() {
-    setLoading(true);
     try {
       const [templatesResult, preferenceResult, statsResult] = await Promise.all([
         backend.morning.getRoutineTemplates(),
@@ -40,10 +35,6 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       setTemplates(templatesResult.templates);
       setPreference(preferenceResult.preference);
       setStats(statsResult);
-
-      if (preferenceResult.preference) {
-        setWakeTime(preferenceResult.preference.wake_time || "");
-      }
 
       if (!preferenceResult.preference) {
         setShowTemplates(true);
@@ -61,27 +52,20 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   }
 
   async function handleSelectTemplate(template: RoutineTemplate) {
-    setSelectedTemplate(template);
-    if (template.id !== "custom") {
-      await handleSaveRoutine(template);
+    if (template.id === "custom") {
+      setShowChat(true);
+      setShowTemplates(false);
+      return;
     }
-  }
 
-  async function handleSaveRoutine(template: RoutineTemplate) {
-    setSaving(true);
     try {
-      console.log("Saving routine:", template);
-      
       const newPreference = await backend.morning.createRoutinePreference({
         user_id: userId,
         routine_name: template.name,
         activities: template.activities,
-        wake_time: wakeTime || undefined,
         duration_minutes: template.duration_minutes
       });
 
-      console.log("Routine saved:", newPreference);
-      
       setPreference(newPreference);
       setShowTemplates(false);
       
@@ -91,15 +75,13 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       });
 
       await loadRoutineData();
-      setSaving(false);
     } catch (error) {
       console.error("Failed to save routine:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save routine.",
+        description: "Failed to save routine.",
         variant: "destructive"
       });
-      setSaving(false);
     }
   }
 
@@ -138,19 +120,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     return (
       <div className="space-y-6">
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
-          <RefreshCw className="w-8 h-8 text-[#4e8f71] animate-spin mx-auto mb-4" />
           <p className="text-[#323e48]/60">Loading your morning routine...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (saving) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
-          <Sparkles className="w-8 h-8 text-[#4e8f71] animate-pulse mx-auto mb-4" />
-          <p className="text-[#323e48]/60">Setting up your routine...</p>
         </div>
       </div>
     );
@@ -196,11 +166,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
               <button
                 key={template.id}
                 onClick={() => handleSelectTemplate(template)}
-                className={`text-left p-6 rounded-2xl border-2 transition-all hover:shadow-lg ${
-                  selectedTemplate?.id === template.id
-                    ? "border-[#4e8f71] bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10"
-                    : "border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50"
-                }`}
+                className="text-left p-6 rounded-2xl border-2 border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50 transition-all hover:shadow-lg"
               >
                 <div className="flex items-start gap-3 mb-3">
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${template.color} flex items-center justify-center flex-shrink-0`}>
