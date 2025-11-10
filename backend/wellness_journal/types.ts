@@ -105,3 +105,121 @@ export interface JournalStats {
   streak_days: number;
   last_entry_date?: Date;
 }
+
+export interface WellnessChapter {
+  id: number;
+  user_id: string;
+  title: string;
+  description?: string;
+  motivation?: string;
+  target_outcome?: string;
+  start_date: Date;
+  completion_vision?: string;
+  is_active: boolean;
+  is_completed: boolean;
+  completed_at?: Date;
+  order_index: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface WellnessSection {
+  id: number;
+  chapter_id: number;
+  title: string;
+  description?: string;
+  habit_type?: string;
+  tracking_frequency?: "daily" | "weekly" | "as_needed";
+  target_count?: number;
+  is_active: boolean;
+  order_index: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface SectionLog {
+  id: number;
+  section_id: number;
+  user_id: string;
+  log_date: Date;
+  completed: boolean;
+  notes?: string;
+  metadata?: Record<string, any>;
+  created_at: Date;
+}
+
+export interface CreateChapterRequest {
+  user_id: string;
+  title: string;
+  description?: string;
+  motivation?: string;
+  target_outcome?: string;
+  completion_vision?: string;
+}
+
+export interface UpdateChapterRequest {
+  chapter_id: number;
+  user_id: string;
+  title?: string;
+  description?: string;
+  motivation?: string;
+  target_outcome?: string;
+  completion_vision?: string;
+  is_active?: boolean;
+  is_completed?: boolean;
+}
+
+export interface CreateSectionRequest {
+  chapter_id: number;
+  user_id: string;
+  title: string;
+  description?: string;
+  habit_type?: string;
+  tracking_frequency?: "daily" | "weekly" | "as_needed";
+  target_count?: number;
+}
+
+export interface UpdateSectionRequest {
+  section_id: number;
+  user_id: string;
+  title?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface LogSectionCompletionRequest {
+  section_id: number;
+  user_id: string;
+  completed: boolean;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface GetChaptersRequest {
+  user_id: string;
+  include_completed?: boolean;
+}
+
+export interface GetChaptersResponse {
+  chapters: (WellnessChapter & { section_count?: number; progress_percentage?: number })[];
+}
+
+export interface GetChapterDetailsRequest {
+  chapter_id: number;
+  user_id: string;
+}
+
+export interface GetChapterDetailsResponse {
+  chapter: WellnessChapter;
+  sections: (WellnessSection & { completion_count?: number; completion_percentage?: number })[];
+  recent_entries: WellnessJournalEntry[];
+  progress_percentage: number;
+}
+
+export interface ChapterInsight {
+  chapter_id: number;
+  insight_text: string;
+  metric_type: string;
+  metric_value: any;
+  generated_at: Date;
+}

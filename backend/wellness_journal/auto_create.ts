@@ -1,5 +1,6 @@
 import db from "../db";
 import type { CreateJournalEntryRequest, WellnessJournalEntry, SourceType } from "./types";
+import { autoLinkEntryToChapter } from "./link_entry_to_chapter";
 
 export async function createJournalEntry(req: CreateJournalEntryRequest): Promise<WellnessJournalEntry> {
   const {
@@ -52,6 +53,10 @@ export async function createJournalEntry(req: CreateJournalEntryRequest): Promis
               energy_level, sleep_quality, tags, metadata, source_type, source_id,
               ai_generated, created_at, updated_at
   `;
+
+  if (entry && source_type) {
+    await autoLinkEntryToChapter(user_id, entry.id, source_type);
+  }
 
   return entry!;
 }

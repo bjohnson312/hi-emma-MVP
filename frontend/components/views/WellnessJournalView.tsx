@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X } from "lucide-react";
+import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X, ChevronRight, Target, CheckCircle2, Circle, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
-import type { WellnessJournalEntry, JournalStats } from "~backend/wellness_journal/types";
+import type { WellnessJournalEntry, JournalStats, WellnessChapter, WellnessSection } from "~backend/wellness_journal/types";
 import { useToast } from "@/components/ui/use-toast";
+import WellnessJournalOnboarding from "../WellnessJournalOnboarding";
+import ChapterInsightsPanel from "../ChapterInsightsPanel";
 
 interface WellnessJournalViewProps {
   userId: string;
@@ -12,9 +14,18 @@ interface WellnessJournalViewProps {
 
 export default function WellnessJournalView({ userId }: WellnessJournalViewProps) {
   const { toast } = useToast();
+  const [chapters, setChapters] = useState<(WellnessChapter & { section_count?: number; progress_percentage?: number })[]>([]);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [chapterDetails, setChapterDetails] = useState<{
+    chapter: WellnessChapter;
+    sections: (WellnessSection & { completion_count?: number; completion_percentage?: number })[];
+    recent_entries: WellnessJournalEntry[];
+    progress_percentage: number;
+  } | null>(null);
   const [entries, setEntries] = useState<WellnessJournalEntry[]>([]);
   const [stats, setStats] = useState<JournalStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [filter, setFilter] = useState<"all" | "daily_summary" | "event" | "insight">("all");
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState(false);
@@ -24,24 +35,41 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
 
   useEffect(() => {
     loadJournalData();
-  }, [filter]);
+  }, []);
+
+  useEffect(() => {
+    if (selectedChapter) {
+      loadChapterDetails(selectedChapter);
+    }
+  }, [selectedChapter]);
 
   async function loadJournalData() {
     setLoading(true);
     try {
-      const [entriesResult, statsResult] = await Promise.all([
+      const [chaptersResult, statsResult, entriesResult] = await Promise.all([
+        backend.wellness_journal.getChapters({
+          user_id: userId,
+          include_completed: false
+        }),
+        backend.wellness_journal.getJournalStats({
+          user_id: userId
+        }),
         backend.wellness_journal.getJournalEntries({
           user_id: userId,
           entry_type: filter === "all" ? undefined : filter,
           limit: 100
-        }),
-        backend.wellness_journal.getJournalStats({
-          user_id: userId
         })
       ]);
 
-      setEntries(entriesResult.entries);
+      setChapters(chaptersResult.chapters);
       setStats(statsResult);
+      setEntries(entriesResult.entries);
+
+      if (chaptersResult.chapters.length === 0) {
+        setShowOnboarding(true);
+      } else if (!selectedChapter && chaptersResult.chapters.length > 0) {
+        setSelectedChapter(chaptersResult.chapters[0].id);
+      }
     } catch (error) {
       console.error("Failed to load journal:", error);
       toast({
@@ -51,6 +79,23 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadChapterDetails(chapterId: number) {
+    try {
+      const details = await backend.wellness_journal.getChapterDetails({
+        chapter_id: chapterId,
+        user_id: userId
+      });
+      setChapterDetails(details);
+    } catch (error) {
+      console.error("Failed to load chapter details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load chapter details.",
+        variant: "destructive"
+      });
     }
   }
 
@@ -156,6 +201,27 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
     }
   }
 
+  async function handleToggleSectionLog(sectionId: number, completed: boolean) {
+    try {
+      await backend.wellness_journal.logSectionCompletion({
+        section_id: sectionId,
+        user_id: userId,
+        completed
+      });
+
+      if (selectedChapter) {
+        await loadChapterDetails(selectedChapter);
+      }
+    } catch (error) {
+      console.error("Failed to log section:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update habit tracking.",
+        variant: "destructive"
+      });
+    }
+  }
+
   function groupEntriesByDate(entries: WellnessJournalEntry[]): Map<string, WellnessJournalEntry[]> {
     const grouped = new Map<string, WellnessJournalEntry[]>();
     
@@ -170,7 +236,7 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
     return grouped;
   }
 
-  const groupedEntries = groupEntriesByDate(entries);
+  const groupedEntries = groupEntriesByDate(chapterDetails?.recent_entries || entries);
 
   function getEntryIcon(entryType: string) {
     switch (entryType) {
@@ -198,6 +264,18 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
     }
   }
 
+  if (showOnboarding) {
+    return (
+      <WellnessJournalOnboarding 
+        userId={userId} 
+        onComplete={() => {
+          setShowOnboarding(false);
+          loadJournalData();
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
@@ -207,33 +285,17 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
               <BookOpen className="w-6 h-6 text-[#4e8f71]" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#323e48]">Wellness Journal</h2>
-              <p className="text-sm text-[#4e8f71]">Your ongoing health story</p>
+              <h2 className="text-2xl font-bold text-[#323e48]">Your Wellness Book</h2>
+              <p className="text-sm text-[#4e8f71]">Writing your health transformation story</p>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button
-              onClick={() => setShowAddEntry(!showAddEntry)}
+              onClick={() => setShowOnboarding(true)}
               className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Entry
-            </Button>
-            <Button
-              onClick={handleAnalyzeTrends}
-              disabled={analyzingTrends}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-xl"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              {analyzingTrends ? "Analyzing..." : "Analyze Trends"}
-            </Button>
-            <Button
-              onClick={handleGenerateDailySummary}
-              disabled={generatingSummary}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-xl"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              {generatingSummary ? "Generating..." : "Generate Summary"}
+              New Chapter
             </Button>
           </div>
         </div>
@@ -256,23 +318,21 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
               <p className="text-2xl font-bold text-[#364d89]">{stats.streak_days} days</p>
             </div>
 
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Target className="w-4 h-4 text-purple-600" />
+                <span className="text-xs text-[#323e48]/60">Active Chapters</span>
+              </div>
+              <p className="text-2xl font-bold text-purple-600">{chapters.length}</p>
+            </div>
+
             {stats.avg_mood_rating && (
-              <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-4">
+              <div className="bg-gradient-to-r from-pink-50 to-pink-100 border border-pink-200 rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <Heart className="w-4 h-4 text-purple-600" />
+                  <Heart className="w-4 h-4 text-pink-600" />
                   <span className="text-xs text-[#323e48]/60">Avg Mood</span>
                 </div>
-                <p className="text-2xl font-bold text-purple-600">{stats.avg_mood_rating}/10</p>
-              </div>
-            )}
-
-            {stats.avg_energy_level && (
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-2xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-4 h-4 text-orange-600" />
-                  <span className="text-xs text-[#323e48]/60">Avg Energy</span>
-                </div>
-                <p className="text-2xl font-bold text-orange-600">{stats.avg_energy_level}/5</p>
+                <p className="text-2xl font-bold text-pink-600">{stats.avg_mood_rating}/10</p>
               </div>
             )}
 
@@ -286,176 +346,213 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-4 h-4 text-[#323e48]/60" />
-          <span className="text-sm text-[#323e48]/60">Filter:</span>
-          {["all", "daily_summary", "event", "insight"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f as any)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                filter === f
-                  ? "bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
-                  : "bg-white/90 text-[#323e48]/60 hover:bg-[#4e8f71]/10"
-              }`}
-            >
-              {f === "all" ? "All" : f.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
-            </button>
-          ))}
-        </div>
-
-        {showAddEntry && (
-          <div className="mt-6 bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 border border-[#4e8f71]/20">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[#323e48] text-lg">Add Manual Entry</h3>
+        <div className="mb-6">
+          <h3 className="font-bold text-[#323e48] mb-3 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-[#4e8f71]" />
+            Your Chapters
+          </h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            {chapters.map((chapter) => (
               <button
-                onClick={() => setShowAddEntry(false)}
-                className="text-[#323e48]/60 hover:text-[#323e48] transition-colors"
+                key={chapter.id}
+                onClick={() => setSelectedChapter(chapter.id)}
+                className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                  selectedChapter === chapter.id
+                    ? "border-[#4e8f71] bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 shadow-lg"
+                    : "border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50"
+                }`}
               >
-                <X className="w-5 h-5" />
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-bold text-[#323e48]">{chapter.title}</h4>
+                  <ChevronRight className={`w-5 h-5 text-[#4e8f71] transition-transform ${selectedChapter === chapter.id ? "rotate-90" : ""}`} />
+                </div>
+                <p className="text-sm text-[#323e48]/70 mb-3">{chapter.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#323e48]/60">{chapter.section_count || 0} habits</span>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-24 bg-[#323e48]/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                        style={{ width: `${chapter.progress_percentage || 0}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-[#4e8f71]">{Math.round(chapter.progress_percentage || 0)}%</span>
+                  </div>
+                </div>
               </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-[#323e48] mb-1 block">Title</label>
-                <Input
-                  value={newEntry.title}
-                  onChange={(e) => setNewEntry({ ...newEntry, title: e.target.value })}
-                  placeholder="What happened today?"
-                  className="bg-white/90 border-[#4e8f71]/20"
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-[#323e48] mb-1 block">Content</label>
-                <textarea
-                  value={newEntry.content}
-                  onChange={(e) => setNewEntry({ ...newEntry, content: e.target.value })}
-                  placeholder="Describe your experience, feelings, or observations..."
-                  rows={4}
-                  className="w-full px-3 py-2 bg-white/90 border border-[#4e8f71]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4e8f71] resize-none"
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-[#323e48] mb-1 block">Tags (comma-separated)</label>
-                <Input
-                  value={newEntry.tags}
-                  onChange={(e) => setNewEntry({ ...newEntry, tags: e.target.value })}
-                  placeholder="wellness, personal, reflection"
-                  className="bg-white/90 border-[#4e8f71]/20"
-                />
-              </div>
-              
-              <Button
-                onClick={handleAddManualEntry}
-                disabled={addingEntry}
-                className="w-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
-              >
-                {addingEntry ? "Adding Entry..." : "Add Entry"}
-              </Button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
-          <RefreshCw className="w-8 h-8 text-[#4e8f71] animate-spin mx-auto mb-4" />
-          <p className="text-[#323e48]/60">Loading your wellness journal...</p>
-        </div>
-      ) : entries.length === 0 ? (
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
-          <BookOpen className="w-16 h-16 text-[#323e48]/20 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-[#323e48] mb-2">No Journal Entries Yet</h3>
-          <p className="text-[#323e48]/60 mb-6">
-            Your wellness journal will automatically populate as you use the app.
-          </p>
-          <Button
-            onClick={handleGenerateDailySummary}
-            disabled={generatingSummary}
-            className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Create Your First Entry
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {Array.from(groupedEntries.entries()).map(([date, dateEntries]) => (
-            <div key={date} className="relative">
-              <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md rounded-2xl px-4 py-2 mb-4 shadow-md border border-white/40 inline-flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#4e8f71]" />
-                <span className="font-semibold text-[#323e48]">{date}</span>
-                <span className="text-xs text-[#323e48]/60">({dateEntries.length} {dateEntries.length === 1 ? "entry" : "entries"})</span>
+      {chapterDetails && selectedChapter && (
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+          <div className="mb-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-2xl font-bold text-[#323e48] mb-1">{chapterDetails.chapter.title}</h3>
+                <p className="text-[#323e48]/70">{chapterDetails.chapter.description}</p>
               </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-[#4e8f71] mb-1">{chapterDetails.progress_percentage}%</div>
+                <div className="text-xs text-[#323e48]/60">Progress</div>
+              </div>
+            </div>
 
-              <div className="space-y-4 pl-6 border-l-2 border-[#4e8f71]/30">
-                {dateEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={`bg-gradient-to-r ${getEntryColor(entry.entry_type)} rounded-2xl p-5 shadow-md border relative -ml-6`}
-                  >
-                    <div className="absolute -left-3 top-6 bg-white rounded-full p-1.5 border-2 border-[#4e8f71]/30 shadow-md">
-                      {getEntryIcon(entry.entry_type)}
+            {chapterDetails.chapter.motivation && (
+              <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <Heart className="w-5 h-5 text-purple-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-[#323e48] text-sm mb-1">Your Motivation</h4>
+                    <p className="text-sm text-[#323e48]/80">{chapterDetails.chapter.motivation}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mb-6">
+            <h4 className="font-bold text-[#323e48] mb-3 flex items-center gap-2">
+              <Target className="w-5 h-5 text-[#4e8f71]" />
+              Habits & Routines
+            </h4>
+            <div className="space-y-3">
+              {chapterDetails.sections.map((section) => (
+                <div
+                  key={section.id}
+                  className="bg-white/90 border border-[#323e48]/10 rounded-xl p-4 hover:border-[#4e8f71]/30 transition-all"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <button
+                        onClick={() => handleToggleSectionLog(section.id, true)}
+                        className="mt-0.5"
+                      >
+                        <CheckCircle2 className="w-5 h-5 text-[#4e8f71]" />
+                      </button>
+                      <div className="flex-1">
+                        <h5 className="font-bold text-[#323e48] mb-1">{section.title}</h5>
+                        <p className="text-sm text-[#323e48]/70 mb-2">{section.description}</p>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-[#323e48]/60">
+                            {section.tracking_frequency}
+                          </span>
+                          {section.target_count && (
+                            <span className="text-xs text-[#323e48]/60">
+                              {section.completion_count || 0}/{section.target_count} completed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {section.completion_percentage !== undefined && (
+                      <div className="text-right ml-4">
+                        <div className="text-lg font-bold text-[#4e8f71]">{Math.round(section.completion_percentage)}%</div>
+                        <div className="h-1.5 w-16 bg-[#323e48]/10 rounded-full overflow-hidden mt-1">
+                          <div 
+                            className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                            style={{ width: `${section.completion_percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <ChapterInsightsPanel 
+              chapterId={selectedChapter}
+              userId={userId}
+              chapterTitle={chapterDetails.chapter.title}
+            />
+          </div>
+
+          {chapterDetails.recent_entries.length > 0 && (
+            <div>
+              <h4 className="font-bold text-[#323e48] mb-3 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#4e8f71]" />
+                Recent Entries
+              </h4>
+              <div className="space-y-8">
+                {Array.from(groupedEntries.entries()).map(([date, dateEntries]) => (
+                  <div key={date} className="relative">
+                    <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md rounded-2xl px-4 py-2 mb-4 shadow-md border border-white/40 inline-flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#4e8f71]" />
+                      <span className="font-semibold text-[#323e48]">{date}</span>
                     </div>
 
-                    <div className="ml-6">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-bold text-[#323e48] mb-1">{entry.title}</h3>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {entry.tags?.map((tag) => (
-                              <span
-                                key={tag}
-                                className="text-xs px-2 py-0.5 rounded-full bg-white/60 text-[#323e48]/80"
-                              >
-                                {tag}
+                    <div className="space-y-4 pl-6 border-l-2 border-[#4e8f71]/30">
+                      {dateEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className={`bg-gradient-to-r ${getEntryColor(entry.entry_type)} rounded-2xl p-5 shadow-md border relative -ml-6`}
+                        >
+                          <div className="absolute -left-3 top-6 bg-white rounded-full p-1.5 border-2 border-[#4e8f71]/30 shadow-md">
+                            {getEntryIcon(entry.entry_type)}
+                          </div>
+
+                          <div className="ml-6">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="font-bold text-[#323e48] mb-1">{entry.title}</h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {entry.tags?.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="text-xs px-2 py-0.5 rounded-full bg-white/60 text-[#323e48]/80"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {entry.ai_generated && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-200 text-purple-800 flex items-center gap-1">
+                                      <Sparkles className="w-3 h-3" />
+                                      AI Generated
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-xs text-[#323e48]/60 whitespace-nowrap">
+                                {new Date(entry.created_at).toLocaleTimeString()}
                               </span>
-                            ))}
-                            {entry.ai_generated && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-200 text-purple-800 flex items-center gap-1">
-                                <Sparkles className="w-3 h-3" />
-                                AI Generated
-                              </span>
+                            </div>
+
+                            <p className="text-[#323e48] whitespace-pre-wrap">{entry.content}</p>
+
+                            {(entry.mood_rating || entry.energy_level || entry.sleep_quality) && (
+                              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/40">
+                                {entry.mood_rating && (
+                                  <div className="flex items-center gap-2">
+                                    <Heart className="w-4 h-4 text-purple-600" />
+                                    <span className="text-sm text-[#323e48]">Mood: {entry.mood_rating}/10</span>
+                                  </div>
+                                )}
+                                {entry.energy_level && (
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-orange-600" />
+                                    <span className="text-sm text-[#323e48]">Energy: {entry.energy_level}/5</span>
+                                  </div>
+                                )}
+                                {entry.sleep_quality && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-[#323e48]">Sleep: {entry.sleep_quality}</span>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
-                        <span className="text-xs text-[#323e48]/60 whitespace-nowrap">
-                          {new Date(entry.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
-
-                      <p className="text-[#323e48] whitespace-pre-wrap">{entry.content}</p>
-
-                      {(entry.mood_rating || entry.energy_level || entry.sleep_quality) && (
-                        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/40">
-                          {entry.mood_rating && (
-                            <div className="flex items-center gap-2">
-                              <Heart className="w-4 h-4 text-purple-600" />
-                              <span className="text-sm text-[#323e48]">Mood: {entry.mood_rating}/10</span>
-                            </div>
-                          )}
-                          {entry.energy_level && (
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-orange-600" />
-                              <span className="text-sm text-[#323e48]">Energy: {entry.energy_level}/5</span>
-                            </div>
-                          )}
-                          {entry.sleep_quality && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-[#323e48]">Sleep: {entry.sleep_quality}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
