@@ -17,7 +17,6 @@ import SettingsView from "./components/views/SettingsView";
 import HelpView from "./components/views/HelpView";
 import ExportView from "./components/views/ExportView";
 import SharedReportView from "./components/views/SharedReportView";
-import { LoginPage } from "./components/LoginPage";
 import { InsightsView } from "./components/views/InsightsView";
 import { MilestonesView } from "./components/views/MilestonesView";
 import { ProviderAccessView } from "./components/views/ProviderAccessView";
@@ -30,43 +29,17 @@ export default function App() {
   const [userName, setUserName] = useState<string>("");
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [showMicSetup, setShowMicSetup] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const [userId, setUserId] = useState(() => {
-    const stored = localStorage.getItem("emma_user_id");
-    return stored || "";
+  const [userId] = useState(() => {
+    let stored = localStorage.getItem("emma_user_id");
+    if (!stored) {
+      stored = crypto.randomUUID();
+      localStorage.setItem("emma_user_id", stored);
+    }
+    return stored;
   });
 
-  useEffect(() => {
-    const storedAuth = localStorage.getItem("emma_authenticated");
-    const storedEmail = localStorage.getItem("emma_user_email");
-    const storedUserId = localStorage.getItem("emma_user_id");
-    const demoMode = localStorage.getItem("emma_demo_mode");
-    
-    if (demoMode === "true" && storedUserId) {
-      setIsAuthenticated(true);
-      setUserId(storedUserId);
-      setUserEmail("demo@example.com");
-      localStorage.setItem("emma_authenticated", "true");
-    } else if (storedAuth === "true" && storedUserId) {
-      setIsAuthenticated(true);
-      setUserId(storedUserId);
-      setUserEmail(storedEmail || "");
-    }
-  }, []);
-
-  useNotificationPolling(userId, isAuthenticated);
-
-  const handleLoginSuccess = (userId: string, email: string) => {
-    setUserId(userId);
-    setUserEmail(email);
-    setIsAuthenticated(true);
-    localStorage.setItem("emma_user_id", userId);
-    localStorage.setItem("emma_user_email", email);
-    localStorage.setItem("emma_authenticated", "true");
-  };
+  useNotificationPolling(userId, true);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -91,15 +64,6 @@ export default function App() {
     return (
       <>
         <SharedReportView shareToken={shareToken} />
-        <Toaster />
-      </>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <>
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
         <Toaster />
       </>
     );
