@@ -17,13 +17,14 @@ import SettingsView from "./components/views/SettingsView";
 import HelpView from "./components/views/HelpView";
 import ExportView from "./components/views/ExportView";
 import SharedReportView from "./components/views/SharedReportView";
-import { LoginPage } from "./components/LoginPage";
+import { ClerkLoginPage } from "./components/ClerkLoginPage";
 import { InsightsView } from "./components/views/InsightsView";
 import { MilestonesView } from "./components/views/MilestonesView";
 import { ProviderAccessView } from "./components/views/ProviderAccessView";
 import { CareTeamView } from "./components/views/CareTeamView";
 import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
+import { clerkClient } from "./lib/clerk-client";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<NavigationView>("home");
@@ -40,15 +41,29 @@ export default function App() {
   });
 
   useEffect(() => {
-    const storedAuth = localStorage.getItem("emma_authenticated");
-    const storedEmail = localStorage.getItem("emma_user_email");
-    const storedUserId = localStorage.getItem("emma_user_id");
+    const checkAuth = async () => {
+      if (clerkClient.isSignedIn()) {
+        const user = await clerkClient.getCurrentUser();
+        if (user) {
+          setIsAuthenticated(true);
+          setUserId(user.id);
+          setUserEmail(user.email_addresses[0]?.email_address || "");
+          return;
+        }
+      }
+      
+      const storedAuth = localStorage.getItem("emma_authenticated");
+      const storedEmail = localStorage.getItem("emma_user_email");
+      const storedUserId = localStorage.getItem("emma_user_id");
+      
+      if (storedAuth === "true" && storedUserId) {
+        setIsAuthenticated(true);
+        setUserId(storedUserId);
+        setUserEmail(storedEmail || "");
+      }
+    };
     
-    if (storedAuth === "true" && storedUserId) {
-      setIsAuthenticated(true);
-      setUserId(storedUserId);
-      setUserEmail(storedEmail || "");
-    }
+    checkAuth();
   }, []);
 
   useNotificationPolling(userId, isAuthenticated);
@@ -63,6 +78,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    clerkClient.signOut();
     setIsAuthenticated(false);
     setUserId("");
     setUserEmail("");
@@ -104,7 +120,7 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <>
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
+        <ClerkLoginPage onLoginSuccess={handleLoginSuccess} />
         <Toaster />
       </>
     );
