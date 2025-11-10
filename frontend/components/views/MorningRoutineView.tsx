@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sun, Flame, TrendingUp, Calendar, CheckCircle2, Circle, Sparkles, MessageSquare, X, Clock, Target } from "lucide-react";
+import { Sun, Flame, TrendingUp, Calendar, CheckCircle2, Circle, Sparkles, MessageSquare, X, Clock, Target, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
@@ -70,6 +70,8 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   async function handleSaveRoutine(template: RoutineTemplate) {
     setSaving(true);
     try {
+      console.log("Saving routine:", template);
+      
       const newPreference = await backend.morning.createRoutinePreference({
         user_id: userId,
         routine_name: template.name,
@@ -78,6 +80,8 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         duration_minutes: template.duration_minutes
       });
 
+      console.log("Routine saved:", newPreference);
+      
       setPreference(newPreference);
       setShowTemplates(false);
       
@@ -91,10 +95,9 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       console.error("Failed to save routine:", error);
       toast({
         title: "Error",
-        description: "Failed to save routine.",
+        description: error instanceof Error ? error.message : "Failed to save routine.",
         variant: "destructive"
       });
-    } finally {
       setSaving(false);
     }
   }
@@ -128,6 +131,28 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     } catch (error) {
       console.error("Failed to log completion:", error);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <RefreshCw className="w-8 h-8 text-[#4e8f71] animate-spin mx-auto mb-4" />
+          <p className="text-[#323e48]/60">Loading your morning routine...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (saving) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <Sparkles className="w-8 h-8 text-[#4e8f71] animate-pulse mx-auto mb-4" />
+          <p className="text-[#323e48]/60">Setting up your routine...</p>
+        </div>
+      </div>
+    );
   }
 
   if (showChat) {
