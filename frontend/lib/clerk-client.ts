@@ -155,6 +155,25 @@ class ClerkClient {
   isSignedIn(): boolean {
     return this.sessionToken !== null;
   }
+
+  signInWithOAuth(provider: 'oauth_google' | 'oauth_apple' | 'oauth_facebook') {
+    const redirectUrl = `${window.location.origin}/oauth-callback`;
+    const clerkFrontendApi = this.publishableKey.replace('pk_test_', '').replace('pk_live_', '');
+    const baseUrl = `https://${clerkFrontendApi}`;
+    
+    const oauthUrl = `${baseUrl}/v1/oauth/${provider}/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
+    
+    window.location.href = oauthUrl;
+  }
+
+  async handleOAuthCallback(token: string): Promise<ClerkUser> {
+    this.saveSession(token);
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new Error('Failed to get user after OAuth');
+    }
+    return user;
+  }
 }
 
 export const clerkClient = new ClerkClient(CLERK_PUBLISHABLE_KEY);
