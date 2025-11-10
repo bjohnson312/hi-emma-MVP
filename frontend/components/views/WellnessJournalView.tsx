@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X, ChevronRight, Target, CheckCircle2, List, BookMarked } from "lucide-react";
+import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X, ChevronRight, Target, CheckCircle2, List, BookMarked, Rocket, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
 import type { WellnessJournalEntry, JournalStats, WellnessChapter, WellnessSection } from "~backend/wellness_journal/types";
+import type { GetJourneySetupResponse } from "~backend/journey/types";
 import { useToast } from "@/components/ui/use-toast";
 import WellnessJournalOnboarding from "../WellnessJournalOnboarding";
 import ChapterInsightsPanel from "../ChapterInsightsPanel";
@@ -35,6 +36,8 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
   const [newEntry, setNewEntry] = useState({ title: "", content: "", tags: "" });
   const [addingEntry, setAddingEntry] = useState(false);
   const [analyzingTrends, setAnalyzingTrends] = useState(false);
+  const [journeySetup, setJourneySetup] = useState<GetJourneySetupResponse | null>(null);
+  const [showSetupBanner, setShowSetupBanner] = useState(false);
 
   useEffect(() => {
     loadJournalData();
@@ -49,7 +52,7 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
   async function loadJournalData() {
     setLoading(true);
     try {
-      const [chaptersResult, statsResult, entriesResult] = await Promise.all([
+      const [chaptersResult, statsResult, entriesResult, setupResult] = await Promise.all([
         backend.wellness_journal.getChapters({
           user_id: userId,
           include_completed: false
@@ -61,12 +64,20 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
           user_id: userId,
           entry_type: filter === "all" ? undefined : filter,
           limit: 100
+        }),
+        backend.journey.getJourneySetup({
+          user_id: userId
         })
       ]);
 
       setChapters(chaptersResult.chapters);
       setStats(statsResult);
       setEntries(entriesResult.entries);
+      setJourneySetup(setupResult);
+
+      if (setupResult.completion_percentage < 100) {
+        setShowSetupBanner(true);
+      }
 
       if (chaptersResult.chapters.length === 0 && viewMode === "chapters") {
         setShowOnboarding(true);
@@ -284,8 +295,12 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
     return (
       <WellnessJournalOnboarding 
         userId={userId} 
-        onComplete={() => {
+        onComplete={async () => {
           setShowOnboarding(false);
+          await backend.journey.updateJourneySetup({
+            user_id: userId,
+            wellness_journal_chapter_created: true
+          });
           loadJournalData();
         }} 
       />
@@ -294,6 +309,85 @@ export default function WellnessJournalView({ userId }: WellnessJournalViewProps
 
   return (
     <div className="space-y-6">
+      {showSetupBanner && journeySetup && journeySetup.completion_percentage < 100 && (
+        <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-3xl p-6 shadow-xl border border-white/40 text-white">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <Rocket className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Start Your Wellness Journey</h3>
+                  <p className="text-sm text-white/90">
+                    Complete your profile to unlock Emma's full potential
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Setup Progress</span>
+                  <span className="text-sm font-bold">{journeySetup.completion_percentage}% Complete</span>
+                </div>
+                <div className="h-3 bg-white/20 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-white rounded-full transition-all duration-500"
+                    style={{ width: `${journeySetup.completion_percentage}%` }}
+                  />
+                </div>
+              </div>
+
+              {journeySetup.incomplete_steps.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium mb-2">Still to complete:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {journeySetup.incomplete_steps.slice(0, 5).map((step, index) => (
+                      <span key={index} className="text-xs px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
+                        {step}
+                      </span>
+                    ))}
+                    {journeySetup.incomplete_steps.length > 5 && (
+                      <span className="text-xs px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
+                        +{journeySetup.incomplete_steps.length - 5} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    if (!journeySetup.setup.wellness_journal_chapter_created) {
+                      setViewMode("chapters");
+                      setShowOnboarding(true);
+                    }
+                  }}
+                  className="bg-white text-purple-600 hover:bg-white/90 font-bold shadow-lg"
+                >
+                  <Rocket className="w-4 h-4 mr-2" />
+                  Continue Setup
+                </Button>
+                <Button
+                  onClick={() => setShowSetupBanner(false)}
+                  variant="outline"
+                  className="border-white/40 text-white hover:bg-white/10"
+                >
+                  Remind Me Later
+                </Button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowSetupBanner(false)}
+              className="text-white/60 hover:text-white transition-colors ml-4"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

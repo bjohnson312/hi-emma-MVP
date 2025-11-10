@@ -7,6 +7,7 @@ import type { ConversationEntry } from "../profile/types";
 import { addFromConversation } from "../wellness_journal/add_manual";
 import { buildMemoryContext, extractAndStoreMemories } from "./memory";
 import { trackInteraction, getBehaviorPatterns } from "../profile/personalization";
+import { updateJourneyProgress } from "../journey/update_progress";
 
 const openAIKey = secret("OpenAIKey");
 
@@ -237,6 +238,16 @@ export const chat = api<ChatRequest, ChatResponse>(
         SET completed = true
         WHERE id = ${session.id}
       `;
+    }
+
+    const isFirstConversation = await db.queryRow<{ count: number }>`
+      SELECT COUNT(*) as count
+      FROM conversation_history
+      WHERE user_id = ${user_id}
+    `;
+
+    if (isFirstConversation && isFirstConversation.count <= 2) {
+      await updateJourneyProgress(user_id, "first_conversation", true);
     }
 
     return {

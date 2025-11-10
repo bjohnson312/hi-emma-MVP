@@ -305,6 +305,13 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
           (${user_id}, 'morning', ${wake_up_time}, ${confirmation}, ${JSON.stringify({ wake_up_time })})
       `;
 
+      await db.exec`
+        INSERT INTO wellness_journey_setup (user_id, morning_routine_completed)
+        VALUES (${user_id}, true)
+        ON CONFLICT (user_id) DO UPDATE 
+        SET morning_routine_completed = true, last_updated = NOW()
+      `;
+
       return {
         emma_reply: confirmation,
         next_step: "complete"

@@ -1,6 +1,7 @@
 import { api } from "encore.dev/api";
 import db from "../db";
 import type { CreateProfileRequest, UserProfile } from "./types";
+import { updateJourneyProgress } from "../journey/update_progress";
 
 export const create = api<CreateProfileRequest, UserProfile>(
   { expose: true, method: "POST", path: "/profile" },
@@ -22,6 +23,8 @@ export const create = api<CreateProfileRequest, UserProfile>(
       VALUES (${user_id}, ${name})
       RETURNING id, user_id, name, created_at, updated_at
     `;
+
+    await updateJourneyProgress(user_id, "user_profile_completed", true);
 
     return result!;
   }
