@@ -159,15 +159,15 @@ class ClerkClient {
   signInWithOAuth(provider: 'oauth_google' | 'oauth_apple' | 'oauth_facebook') {
     const redirectUrl = `${window.location.origin}/oauth-callback`;
     
-    const keyParts = this.publishableKey.split('$');
-    if (keyParts.length !== 2) {
-      throw new Error('Invalid Clerk publishable key format');
-    }
+    const frontendApiBase64 = this.publishableKey
+      .replace('pk_test_', '')
+      .replace('pk_live_', '')
+      .replace('$', '');
     
-    const frontendApiBase64 = keyParts[0].replace('pk_test_', '').replace('pk_live_', '');
-    const frontendApi = atob(frontendApiBase64);
+    const frontendApi = atob(frontendApiBase64).replace('$', '');
     
-    const oauthUrl = `https://${frontendApi}/v1/${provider}/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
+    const providerName = provider.replace('oauth_', '');
+    const oauthUrl = `https://${frontendApi}/v1/oauth/${providerName}/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
     
     window.location.href = oauthUrl;
   }

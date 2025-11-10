@@ -95,7 +95,7 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
       console.error("OAuth error:", error);
       toast({
         title: "Error",
-        description: "Failed to initiate OAuth login. Please try again.",
+        description: error.message || "Failed to initiate OAuth login. Please try again.",
         variant: "destructive",
       });
     }
