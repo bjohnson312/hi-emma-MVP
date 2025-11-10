@@ -1,6 +1,7 @@
 import { api } from "encore.dev/api";
 import db from "../db";
 import type { CreateRoutinePreferenceRequest, MorningRoutinePreference } from "./routine_types";
+import { updateJourneyProgress } from "../journey/update_progress";
 
 export const createRoutinePreference = api<CreateRoutinePreferenceRequest, MorningRoutinePreference>(
   { expose: true, method: "POST", path: "/morning_routine/preference/create" },
@@ -34,6 +35,8 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
       )
       RETURNING *
     `;
+
+    await updateJourneyProgress(user_id, "morning_routine_completed", true);
 
     return preference!;
   }

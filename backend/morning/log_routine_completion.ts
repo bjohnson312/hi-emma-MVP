@@ -2,6 +2,7 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { LogRoutineCompletionRequest, MorningRoutineCompletion } from "./routine_types";
 import { updateJourneyProgress } from "../journey/update_progress";
+import { autoCreateMorningRoutineEntry } from "../wellness_journal/auto_create";
 
 export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRoutineCompletion>(
   { expose: true, method: "POST", path: "/morning_routine/completion/log" },
@@ -42,6 +43,15 @@ export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRout
 
     if (all_completed) {
       await updateJourneyProgress(user_id, "morning_routine_completed", true);
+      
+      await autoCreateMorningRoutineEntry(
+        user_id,
+        activities_completed,
+        mood_rating,
+        energy_level,
+        notes,
+        completion!.id
+      );
     }
 
     return completion!;

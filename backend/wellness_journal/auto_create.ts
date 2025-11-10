@@ -88,6 +88,44 @@ export async function autoCreateMorningEntry(
   });
 }
 
+export async function autoCreateMorningRoutineEntry(
+  userId: string,
+  activitiesCompleted: string[],
+  moodRating?: number,
+  energyLevel?: number,
+  notes?: string,
+  sourceId?: number
+): Promise<void> {
+  const activityList = activitiesCompleted.length > 0 
+    ? activitiesCompleted.join(", ") 
+    : "morning activities";
+  
+  let content = `Completed morning routine: ${activityList}.`;
+  
+  if (moodRating) {
+    content += ` Feeling ${getMoodDescription(moodRating)}.`;
+  }
+  if (energyLevel) {
+    content += ` Energy level: ${energyLevel}/5.`;
+  }
+  if (notes) {
+    content += ` ${notes}`;
+  }
+
+  await createJournalEntry({
+    user_id: userId,
+    entry_type: "event",
+    title: "Morning Routine Completed",
+    content,
+    mood_rating: moodRating,
+    energy_level: energyLevel,
+    tags: ["morning", "routine", "completed"],
+    source_type: "morning_routine",
+    source_id: sourceId,
+    ai_generated: false
+  });
+}
+
 export async function autoCreateEveningEntry(
   userId: string,
   windDownActivities: string[],

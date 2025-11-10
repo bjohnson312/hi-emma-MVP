@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sun, Flame, TrendingUp, Calendar, CheckCircle2, Circle, Sparkles, MessageSquare, X, Clock, Target } from "lucide-react";
+import { Sun, Flame, TrendingUp, Calendar, CheckCircle2, Circle, Sparkles, MessageSquare, X, Clock, Target, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import backend from "~backend/client";
 import type { RoutineTemplate, MorningRoutinePreference, RoutineStats } from "~backend/morning/routine_types";
@@ -25,16 +25,32 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   }, [userId]);
 
   async function loadRoutineData() {
+    setLoading(true);
     try {
-      const [templatesResult, preferenceResult, statsResult] = await Promise.all([
+      const [templatesResult, preferenceResult, statsResult, todayResult] = await Promise.all([
         backend.morning.getRoutineTemplates(),
         backend.morning.getRoutinePreference({ user_id: userId }),
-        backend.morning.getRoutineStats({ user_id: userId, days: 30 })
+        backend.morning.getRoutineStats({ user_id: userId, days: 30 }),
+        backend.morning.getTodayCompletion({ user_id: userId })
       ]);
 
       setTemplates(templatesResult.templates);
       setPreference(preferenceResult.preference);
       setStats(statsResult);
+
+      if (todayResult.completion?.activities_completed) {
+        try {
+          const activities = typeof todayResult.completion.activities_completed === 'string'
+            ? JSON.parse(todayResult.completion.activities_completed)
+            : todayResult.completion.activities_completed;
+          setTodayCompleted(activities || []);
+        } catch (e) {
+          console.error("Failed to parse activities:", e);
+          setTodayCompleted([]);
+        }
+      } else {
+        setTodayCompleted([]);
+      }
 
       if (!preferenceResult.preference) {
         setShowTemplates(true);
@@ -120,6 +136,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     return (
       <div className="space-y-6">
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <RefreshCw className="w-8 h-8 text-[#4e8f71] animate-spin mx-auto mb-4" />
           <p className="text-[#323e48]/60">Loading your morning routine...</p>
         </div>
       </div>
@@ -133,7 +150,10 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-[#323e48]">Chat with Emma</h2>
             <Button
-              onClick={() => setShowChat(false)}
+              onClick={() => {
+                setShowChat(false);
+                loadRoutineData();
+              }}
               variant="outline"
               className="border-[#323e48]/20"
             >
@@ -237,7 +257,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           <div className="flex gap-2">
             <Button
               onClick={() => setShowChat(true)}
-              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white shadow-xl"
+              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-lg"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Chat with Emma
