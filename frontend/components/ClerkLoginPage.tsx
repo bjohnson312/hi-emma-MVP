@@ -43,13 +43,13 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
       if (isSignup) {
         user = await clerkClient.signUp(email, password);
         toast({
-          title: "Account created!",
-          description: "Welcome to Hi, Emma.",
+          title: "Welcome to Hi, Emma! 🎉",
+          description: "Your account has been created successfully.",
         });
       } else {
         user = await clerkClient.signIn(email, password);
         toast({
-          title: "Welcome back!",
+          title: "Welcome back! 👋",
           description: "You've successfully logged in.",
         });
       }
@@ -57,9 +57,50 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
       onLoginSuccess(user.id, user.email_addresses[0]?.email_address || email);
     } catch (error: any) {
       console.error("Authentication error:", error);
+      
+      let errorTitle = "Authentication Error";
+      let errorMessage = "Something went wrong. Please try again.";
+      let switchMode = false;
+      
+      if (error.message) {
+        const msg = error.message.toLowerCase();
+        
+        if (msg.includes("already exists") || msg.includes("duplicate")) {
+          errorTitle = "Email Already Registered";
+          errorMessage = "This email is already in use. Please sign in instead.";
+          switchMode = true;
+          
+          setTimeout(() => {
+            setIsSignup(false);
+          }, 2000);
+        } else if (msg.includes("invalid email")) {
+          errorTitle = "Invalid Email";
+          errorMessage = "Please enter a valid email address.";
+        } else if (msg.includes("password") && msg.includes("8 characters")) {
+          errorTitle = "Password Too Short";
+          errorMessage = "Password must be at least 8 characters long.";
+        } else if (msg.includes("invalid") && msg.includes("password")) {
+          errorTitle = "Incorrect Password";
+          errorMessage = "The email or password you entered is incorrect.";
+        } else if (msg.includes("unauthenticated") || msg.includes("not found")) {
+          errorTitle = "Account Not Found";
+          errorMessage = "No account found with this email. Please sign up first.";
+          switchMode = true;
+          
+          setTimeout(() => {
+            setIsSignup(true);
+          }, 2000);
+        } else if (msg.includes("network") || msg.includes("fetch")) {
+          errorTitle = "Connection Error";
+          errorMessage = "Unable to connect. Please check your internet connection.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Authentication failed. Please try again.",
+        title: errorTitle,
+        description: switchMode ? `${errorMessage} Switching mode in 2 seconds...` : errorMessage,
         variant: "destructive",
       });
     } finally {

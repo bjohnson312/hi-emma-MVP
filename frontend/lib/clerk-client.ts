@@ -49,27 +49,51 @@ class ClerkClient {
   }
 
   async signUp(emailAddress: string, password: string): Promise<ClerkUser> {
-    const data = await backend.auth.signup({ email: emailAddress, password });
-    
-    this.saveSession(data.userId);
-    localStorage.setItem('emma_user_email', data.email);
+    try {
+      const data = await backend.auth.signup({ email: emailAddress, password });
+      
+      this.saveSession(data.userId);
+      localStorage.setItem('emma_user_email', data.email);
 
-    return {
-      id: data.userId,
-      email_addresses: [{ email_address: data.email }],
-    };
+      return {
+        id: data.userId,
+        email_addresses: [{ email_address: data.email }],
+      };
+    } catch (error: any) {
+      if (error.message) {
+        throw error;
+      }
+      
+      if (error.code === 'already_exists') {
+        throw new Error('user with this email already exists');
+      }
+      
+      throw new Error(error.toString());
+    }
   }
 
   async signIn(emailAddress: string, password: string): Promise<ClerkUser> {
-    const data = await backend.auth.login({ email: emailAddress, password });
-    
-    this.saveSession(data.userId);
-    localStorage.setItem('emma_user_email', data.email);
+    try {
+      const data = await backend.auth.login({ email: emailAddress, password });
+      
+      this.saveSession(data.userId);
+      localStorage.setItem('emma_user_email', data.email);
 
-    return {
-      id: data.userId,
-      email_addresses: [{ email_address: data.email }],
-    };
+      return {
+        id: data.userId,
+        email_addresses: [{ email_address: data.email }],
+      };
+    } catch (error: any) {
+      if (error.message) {
+        throw error;
+      }
+      
+      if (error.code === 'unauthenticated') {
+        throw new Error('invalid email or password');
+      }
+      
+      throw new Error(error.toString());
+    }
   }
 
 
