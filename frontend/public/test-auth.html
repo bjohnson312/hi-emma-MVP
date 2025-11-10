@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Test - Hi Emma</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #6656cb;
+      margin-top: 0;
+    }
+    .section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 5px;
+    }
+    .test-item {
+      margin: 15px 0;
+      padding: 15px;
+      background: white;
+      border-left: 4px solid #6656cb;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status.ready { background: #4caf50; color: white; }
+    .status.pending { background: #ff9800; color: white; }
+    .status.error { background: #f44336; color: white; }
+    button {
+      background: #6656cb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #5545ba;
+    }
+    button.secondary {
+      background: #4e8f71;
+    }
+    button.secondary:hover {
+      background: #3d7260;
+    }
+    input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .result.success {
+      background: #e8f5e9;
+      border: 1px solid #4caf50;
+    }
+    .result.error {
+      background: #ffebee;
+      border: 1px solid #f44336;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Authentication Test Suite</h1>
+    <p>Test the authentication system before deployment</p>
+
+    <div class="section">
+      <h2>Email/Password Authentication <span class="status ready">READY</span></h2>
+      
+      <div class="test-item">
+        <h3>Test 1: Create Account</h3>
+        <p>Create a new test account using email/password</p>
+        <input type="email" id="signup-email" placeholder="test@example.com" value="test@example.com">
+        <input type="password" id="signup-password" placeholder="password" value="testpass123">
+        <button onclick="testSignup()">Create Account</button>
+        <div id="signup-result"></div>
+      </div>
+
+      <div class="test-item">
+        <h3>Test 2: Login</h3>
+        <p>Login with existing account</p>
+        <input type="email" id="login-email" placeholder="test@example.com" value="test@example.com">
+        <input type="password" id="login-password" placeholder="password" value="testpass123">
+        <button onclick="testLogin()">Login</button>
+        <div id="login-result"></div>
+      </div>
+
+      <div class="test-item">
+        <h3>Test 3: Session Check</h3>
+        <p>Check if you're currently logged in</p>
+        <button onclick="checkSession()">Check Session</button>
+        <button class="secondary" onclick="clearSession()">Clear Session</button>
+        <div id="session-result"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>OAuth Authentication <span class="status pending">NEEDS SETUP</span></h2>
+      
+      <div class="test-item">
+        <h3>OAuth Configuration Status</h3>
+        <p>OAuth requires configuration in Clerk dashboard</p>
+        <button onclick="testOAuthGoogle()">Test Google OAuth</button>
+        <button onclick="testOAuthApple()">Test Apple OAuth</button>
+        <button onclick="testOAuthFacebook()">Test Facebook OAuth</button>
+        <div id="oauth-result"></div>
+        <p style="margin-top: 15px; font-size: 13px; color: #666;">
+          <strong>Note:</strong> OAuth will show a 404 error until configured in the Clerk dashboard.
+          See <code>AUTHENTICATION_TEST_GUIDE.md</code> for setup instructions.
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Quick Links</h2>
+      <button class="secondary" onclick="window.location.href='/'">Go to Login Page</button>
+      <button class="secondary" onclick="window.location.href='/test-care-team.html'">Care Team Test</button>
+    </div>
+  </div>
+
+  <script>
+    const CLERK_KEY = 'pk_test_ZXBpYy1sb3VzZS04Ny5jbGVyay5hY2NvdW50cy5kZXYk';
+    
+    function showResult(elementId, message, isSuccess) {
+      const el = document.getElementById(elementId);
+      el.className = 'result ' + (isSuccess ? 'success' : 'error');
+      el.textContent = message;
+    }
+
+    async function testSignup() {
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+
+      if (!email || !password) {
+        showResult('signup-result', 'Please enter email and password', false);
+        return;
+      }
+
+      try {
+        const response = await fetch('https://api.clerk.com/v1/client/sign_ups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${CLERK_KEY}`,
+          },
+          body: JSON.stringify({
+            email_address: email,
+            password: password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showResult('signup-result', `Error: ${data.errors?.[0]?.message || 'Signup failed'}`, false);
+          return;
+        }
+
+        showResult('signup-result', `✓ Account created! User ID: ${data.id}`, true);
+      } catch (error) {
+        showResult('signup-result', `Error: ${error.message}`, false);
+      }
+    }
+
+    async function testLogin() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      if (!email || !password) {
+        showResult('login-result', 'Please enter email and password', false);
+        return;
+      }
+
+      try {
+        const response = await fetch('https://api.clerk.com/v1/client/sign_ins', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${CLERK_KEY}`,
+          },
+          body: JSON.stringify({
+            identifier: email,
+            password: password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showResult('login-result', `Error: ${data.errors?.[0]?.message || 'Login failed'}`, false);
+          return;
+        }
+
+        if (data.status === 'complete' && data.created_session_id) {
+          localStorage.setItem('clerk_session_token', data.created_session_id);
+          showResult('login-result', `✓ Login successful! Session: ${data.created_session_id}`, true);
+        } else {
+          showResult('login-result', `Partial success. Status: ${data.status}`, false);
+        }
+      } catch (error) {
+        showResult('login-result', `Error: ${error.message}`, false);
+      }
+    }
+
+    function checkSession() {
+      const token = localStorage.getItem('clerk_session_token');
+      const userId = localStorage.getItem('emma_user_id');
+      const email = localStorage.getItem('emma_user_email');
+      const auth = localStorage.getItem('emma_authenticated');
+
+      if (token || userId) {
+        showResult('session-result', 
+          `✓ Session found!\n` +
+          `Token: ${token ? token.substring(0, 20) + '...' : 'none'}\n` +
+          `User ID: ${userId || 'none'}\n` +
+          `Email: ${email || 'none'}\n` +
+          `Authenticated: ${auth}`,
+          true
+        );
+      } else {
+        showResult('session-result', 'No active session found', false);
+      }
+    }
+
+    function clearSession() {
+      localStorage.removeItem('clerk_session_token');
+      localStorage.removeItem('emma_user_id');
+      localStorage.removeItem('emma_user_email');
+      localStorage.removeItem('emma_authenticated');
+      showResult('session-result', '✓ Session cleared', true);
+    }
+
+    function testOAuthGoogle() {
+      const redirectUrl = encodeURIComponent(window.location.origin + '/oauth-callback');
+      const frontendApi = 'epic-louse-87.clerk.accounts.dev';
+      const url = `https://${frontendApi}/v1/oauth/google/authorize?redirect_url=${redirectUrl}`;
+      
+      showResult('oauth-result', `Redirecting to: ${url}`, true);
+      setTimeout(() => {
+        window.location.href = url;
+      }, 1000);
+    }
+
+    function testOAuthApple() {
+      const redirectUrl = encodeURIComponent(window.location.origin + '/oauth-callback');
+      const frontendApi = 'epic-louse-87.clerk.accounts.dev';
+      const url = `https://${frontendApi}/v1/oauth/apple/authorize?redirect_url=${redirectUrl}`;
+      
+      showResult('oauth-result', `Redirecting to: ${url}`, true);
+      setTimeout(() => {
+        window.location.href = url;
+      }, 1000);
+    }
+
+    function testOAuthFacebook() {
+      const redirectUrl = encodeURIComponent(window.location.origin + '/oauth-callback');
+      const frontendApi = 'epic-louse-87.clerk.accounts.dev';
+      const url = `https://${frontendApi}/v1/oauth/facebook/authorize?redirect_url=${redirectUrl}`;
+      
+      showResult('oauth-result', `Redirecting to: ${url}`, true);
+      setTimeout(() => {
+        window.location.href = url;
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
