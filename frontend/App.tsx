@@ -42,25 +42,6 @@ export default function App() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('__clerk_db_jwt') || params.get('token');
-      
-      if (token) {
-        try {
-          const user = await clerkClient.handleOAuthCallback(token);
-          setIsAuthenticated(true);
-          setUserId(user.id);
-          setUserEmail(user.email_addresses[0]?.email_address || "");
-          localStorage.setItem("emma_user_id", user.id);
-          localStorage.setItem("emma_user_email", user.email_addresses[0]?.email_address || "");
-          localStorage.setItem("emma_authenticated", "true");
-          window.history.replaceState({}, document.title, "/");
-          return;
-        } catch (error) {
-          console.error("OAuth callback error:", error);
-        }
-      }
-      
       if (clerkClient.isSignedIn()) {
         const user = await clerkClient.getCurrentUser();
         if (user) {
