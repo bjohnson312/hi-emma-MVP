@@ -19,14 +19,20 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   const [loading, setLoading] = useState(true);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRoutineData();
+    if (userId) {
+      loadRoutineData();
+    }
   }, [userId]);
 
   async function loadRoutineData() {
     setLoading(true);
+    setError(null);
     try {
+      console.log("Loading routine data for user:", userId);
+      
       const [templatesResult, preferenceResult, statsResult, todayResult] = await Promise.all([
         backend.morning.getRoutineTemplates(),
         backend.morning.getRoutinePreference({ user_id: userId }),
@@ -34,7 +40,9 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         backend.morning.getTodayCompletion({ user_id: userId })
       ]);
 
-      setTemplates(templatesResult.templates);
+      console.log("Data loaded:", { templates: templatesResult, preference: preferenceResult, stats: statsResult });
+
+      setTemplates(templatesResult.templates || []);
       setPreference(preferenceResult.preference);
       setStats(statsResult);
 
@@ -57,6 +65,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       }
     } catch (error) {
       console.error("Failed to load routine data:", error);
+      setError(error instanceof Error ? error.message : "Failed to load morning routine data.");
       toast({
         title: "Error",
         description: "Failed to load morning routine data.",
@@ -68,13 +77,27 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   }
 
   async function handleSelectTemplate(template: RoutineTemplate) {
+    console.log("Template selected:", template.name);
+    
     if (template.id === "custom") {
       setShowChat(true);
       setShowTemplates(false);
       return;
     }
 
+    if (!userId) {
+      console.error("No userId available");
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please refresh the page.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      console.log("Saving routine:", { userId, template: template.name });
+      
       const newPreference = await backend.morning.createRoutinePreference({
         user_id: userId,
         routine_name: template.name,
@@ -82,6 +105,8 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         duration_minutes: template.duration_minutes
       });
 
+      console.log("Routine saved successfully:", newPreference);
+      
       setPreference(newPreference);
       setShowTemplates(false);
       
@@ -93,9 +118,10 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       await loadRoutineData();
     } catch (error) {
       console.error("Failed to save routine:", error);
+      setError(error instanceof Error ? error.message : "Failed to save routine");
       toast({
         title: "Error",
-        description: "Failed to save routine.",
+        description: error instanceof Error ? error.message : "Failed to save routine.",
         variant: "destructive"
       });
     }
@@ -130,6 +156,33 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     } catch (error) {
       console.error("Failed to log completion:", error);
     }
+  }
+
+  if (!userId) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <p className="text-red-600">Please log in to view your morning routine</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <p className="text-red-600 mb-4">Error loading morning routine</p>
+          <p className="text-sm text-[#323e48]/60 mb-4">{error}</p>
+          <button
+            onClick={() => loadRoutineData()}
+            className="px-4 py-2 bg-[#4e8f71] text-white rounded-lg hover:bg-[#3d7259]"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -198,7 +251,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
                   </div>
                 </div>
 
-                {template.id !== "custom" && (
+                {template.id !== "custom" && template.activities && (
                   <>
                     <div className="flex items-center gap-2 mb-3 text-xs text-[#323e48]/60">
                       <Clock className="w-3 h-3" />
@@ -241,6 +294,19 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     );
   }
 
+  if (!preference || !preference.activities || preference.activities.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-xl border border-white/40 text-center">
+          <p className="text-[#323e48]/60 mb-4">No routine set up yet</p>
+          <Button onClick={() => setShowTemplates(true)} className="bg-[#4e8f71]">
+            Choose a Routine
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
@@ -251,7 +317,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#323e48]">Morning Routine</h2>
-              <p className="text-sm text-[#4e8f71]">{preference?.routine_name || "Your daily wellness start"}</p>
+              <p className="text-sm text-[#4e8f71]">{preference.routine_name || "Your daily wellness start"}</p>
             </div>
           </div>
           <div className="flex gap-2">
