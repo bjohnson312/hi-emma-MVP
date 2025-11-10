@@ -45,6 +45,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
           if (trinityVoice) {
             setSelectedElevenLabsVoice(trinityVoice);
             setSelectedVoice(null);
+            saveVoicePreference(trinityVoice.name, 'elevenlabs', trinityVoice.id);
           }
         }
       } catch (error) {
