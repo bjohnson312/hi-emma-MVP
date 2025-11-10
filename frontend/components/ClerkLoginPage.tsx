@@ -28,6 +28,7 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { toast } = useToast();
   
   const randomQuote = useMemo(() => {
@@ -37,6 +38,7 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage("");
 
     try {
       let user;
@@ -58,51 +60,42 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
     } catch (error: any) {
       console.error("Authentication error:", error);
       
-      let errorTitle = "Authentication Error";
-      let errorMessage = "Something went wrong. Please try again.";
+      let message = "Something went wrong. Please try again.";
       let switchMode = false;
       
       if (error.message) {
         const msg = error.message.toLowerCase();
         
         if (msg.includes("already exists") || msg.includes("duplicate")) {
-          errorTitle = "Email Already Registered";
-          errorMessage = "This email is already in use. Please sign in instead.";
+          message = "This email is already registered. Please sign in instead.";
           switchMode = true;
           
           setTimeout(() => {
             setIsSignup(false);
-          }, 2000);
+            setErrorMessage("");
+          }, 3000);
         } else if (msg.includes("invalid email")) {
-          errorTitle = "Invalid Email";
-          errorMessage = "Please enter a valid email address.";
+          message = "Please enter a valid email address.";
         } else if (msg.includes("password") && msg.includes("8 characters")) {
-          errorTitle = "Password Too Short";
-          errorMessage = "Password must be at least 8 characters long.";
+          message = "Password must be at least 8 characters long.";
         } else if (msg.includes("invalid") && msg.includes("password")) {
-          errorTitle = "Incorrect Password";
-          errorMessage = "The email or password you entered is incorrect.";
+          message = "The email or password you entered is incorrect.";
         } else if (msg.includes("unauthenticated") || msg.includes("not found")) {
-          errorTitle = "Account Not Found";
-          errorMessage = "No account found with this email. Please sign up first.";
+          message = "No account found with this email. Please sign up first.";
           switchMode = true;
           
           setTimeout(() => {
             setIsSignup(true);
-          }, 2000);
+            setErrorMessage("");
+          }, 3000);
         } else if (msg.includes("network") || msg.includes("fetch")) {
-          errorTitle = "Connection Error";
-          errorMessage = "Unable to connect. Please check your internet connection.";
+          message = "Unable to connect. Please check your internet connection.";
         } else {
-          errorMessage = error.message;
+          message = error.message;
         }
       }
       
-      toast({
-        title: errorTitle,
-        description: switchMode ? `${errorMessage} Switching mode in 2 seconds...` : errorMessage,
-        variant: "destructive",
-      });
+      setErrorMessage(switchMode ? `${message} Switching in 3 seconds...` : message);
     } finally {
       setLoading(false);
     }
@@ -153,6 +146,12 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMessage && (
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                <p className="text-sm">{errorMessage}</p>
+              </div>
+            )}
+            
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2 text-foreground">
                 Email
