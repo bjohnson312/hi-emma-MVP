@@ -91,6 +91,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
       });
 
       await loadRoutineData();
+      setSaving(false);
     } catch (error) {
       console.error("Failed to save routine:", error);
       toast({
