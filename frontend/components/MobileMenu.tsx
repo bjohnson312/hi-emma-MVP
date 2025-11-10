@@ -15,7 +15,8 @@ import {
   Settings,
   HelpCircle,
   Sparkles,
-  Stethoscope
+  Stethoscope,
+  LogOut
 } from "lucide-react";
 
 interface MobileMenuProps {
@@ -23,9 +24,10 @@ interface MobileMenuProps {
   onClose: () => void;
   activeView: string;
   onNavigate: (view: string) => void;
+  onLogout?: () => void;
 }
 
-export default function MobileMenu({ isOpen, onClose, activeView, onNavigate }: MobileMenuProps) {
+export default function MobileMenu({ isOpen, onClose, activeView, onNavigate, onLogout }: MobileMenuProps) {
   if (!isOpen) return null;
 
   const handleNavigate = (view: string) => {
@@ -121,6 +123,26 @@ export default function MobileMenu({ isOpen, onClose, activeView, onNavigate }: 
               </div>
             </div>
           ))}
+
+          {onLogout && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">
+                Account
+              </h3>
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    onLogout();
+                    onClose();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

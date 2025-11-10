@@ -18,7 +18,8 @@ import {
   Sparkles,
   Trophy,
   Shield,
-  Users
+  Users,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -47,6 +48,7 @@ interface SidebarProps {
   currentView: NavigationView;
   onNavigate: (view: NavigationView) => void;
   userName?: string;
+  onLogout?: () => void;
 }
 
 interface NavItem {
@@ -80,7 +82,7 @@ const bottomNavItems: NavItem[] = [
   { id: "help", label: "Help / About Emma", icon: HelpCircle, tooltip: "Learn more about Emma and get support" }
 ];
 
-export default function Sidebar({ currentView, onNavigate, userName }: SidebarProps) {
+export default function Sidebar({ currentView, onNavigate, userName, onLogout }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   
   const getGreeting = () => {
@@ -192,6 +194,25 @@ export default function Sidebar({ currentView, onNavigate, userName }: SidebarPr
               })}
             </div>
           </nav>
+
+          {onLogout && (
+            <div className="pt-4 mt-4 border-t border-white/30">
+              <Tooltip content="Sign out of your account" side="right">
+                <button
+                  onClick={onLogout}
+                  className="
+                    w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                    transition-all duration-200
+                    text-white/90 hover:bg-red-500/20 hover:text-white hover:shadow-md
+                  "
+                  aria-label="Log out"
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-medium text-sm flex-1 text-left">Log Out</span>
+                </button>
+              </Tooltip>
+            </div>
+          )}
         </div>
       </div>
 

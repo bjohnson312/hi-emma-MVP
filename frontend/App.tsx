@@ -62,6 +62,17 @@ export default function App() {
     localStorage.setItem("emma_authenticated", "true");
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserId("");
+    setUserEmail("");
+    setUserName("");
+    setCurrentView("home");
+    localStorage.removeItem("emma_user_id");
+    localStorage.removeItem("emma_user_email");
+    localStorage.removeItem("emma_authenticated");
+  };
+
   useEffect(() => {
     const path = window.location.pathname;
     const match = path.match(/^\/shared\/([a-f0-9]+)$/);
@@ -203,6 +214,7 @@ export default function App() {
           currentView={currentView} 
           onNavigate={setCurrentView}
           userName={userName}
+          onLogout={handleLogout}
         />
         
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
@@ -223,6 +235,7 @@ export default function App() {
         onClose={() => setIsMobileMenuOpen(false)}
         activeView={currentView}
         onNavigate={(view) => setCurrentView(view as NavigationView)}
+        onLogout={handleLogout}
       />
       
       <Toaster />
