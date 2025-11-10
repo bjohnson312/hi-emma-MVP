@@ -173,7 +173,7 @@ export default function App() {
       case "home":
         return <ConversationalCheckIn userId={userId} sessionType="morning" title={personalizedTitle} onNameUpdate={setUserName} />;
       case "morning-routine":
-        return <MorningRoutineView />;
+        return <MorningRoutineView userId={userId} />;
       case "doctors-orders":
         return <DoctorsOrdersView userId={userId} />;
       case "diet-nutrition":
