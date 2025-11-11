@@ -250,18 +250,18 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
 
   return (
     <div className="space-y-6">
-      {showSetupBanner && journeySetup && journeySetup.completion_percentage < 100 && (
+      {showSetupBanner && morningSetup && !morningSetup.all_complete && (
         <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-3xl p-6 shadow-xl border border-white/40 text-white">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
-                  <Rocket className="w-6 h-6 text-white" />
+                  <Sun className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Start Your Wellness Journey</h3>
+                  <h3 className="text-xl font-bold">Set Up Your Morning Routine</h3>
                   <p className="text-sm text-white/90">
-                    Complete your profile to unlock Emma's full potential
+                    Complete setup to start your day with intention
                   </p>
                 </div>
               </div>
@@ -269,57 +269,47 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Setup Progress</span>
-                  <span className="text-sm font-bold">{journeySetup.completion_percentage}% Complete</span>
+                  <span className="text-sm font-bold">{morningSetup.completion_percentage}% Complete</span>
                 </div>
                 <div className="h-3 bg-white/20 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-white rounded-full transition-all duration-500"
-                    style={{ width: `${journeySetup.completion_percentage}%` }}
+                    style={{ width: `${morningSetup.completion_percentage}%` }}
                   />
                 </div>
               </div>
 
-              {journeySetup.incomplete_steps.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-sm font-medium mb-2">Still to complete:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {journeySetup.incomplete_steps.slice(0, 5).map((step, index) => (
-                      <span key={index} className="text-xs px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
-                        {step}
-                      </span>
-                    ))}
-                    {journeySetup.incomplete_steps.length > 5 && (
-                      <span className="text-xs px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
-                        +{journeySetup.incomplete_steps.length - 5} more
-                      </span>
-                    )}
+              <div className="space-y-2">
+                <p className="text-sm font-medium mb-2">Next Steps:</p>
+                {morningSetup.steps.filter(step => !step.completed).map((step) => (
+                  <div key={step.id} className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white mt-1.5 flex-shrink-0" />
+                    <span className="text-white/90">{step.name}</span>
                   </div>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setShowTemplates(true)}
-                  className="bg-white text-purple-600 hover:bg-white/90 font-bold shadow-lg"
-                >
-                  <Rocket className="w-4 h-4 mr-2" />
-                  Continue Setup
-                </Button>
-                <Button
-                  onClick={() => setShowSetupBanner(false)}
-                  variant="outline"
-                  className="border-white/40 text-white hover:bg-white/10"
-                >
-                  Remind Me Later
-                </Button>
+                ))}
               </div>
             </div>
 
             <button
               onClick={() => setShowSetupBanner(false)}
-              className="text-white/60 hover:text-white transition-colors ml-4"
+              className="ml-4 w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={() => setShowSetupBanner(false)}
+              className="px-6 py-3 bg-white text-purple-600 rounded-xl font-medium hover:bg-white/90 transition-colors"
+            >
+              Continue Setup
+            </button>
+            <button
+              onClick={() => setShowSetupBanner(false)}
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-medium transition-colors backdrop-blur-sm"
+            >
+              Remind Me Later
             </button>
           </div>
         </div>
