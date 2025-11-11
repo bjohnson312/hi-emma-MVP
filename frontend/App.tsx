@@ -129,7 +129,7 @@ export default function App() {
   if (showAdminPortal) {
     return (
       <>
-        <AdminPortalApp />
+        <AdminPortalApp onBackToSignIn={() => setShowAdminPortal(false)} />
         <Toaster />
       </>
     );

@@ -3,12 +3,14 @@ import backend from "~backend/client";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
+import { ArrowLeft } from "lucide-react";
 
 interface AdminLoginPageProps {
   onLoginSuccess: (token: string) => void;
+  onBackToSignIn?: () => void;
 }
 
-export default function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) {
+export default function AdminLoginPage({ onLoginSuccess, onBackToSignIn }: AdminLoginPageProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -92,6 +94,19 @@ export default function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) 
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          {onBackToSignIn && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onBackToSignIn}
+                className="text-sm text-purple-300 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Sign In
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -2,7 +2,11 @@ import { useState } from "react";
 import AdminLoginPage from "./components/AdminLoginPage";
 import AdminDashboard from "./components/AdminDashboard";
 
-export default function AdminPortalApp() {
+interface AdminPortalAppProps {
+  onBackToSignIn?: () => void;
+}
+
+export default function AdminPortalApp({ onBackToSignIn }: AdminPortalAppProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
 
@@ -17,7 +21,7 @@ export default function AdminPortalApp() {
   };
 
   if (!isAuthenticated) {
-    return <AdminLoginPage onLoginSuccess={handleLoginSuccess} />;
+    return <AdminLoginPage onLoginSuccess={handleLoginSuccess} onBackToSignIn={onBackToSignIn} />;
   }
 
   return <AdminDashboard adminToken={adminToken!} onLogout={handleLogout} />;
