@@ -61,7 +61,7 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { id: "home", label: "Home / Chat", icon: MessageCircle, tooltip: "Have a conversation with Emma about anything" },
-  { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, badge: "beta", tooltip: "Track your daily health & wellness journey" },
+  { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, tooltip: "Track your daily health & wellness journey" },
   { id: "morning-routine", label: "Morning Routine", icon: Sun, tooltip: "Start your day with a guided check-in" },
   { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, badge: "beta", tooltip: "Manage medications and treatment plans" },
   { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, badge: "beta", tooltip: "Log meals and track nutrition goals" },
