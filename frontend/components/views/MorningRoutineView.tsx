@@ -38,7 +38,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   const [editMode, setEditMode] = useState(false);
   const [editedActivities, setEditedActivities] = useState<MorningRoutineActivity[]>([]);
   const [routineName, setRoutineName] = useState("");
-  const [journeySetup, setJourneySetup] = useState<GetJourneySetupResponse | null>(null);
+  const [morningSetup, setMorningSetup] = useState<{ completion_percentage: number; steps: Array<{ id: string; name: string; description: string; completed: boolean; route?: string }>; all_complete: boolean } | null>(null);
   const [showSetupBanner, setShowSetupBanner] = useState(false);
   const [stats, setStats] = useState<{ total_completions: number; current_streak: number; completion_rate: number } | null>(null);
 
@@ -49,11 +49,11 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   async function loadData() {
     setLoading(true);
     try {
-      const [templatesRes, preferenceRes, todayRes, setupResult, statsRes] = await Promise.all([
+      const [templatesRes, preferenceRes, todayRes, morningSetupRes, statsRes] = await Promise.all([
         backend.morning.getRoutineTemplates().catch(() => ({ templates: [] })),
         backend.morning.getRoutinePreference({ user_id: userId }).catch(() => ({ preference: null })),
         backend.morning.getTodayCompletion({ user_id: userId }).catch(() => ({ completion: null })),
-        backend.journey.getJourneySetup({ user_id: userId }).catch(() => null),
+        backend.morning.getMorningSetupProgress({ user_id: userId }).catch(() => null),
         backend.morning.getRoutineStats({ user_id: userId }).catch(() => ({ total_completions: 0, current_streak: 0, completion_rate: 0 }))
       ]);
 
@@ -81,8 +81,8 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         }
       }
 
-      if (setupResult && setupResult.completion_percentage < 100) {
-        setJourneySetup(setupResult);
+      if (morningSetupRes && !morningSetupRes.all_complete) {
+        setMorningSetup(morningSetupRes);
         setShowSetupBanner(true);
       }
     } catch (error) {
