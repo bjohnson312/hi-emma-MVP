@@ -505,8 +505,8 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
 
         {viewMode === "journal" && (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Filter className="w-4 h-4 text-[#323e48]/60" />
                 <span className="text-sm text-[#323e48]/60">Filter:</span>
                 {["all", "daily_summary", "event", "insight"].map((f) => (
@@ -524,10 +524,10 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
                 ))}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   onClick={() => setShowAddEntry(!showAddEntry)}
-                  className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+                  className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-lg"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Entry
@@ -535,7 +535,7 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
                 <Button
                   onClick={handleAnalyzeTrends}
                   disabled={analyzingTrends}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-xl"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
                   {analyzingTrends ? "Analyzing..." : "Analyze Trends"}
@@ -543,7 +543,7 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
                 <Button
                   onClick={handleGenerateDailySummary}
                   disabled={generatingSummary}
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-xl"
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
                   {generatingSummary ? "Generating..." : "Generate Summary"}
