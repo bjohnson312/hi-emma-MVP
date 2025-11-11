@@ -14,6 +14,8 @@ export interface AccessStats {
   uniqueUsers: number;
   todayAccess: number;
   weeklyAccess: number;
+  monthlyAccess: number;
+  avgAccessPerUser: number;
 }
 
 export interface AccessStatsResponse {

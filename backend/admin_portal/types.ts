@@ -29,6 +29,10 @@ export interface UsageStats {
   totalMorningRoutines: number;
   totalJournalEntries: number;
   totalMealPlans: number;
+  avgSessionsPerUser: number;
+  avgTimePerSession: number;
+  totalCareTeamMembers: number;
+  totalWellnessEntries: number;
 }
 
 export interface UsageStatsResponse {
@@ -37,5 +41,6 @@ export interface UsageStatsResponse {
     userId: string;
     email: string;
     conversationCount: number;
+    totalSessions: number;
   }[];
 }

@@ -5,7 +5,7 @@ import type { SystemInfoResponse, AccessStatsResponse } from "~backend/admin_por
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
-import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX } from "lucide-react";
+import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX, Heart, UserPlus, Utensils } from "lucide-react";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -173,6 +173,14 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
     return `${minutes}m`;
   };
 
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="border-b border-white/10 bg-black/20 backdrop-blur-lg">
@@ -252,31 +260,46 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
             )}
 
             {accessStats && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  icon={<Activity className="w-8 h-8" />}
-                  title="Total Accesses"
-                  value={accessStats.stats.totalAccess}
-                  color="purple"
-                />
-                <StatCard
-                  icon={<Users className="w-8 h-8" />}
-                  title="Unique Users"
-                  value={accessStats.stats.uniqueUsers}
-                  color="blue"
-                />
-                <StatCard
-                  icon={<TrendingUp className="w-8 h-8" />}
-                  title="Today's Accesses"
-                  value={accessStats.stats.todayAccess}
-                  color="green"
-                />
-                <StatCard
-                  icon={<Calendar className="w-8 h-8" />}
-                  title="Weekly Accesses"
-                  value={accessStats.stats.weeklyAccess}
-                  color="orange"
-                />
+              <div>
+                <h2 className="text-xl font-semibold text-white mb-4">Access Statistics</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <StatCard
+                    icon={<Activity className="w-8 h-8" />}
+                    title="Total Accesses"
+                    value={accessStats.stats.totalAccess}
+                    color="purple"
+                  />
+                  <StatCard
+                    icon={<Users className="w-8 h-8" />}
+                    title="Unique Users"
+                    value={accessStats.stats.uniqueUsers}
+                    color="blue"
+                  />
+                  <StatCard
+                    icon={<TrendingUp className="w-8 h-8" />}
+                    title="Today's Accesses"
+                    value={accessStats.stats.todayAccess}
+                    color="green"
+                  />
+                  <StatCard
+                    icon={<Calendar className="w-8 h-8" />}
+                    title="Weekly Accesses"
+                    value={accessStats.stats.weeklyAccess}
+                    color="orange"
+                  />
+                  <StatCard
+                    icon={<Calendar className="w-8 h-8" />}
+                    title="Monthly Accesses"
+                    value={accessStats.stats.monthlyAccess}
+                    color="pink"
+                  />
+                  <StatCard
+                    icon={<Activity className="w-8 h-8" />}
+                    title="Avg Access/User"
+                    value={accessStats.stats.avgAccessPerUser}
+                    color="teal"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -403,43 +426,77 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
 
         {activeTab === "usage" && usageStats && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatCard
-                icon={<Users className="w-8 h-8" />}
-                title="Total Users"
-                value={usageStats.stats.totalUsers}
-                color="purple"
-              />
-              <StatCard
-                icon={<TrendingUp className="w-8 h-8" />}
-                title="Active Users (30d)"
-                value={usageStats.stats.activeUsers}
-                color="green"
-              />
-              <StatCard
-                icon={<MessageSquare className="w-8 h-8" />}
-                title="Conversations"
-                value={usageStats.stats.totalConversations}
-                color="blue"
-              />
-              <StatCard
-                icon={<Calendar className="w-8 h-8" />}
-                title="Morning Routines"
-                value={usageStats.stats.totalMorningRoutines}
-                color="orange"
-              />
-              <StatCard
-                icon={<Book className="w-8 h-8" />}
-                title="Journal Entries"
-                value={usageStats.stats.totalJournalEntries}
-                color="pink"
-              />
-              <StatCard
-                icon={<Activity className="w-8 h-8" />}
-                title="Meal Plans"
-                value={usageStats.stats.totalMealPlans}
-                color="teal"
-              />
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-4">User Engagement</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  icon={<Users className="w-8 h-8" />}
+                  title="Total Users"
+                  value={usageStats.stats.totalUsers}
+                  color="purple"
+                />
+                <StatCard
+                  icon={<TrendingUp className="w-8 h-8" />}
+                  title="Active Users (30d)"
+                  value={usageStats.stats.activeUsers}
+                  color="green"
+                />
+                <StatCard
+                  icon={<MessageSquare className="w-8 h-8" />}
+                  title="Avg Sessions/User"
+                  value={usageStats.stats.avgSessionsPerUser}
+                  color="blue"
+                  decimal
+                />
+                <MetricCard
+                  icon={<Clock className="w-8 h-8" />}
+                  title="Avg Session Time"
+                  value={formatTime(usageStats.stats.avgTimePerSession)}
+                  color="orange"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-4">Content & Activity</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <StatCard
+                  icon={<MessageSquare className="w-8 h-8" />}
+                  title="Conversations"
+                  value={usageStats.stats.totalConversations}
+                  color="blue"
+                />
+                <StatCard
+                  icon={<Calendar className="w-8 h-8" />}
+                  title="Morning Routines"
+                  value={usageStats.stats.totalMorningRoutines}
+                  color="orange"
+                />
+                <StatCard
+                  icon={<Book className="w-8 h-8" />}
+                  title="Journal Entries"
+                  value={usageStats.stats.totalJournalEntries}
+                  color="pink"
+                />
+                <StatCard
+                  icon={<Utensils className="w-8 h-8" />}
+                  title="Meal Plans"
+                  value={usageStats.stats.totalMealPlans}
+                  color="teal"
+                />
+                <StatCard
+                  icon={<UserPlus className="w-8 h-8" />}
+                  title="Care Team Members"
+                  value={usageStats.stats.totalCareTeamMembers}
+                  color="indigo"
+                />
+                <StatCard
+                  icon={<Heart className="w-8 h-8" />}
+                  title="Wellness Entries"
+                  value={usageStats.stats.totalWellnessEntries}
+                  color="rose"
+                />
+              </div>
             </div>
 
             <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
@@ -457,8 +514,13 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                         <p className="text-white/60 text-sm font-mono">{user.userId.substring(0, 12)}...</p>
                       </div>
                     </div>
-                    <div className="text-purple-300 font-semibold">
-                      {user.conversationCount} conversations
+                    <div className="text-right">
+                      <p className="text-purple-300 font-semibold">
+                        {user.totalSessions} total sessions
+                      </p>
+                      <p className="text-purple-200 text-sm">
+                        {user.conversationCount} conversations
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -471,10 +533,43 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
   );
 }
 
-function StatCard({ icon, title, value, color }: {
+function StatCard({ icon, title, value, color, decimal = false }: {
   icon: React.ReactNode;
   title: string;
   value: number;
+  color: string;
+  decimal?: boolean;
+}) {
+  const colorClasses = {
+    purple: "from-purple-600 to-purple-800",
+    green: "from-green-600 to-green-800",
+    blue: "from-blue-600 to-blue-800",
+    orange: "from-orange-600 to-orange-800",
+    pink: "from-pink-600 to-pink-800",
+    teal: "from-teal-600 to-teal-800",
+    indigo: "from-indigo-600 to-indigo-800",
+    rose: "from-rose-600 to-rose-800",
+  };
+
+  return (
+    <div className={`bg-gradient-to-br ${colorClasses[color as keyof typeof colorClasses]} rounded-xl p-6 text-white`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-white/80 text-sm mb-1">{title}</p>
+          <p className="text-3xl font-bold">
+            {decimal ? value.toFixed(1) : value.toLocaleString()}
+          </p>
+        </div>
+        <div className="opacity-50">{icon}</div>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ icon, title, value, color }: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
   color: string;
 }) {
   const colorClasses = {
@@ -491,7 +586,7 @@ function StatCard({ icon, title, value, color }: {
       <div className="flex items-start justify-between">
         <div>
           <p className="text-white/80 text-sm mb-1">{title}</p>
-          <p className="text-3xl font-bold">{value.toLocaleString()}</p>
+          <p className="text-3xl font-bold">{value}</p>
         </div>
         <div className="opacity-50">{icon}</div>
       </div>

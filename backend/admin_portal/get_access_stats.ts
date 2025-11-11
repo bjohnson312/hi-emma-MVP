@@ -33,12 +33,24 @@ export const getAccessStats = api(
       weeklyAccess = row.count as number;
     }
 
+    let monthlyAccess = 0;
+    for await (const row of db.query`
+      SELECT COUNT(*)::int as count FROM user_access_logs 
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+    `) {
+      monthlyAccess = row.count as number;
+    }
+
+    const avgAccessPerUser = uniqueUsers > 0 ? Math.round(totalAccess / uniqueUsers) : 0;
+
     return {
       stats: {
         totalAccess,
         uniqueUsers,
         todayAccess,
         weeklyAccess,
+        monthlyAccess,
+        avgAccessPerUser,
       },
     };
   }
