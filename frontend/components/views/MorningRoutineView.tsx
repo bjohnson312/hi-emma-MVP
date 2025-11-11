@@ -7,6 +7,7 @@ import backend from "~backend/client";
 import type { RoutineTemplate, MorningRoutinePreference, MorningRoutineActivity } from "~backend/morning/routine_types";
 import type { GetJourneySetupResponse } from "~backend/journey/types";
 import ConversationalCheckIn from "../ConversationalCheckIn";
+import MorningRoutineJournal from "../MorningRoutineJournal";
 
 interface MorningRoutineViewProps {
   userId: string;
@@ -669,6 +670,8 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           )}
         </div>
       )}
+
+      <MorningRoutineJournal userId={userId} days={7} />
     </div>
   );
 }

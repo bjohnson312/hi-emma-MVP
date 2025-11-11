@@ -2,6 +2,7 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { CreateRoutinePreferenceRequest, MorningRoutinePreference } from "./routine_types";
 import { updateJourneyProgress } from "../journey/update_progress";
+import { logJournalEntry } from "./add_journal_entry";
 
 export const createRoutinePreference = api<CreateRoutinePreferenceRequest, MorningRoutinePreference>(
   { expose: true, method: "POST", path: "/morning_routine/preference/create" },
@@ -24,6 +25,18 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
         WHERE user_id = ${user_id}
         RETURNING *
       `;
+
+      await logJournalEntry(
+        user_id,
+        "routine_edited",
+        `Updated routine: ${routine_name || 'My Routine'}`,
+        undefined,
+        { 
+          activities_count: activities.length,
+          duration_minutes 
+        }
+      );
+
       return updated!;
     }
 
@@ -37,6 +50,17 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
     `;
 
     await updateJourneyProgress(user_id, "morning_routine_completed", true);
+
+    await logJournalEntry(
+      user_id,
+      "routine_created",
+      `Created new routine: ${routine_name || 'My Routine'}`,
+      undefined,
+      { 
+        activities_count: activities.length,
+        duration_minutes 
+      }
+    );
 
     return preference!;
   }

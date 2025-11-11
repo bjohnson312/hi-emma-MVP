@@ -1,6 +1,7 @@
 import { api } from "encore.dev/api";
 import db from "../db";
 import type { MorningRoutineActivity, MorningRoutinePreference } from "./routine_types";
+import { logJournalEntry } from "./add_journal_entry";
 
 interface AddActivityRequest {
   user_id: string;
@@ -48,6 +49,14 @@ export const addActivity = api<AddActivityRequest, MorningRoutinePreference>(
       WHERE user_id = ${user_id} AND is_active = true
       RETURNING *
     `;
+
+    await logJournalEntry(
+      user_id,
+      "activity_added",
+      `Added new activity: ${activity.name}`,
+      activity.name,
+      { duration_minutes: activity.duration_minutes, icon: activity.icon }
+    );
 
     return updated!;
   }

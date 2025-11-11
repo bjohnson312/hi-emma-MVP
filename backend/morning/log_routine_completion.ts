@@ -3,6 +3,7 @@ import db from "../db";
 import type { LogRoutineCompletionRequest, MorningRoutineCompletion } from "./routine_types";
 import { updateJourneyProgress } from "../journey/update_progress";
 import { autoCreateMorningRoutineEntry } from "../wellness_journal/auto_create";
+import { logJournalEntry } from "./add_journal_entry";
 
 export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRoutineCompletion>(
   { expose: true, method: "POST", path: "/morning_routine/completion/log" },
@@ -52,6 +53,31 @@ export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRout
         notes,
         completion!.id
       );
+
+      await logJournalEntry(
+        user_id,
+        "all_activities_completed",
+        `Completed all morning routine activities`,
+        undefined,
+        { 
+          activities_count: activities_completed.length,
+          mood_rating,
+          energy_level
+        }
+      );
+    } else {
+      const newlyCompleted = activities_completed.filter(
+        (activity) => !existing || !(existing as any).activities_completed?.includes(activity)
+      );
+      
+      for (const activity of newlyCompleted) {
+        await logJournalEntry(
+          user_id,
+          "activity_completed",
+          `Completed: ${activity}`,
+          activity
+        );
+      }
     }
 
     return completion!;
