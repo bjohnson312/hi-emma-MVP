@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X, ChevronRight, Target, CheckCircle2, List, BookMarked, Rocket, AlertCircle } from "lucide-react";
+import { BookOpen, Calendar, Sparkles, TrendingUp, Heart, Filter, RefreshCw, Plus, X, ChevronRight, Target, CheckCircle2, List, BookMarked, Rocket, AlertCircle, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import backend from "~backend/client";
@@ -39,6 +39,9 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
   const [analyzingTrends, setAnalyzingTrends] = useState(false);
   const [journeySetup, setJourneySetup] = useState<GetJourneySetupResponse | null>(null);
   const [showSetupBanner, setShowSetupBanner] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<WellnessChapter | null>(null);
+  const [deletingChapterId, setDeletingChapterId] = useState<number | null>(null);
+  const [chapterMenuOpen, setChapterMenuOpen] = useState<number | null>(null);
 
   useEffect(() => {
     loadJournalData();
@@ -232,6 +235,107 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
       toast({
         title: "Error",
         description: "Failed to update habit tracking.",
+        variant: "destructive"
+      });
+    }
+  }
+
+  async function handleEditChapter(chapter: WellnessChapter) {
+    setEditingChapter(chapter);
+    setChapterMenuOpen(null);
+  }
+
+  async function handleUpdateChapter() {
+    if (!editingChapter) return;
+
+    try {
+      await backend.wellness_journal.updateChapter({
+        chapter_id: editingChapter.id,
+        user_id: userId,
+        title: editingChapter.title,
+        description: editingChapter.description,
+        motivation: editingChapter.motivation,
+        target_outcome: editingChapter.target_outcome,
+        completion_vision: editingChapter.completion_vision
+      });
+
+      toast({
+        title: "Chapter Updated",
+        description: "Your chapter has been updated successfully.",
+      });
+
+      setEditingChapter(null);
+      await loadJournalData();
+      
+      if (selectedChapter === editingChapter.id) {
+        await loadChapterDetails(editingChapter.id);
+      }
+    } catch (error) {
+      console.error("Failed to update chapter:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update chapter.",
+        variant: "destructive"
+      });
+    }
+  }
+
+  async function handleDeleteChapter(chapterId: number) {
+    try {
+      await backend.wellness_journal.updateChapter({
+        chapter_id: chapterId,
+        user_id: userId,
+        is_active: false
+      });
+
+      toast({
+        title: "Chapter Deleted",
+        description: "Your chapter has been removed.",
+      });
+
+      setDeletingChapterId(null);
+      setChapterMenuOpen(null);
+      
+      if (selectedChapter === chapterId) {
+        setSelectedChapter(null);
+        setChapterDetails(null);
+      }
+      
+      await loadJournalData();
+    } catch (error) {
+      console.error("Failed to delete chapter:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete chapter.",
+        variant: "destructive"
+      });
+    }
+  }
+
+  async function handleMarkChapterComplete(chapterId: number) {
+    try {
+      await backend.wellness_journal.updateChapter({
+        chapter_id: chapterId,
+        user_id: userId,
+        is_completed: true
+      });
+
+      toast({
+        title: "🎉 Chapter Completed!",
+        description: "Congratulations on completing this chapter of your wellness journey!",
+      });
+
+      setChapterMenuOpen(null);
+      await loadJournalData();
+      
+      if (selectedChapter === chapterId) {
+        await loadChapterDetails(chapterId);
+      }
+    } catch (error) {
+      console.error("Failed to complete chapter:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark chapter as complete.",
         variant: "destructive"
       });
     }
@@ -610,50 +714,178 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
 
         {viewMode === "chapters" && chapters.length > 0 && (
           <>
-            <div className="mb-6 flex items-center justify-between">
-              <h3 className="font-bold text-[#323e48] flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-[#4e8f71]" />
-                Your Chapters
-              </h3>
-              <Button
-                onClick={() => setShowOnboarding(true)}
-                className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Chapter
-              </Button>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              {chapters.map((chapter) => (
-                <button
-                  key={chapter.id}
-                  onClick={() => setSelectedChapter(chapter.id)}
-                  className={`text-left p-5 rounded-2xl border-2 transition-all ${
-                    selectedChapter === chapter.id
-                      ? "border-[#4e8f71] bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 shadow-lg"
-                      : "border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50"
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-bold text-[#323e48]">{chapter.title}</h4>
-                    <ChevronRight className={`w-5 h-5 text-[#4e8f71] transition-transform ${selectedChapter === chapter.id ? "rotate-90" : ""}`} />
+            {editingChapter ? (
+              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-[#323e48]">Edit Chapter</h3>
+                  <button
+                    onClick={() => setEditingChapter(null)}
+                    className="text-[#323e48]/60 hover:text-[#323e48] transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-[#323e48] mb-1 block">Chapter Title</label>
+                    <Input
+                      value={editingChapter.title}
+                      onChange={(e) => setEditingChapter({ ...editingChapter, title: e.target.value })}
+                      placeholder="Lower Stress and Anxiety"
+                      className="bg-white/90 border-[#4e8f71]/20"
+                    />
                   </div>
-                  <p className="text-sm text-[#323e48]/70 mb-3">{chapter.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#323e48]/60">{chapter.section_count || 0} habits</span>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-24 bg-[#323e48]/10 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
-                          style={{ width: `${chapter.progress_percentage || 0}%` }}
-                        />
+
+                  <div>
+                    <label className="text-sm font-medium text-[#323e48] mb-1 block">Description</label>
+                    <textarea
+                      value={editingChapter.description || ""}
+                      onChange={(e) => setEditingChapter({ ...editingChapter, description: e.target.value })}
+                      placeholder="Develop coping strategies and find moments of calm"
+                      rows={2}
+                      className="w-full px-3 py-2 bg-white/90 border border-[#4e8f71]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4e8f71] resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-[#323e48] mb-1 block">Your Motivation</label>
+                    <textarea
+                      value={editingChapter.motivation || ""}
+                      onChange={(e) => setEditingChapter({ ...editingChapter, motivation: e.target.value })}
+                      placeholder="Why is this important to you?"
+                      rows={2}
+                      className="w-full px-3 py-2 bg-white/90 border border-[#4e8f71]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4e8f71] resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-[#323e48] mb-1 block">Target Outcome</label>
+                    <Input
+                      value={editingChapter.target_outcome || ""}
+                      onChange={(e) => setEditingChapter({ ...editingChapter, target_outcome: e.target.value })}
+                      placeholder="What do you want to achieve?"
+                      className="bg-white/90 border-[#4e8f71]/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-[#323e48] mb-1 block">Completion Vision</label>
+                    <textarea
+                      value={editingChapter.completion_vision || ""}
+                      onChange={(e) => setEditingChapter({ ...editingChapter, completion_vision: e.target.value })}
+                      placeholder="How will you feel when you complete this chapter?"
+                      rows={2}
+                      className="w-full px-3 py-2 bg-white/90 border border-[#4e8f71]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4e8f71] resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={handleUpdateChapter}
+                      className="flex-1 bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+                    >
+                      Save Changes
+                    </Button>
+                    <Button
+                      onClick={() => setEditingChapter(null)}
+                      variant="outline"
+                      className="border-[#323e48]/20"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="font-bold text-[#323e48] flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-[#4e8f71]" />
+                    Your Chapters
+                  </h3>
+                  <Button
+                    onClick={() => setShowOnboarding(true)}
+                    className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-xl"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Chapter
+                  </Button>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {chapters.map((chapter) => (
+                    <div key={chapter.id} className="relative">
+                      <button
+                        onClick={() => setSelectedChapter(chapter.id)}
+                        className={`w-full text-left p-5 rounded-2xl border-2 transition-all ${
+                          selectedChapter === chapter.id
+                            ? "border-[#4e8f71] bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 shadow-lg"
+                            : "border-[#323e48]/10 bg-white/90 hover:border-[#4e8f71]/50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-bold text-[#323e48] pr-8">{chapter.title}</h4>
+                          <div className="flex items-center gap-1">
+                            <ChevronRight className={`w-5 h-5 text-[#4e8f71] transition-transform ${selectedChapter === chapter.id ? "rotate-90" : ""}`} />
+                          </div>
+                        </div>
+                        <p className="text-sm text-[#323e48]/70 mb-3">{chapter.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-[#323e48]/60">{chapter.section_count || 0} habits</span>
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-24 bg-[#323e48]/10 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89]"
+                                style={{ width: `${chapter.progress_percentage || 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-[#4e8f71]">{Math.round(chapter.progress_percentage || 0)}%</span>
+                          </div>
+                        </div>
+                      </button>
+                      
+                      <div className="absolute top-3 right-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setChapterMenuOpen(chapterMenuOpen === chapter.id ? null : chapter.id);
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/90 hover:bg-white border border-[#323e48]/10 flex items-center justify-center transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4 text-[#323e48]/60" />
+                        </button>
+                        
+                        {chapterMenuOpen === chapter.id && (
+                          <div className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-[#323e48]/10 py-2 z-10">
+                            <button
+                              onClick={() => handleEditChapter(chapter)}
+                              className="w-full px-4 py-2 text-left text-sm text-[#323e48] hover:bg-[#4e8f71]/10 flex items-center gap-2"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Edit Chapter
+                            </button>
+                            <button
+                              onClick={() => handleMarkChapterComplete(chapter.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-[#4e8f71] hover:bg-[#4e8f71]/10 flex items-center gap-2"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              Mark Complete
+                            </button>
+                            <button
+                              onClick={() => setDeletingChapterId(chapter.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete Chapter
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-xs font-bold text-[#4e8f71]">{Math.round(chapter.progress_percentage || 0)}%</span>
                     </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -931,6 +1163,43 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
             </div>
           )}
         </>
+      )}
+
+      {deletingChapterId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#323e48]">Delete Chapter?</h3>
+                <p className="text-sm text-[#323e48]/60">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-[#323e48]/80 mb-6">
+              Are you sure you want to delete this chapter? All associated habits and progress will be removed.
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => handleDeleteChapter(deletingChapterId)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Chapter
+              </Button>
+              <Button
+                onClick={() => setDeletingChapterId(null)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
