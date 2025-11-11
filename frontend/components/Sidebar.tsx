@@ -64,7 +64,7 @@ const mainNavItems: NavItem[] = [
   { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, tooltip: "Track your daily health & wellness journey" },
   { id: "morning-routine", label: "Morning Routine", icon: Sun, tooltip: "Start your day with a guided check-in" },
   { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, badge: "beta", tooltip: "Manage medications and treatment plans" },
-  { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, badge: "beta", tooltip: "Log meals and track nutrition goals" },
+  { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, tooltip: "Log meals and track nutrition goals" },
   { id: "mood", label: "How Are You Feeling", icon: Smile, badge: "beta", tooltip: "Check in with your emotional wellbeing" },
   { id: "evening-routine", label: "Evening Routine", icon: Moon, badge: "beta", tooltip: "Wind down with a reflective evening routine" }
 ];

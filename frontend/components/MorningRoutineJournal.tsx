@@ -8,7 +8,7 @@ interface MorningRoutineJournalProps {
   days?: number;
 }
 
-const entryTypeIcons: Record<MorningJournalEntryType, JSX.Element> = {
+const entryTypeIcons: Record<MorningJournalEntryType, React.ReactElement> = {
   activity_added: <Plus className="w-4 h-4" />,
   activity_completed: <CheckCircle2 className="w-4 h-4" />,
   routine_created: <Sparkles className="w-4 h-4" />,
