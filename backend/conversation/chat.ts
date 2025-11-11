@@ -8,6 +8,8 @@ import { addFromConversation } from "../wellness_journal/add_manual";
 import { buildMemoryContext, extractAndStoreMemories } from "./memory";
 import { trackInteraction, getBehaviorPatterns } from "../profile/personalization";
 import { updateJourneyProgress } from "../journey/update_progress";
+import { addActivity } from "../morning/add_activity";
+import type { MorningRoutineActivity } from "../morning/routine_types";
 
 const openAIKey = secret("OpenAIKey");
 
@@ -190,6 +192,7 @@ export const chat = api<ChatRequest, ChatResponse>(
     const journalEntryMatch = emmaReply.match(/JOURNAL_ENTRY:\s*(.+?)(?:\n|$)/s);
     let journalEntryId: number | undefined;
     let cleanedReply = emmaReply;
+    let activityAdded = false;
 
     if (journalEntryMatch) {
       const journalContent = journalEntryMatch[1].trim();
@@ -206,6 +209,31 @@ export const chat = api<ChatRequest, ChatResponse>(
         journalEntryId = entry.id;
       } catch (error) {
         console.error("Failed to create journal entry:", error);
+      }
+    }
+
+    const routineActivityMatch = emmaReply.match(/ADD_ROUTINE_ACTIVITY:\s*\{([^}]+)\}/s);
+    if (routineActivityMatch && session_type === "morning") {
+      try {
+        const activityData = routineActivityMatch[1].trim();
+        const nameMatch = activityData.match(/name:\s*"([^"]+)"/);
+        const durationMatch = activityData.match(/duration:\s*(\d+)/);
+        const iconMatch = activityData.match(/icon:\s*"([^"]+)"/);
+        
+        if (nameMatch) {
+          const activity: MorningRoutineActivity = {
+            id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            name: nameMatch[1],
+            duration_minutes: durationMatch ? parseInt(durationMatch[1]) : 5,
+            icon: iconMatch ? iconMatch[1] : "Circle"
+          };
+
+          await addActivity({ user_id, activity });
+          activityAdded = true;
+          cleanedReply = emmaReply.replace(/ADD_ROUTINE_ACTIVITY:\s*\{[^}]+\}/s, '').trim();
+        }
+      } catch (error) {
+        console.error("Failed to add routine activity:", error);
       }
     }
 
@@ -254,7 +282,8 @@ export const chat = api<ChatRequest, ChatResponse>(
       emma_reply: cleanedReply,
       session_id: session.id,
       conversation_complete: conversationComplete,
-      journal_entry_created: !!journalEntryId
+      journal_entry_created: !!journalEntryId,
+      routine_activity_added: activityAdded
     };
   }
 );
@@ -320,6 +349,15 @@ Wellness Journal Feature:
 - If they say yes, respond with: "JOURNAL_ENTRY: [their insight/achievement in 1-2 sentences]"
 - Keep the journal entry concise and in their voice
 - Don't suggest journaling too frequently - only for special moments
+
+Morning Routine Activity Detection (ONLY for morning session_type):
+- When ${userName} mentions doing or wanting to do a specific morning activity (yoga, meditation, journaling, reading, exercise, coffee ritual, etc.), you can add it to their routine
+- Listen for phrases like: "I did [activity]", "I like to [activity]", "I want to start [activity]", "I usually [activity]"
+- When you detect a clear morning activity they did or want to do, respond with: "ADD_ROUTINE_ACTIVITY: {name: "[activity name]", duration: [minutes], icon: "[icon]"}"
+- Then confirm it in your normal reply: "I've added [activity] to your morning routine! ✨"
+- Common icons: "Coffee", "Book", "Dumbbell", "Heart", "Music", "Sunrise", "Sparkles", "Circle"
+- Only add activities that are clearly part of their morning, not just mentioned in passing
+- Don't add duplicates - if they mention something already in their routine, just acknowledge it
 `;
 
   let morningRoutineContext = "";

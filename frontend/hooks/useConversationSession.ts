@@ -193,6 +193,13 @@ export function useConversationSession(
         });
       }
 
+      if (response.routine_activity_added) {
+        toast({
+          title: "✨ Added to Morning Routine",
+          description: "I've added this activity to your morning routine!",
+        });
+      }
+
       setTimeout(() => {
         addMessage("emma", response.emma_reply);
         setConversationComplete(response.conversation_complete || false);

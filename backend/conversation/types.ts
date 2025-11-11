@@ -29,6 +29,7 @@ export interface ChatResponse {
   journal_entry_created?: boolean;
   meal_logged?: boolean;
   goals_updated?: boolean;
+  routine_activity_added?: boolean;
 }
 
 export interface GetOrCreateSessionRequest {
