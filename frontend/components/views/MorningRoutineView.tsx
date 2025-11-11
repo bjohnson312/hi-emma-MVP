@@ -440,69 +440,90 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         </div>
 
         {routine && routine.activities && Array.isArray(routine.activities) && routine.activities.length > 0 && (
-          <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 border border-[#4e8f71]/20 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-bold text-[#323e48] text-lg">{routine.routine_name}</h3>
-                <p className="text-sm text-[#323e48]/60">
-                  {completedToday.length}/{routine.activities.length} completed today
-                </p>
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-[#4e8f71]/20 mb-6">
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-[#323e48] text-xl flex items-center gap-2">
+                    <CheckCircle2 className="w-6 h-6 text-[#4e8f71]" />
+                    Today's Routine
+                  </h3>
+                  <p className="text-sm text-[#323e48]/70 ml-8">
+                    {routine.routine_name}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={startEdit}
+                    variant="outline"
+                    size="sm"
+                    className="border-[#323e48]/20 hover:bg-[#4e8f71]/10"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => setShowTemplates(true)}
+                    variant="outline"
+                    size="sm"
+                    className="border-[#323e48]/20 hover:bg-[#4e8f71]/10"
+                  >
+                    Change
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={startEdit}
-                  variant="outline"
-                  size="sm"
-                  className="border-[#323e48]/20"
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => setShowTemplates(true)}
-                  variant="outline"
-                  size="sm"
-                  className="border-[#323e48]/20"
-                >
-                  Change
-                </Button>
+
+              <div className="ml-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex-1 h-2 bg-[#323e48]/10 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#4e8f71] to-[#364d89] transition-all duration-500 rounded-full"
+                      style={{ width: `${routine.activities.length > 0 ? (completedToday.length / routine.activities.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-[#323e48] min-w-[60px]">
+                    {completedToday.length}/{routine.activities.length}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {routine.activities.map((activity) => {
                 const isCompleted = completedToday.includes(activity.id);
                 return (
                   <button
                     key={activity.id}
                     onClick={() => toggleActivity(activity.id)}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                    className={`w-full text-left p-3 rounded-lg transition-all flex items-center gap-3 group ${
                       isCompleted
-                        ? "bg-gradient-to-r from-green-50 to-green-100 border-green-200"
-                        : "bg-white/90 border-[#323e48]/10 hover:border-[#4e8f71]/50 hover:shadow-md"
+                        ? "bg-green-50 hover:bg-green-100"
+                        : "bg-[#f8f9fa] hover:bg-white hover:shadow-sm"
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1">
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6 text-green-600" />
-                        ) : (
-                          <Circle className="w-6 h-6 text-[#323e48]/20" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xl">{activity.icon}</span>
-                          <h4 className="font-bold text-[#323e48]">{activity.name}</h4>
-                        </div>
-                        {activity.description && (
-                          <p className="text-sm text-[#323e48]/70">{activity.description}</p>
-                        )}
+                    <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      isCompleted
+                        ? "bg-green-500 border-green-500"
+                        : "bg-white border-[#323e48]/30 group-hover:border-[#4e8f71]"
+                    }`}>
+                      {isCompleted && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    
+                    <span className="text-lg mr-2">{activity.icon}</span>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium text-[#323e48] ${isCompleted ? 'line-through opacity-60' : ''}`}>
+                          {activity.name}
+                        </span>
                         {activity.duration_minutes && (
-                          <div className="flex items-center gap-1 mt-2 text-xs text-[#323e48]/60">
-                            <Clock className="w-3 h-3" />
+                          <span className="text-xs text-[#323e48]/50">
                             {activity.duration_minutes} min
-                          </div>
+                          </span>
                         )}
                       </div>
                     </div>
