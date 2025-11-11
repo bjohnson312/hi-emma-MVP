@@ -11,7 +11,7 @@ export const resetPassword = api(
       for await (const row of db.query`
         UPDATE users
         SET updated_at = NOW()
-        WHERE id = ${req.userId}::uuid
+        WHERE id = ${req.userId}
         RETURNING id
       `) {
         updated = true;

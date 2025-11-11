@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS user_access_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
   action TEXT NOT NULL,
   ip_address TEXT,
   user_agent TEXT,

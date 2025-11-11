@@ -8,14 +8,14 @@ export const logAccess = api(
     try {
       await db.query`
         INSERT INTO user_access_logs (user_id, action)
-        VALUES (${req.userId}::uuid, ${req.action})
+        VALUES (${req.userId}, ${req.action})
       `;
 
       await db.query`
         UPDATE users
         SET login_count = COALESCE(login_count, 0) + 1,
             last_login = NOW()
-        WHERE id = ${req.userId}::uuid
+        WHERE id = ${req.userId}
       `;
 
       return { success: true };

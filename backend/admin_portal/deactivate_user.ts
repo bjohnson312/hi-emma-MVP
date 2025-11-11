@@ -12,7 +12,7 @@ export const deactivateUser = api(
         UPDATE users
         SET is_active = false,
             updated_at = NOW()
-        WHERE id = ${req.userId}::uuid
+        WHERE id = ${req.userId}
         RETURNING id
       `) {
         updated = true;

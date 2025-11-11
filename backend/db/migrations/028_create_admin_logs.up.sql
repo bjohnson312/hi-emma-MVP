@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS admin_action_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id TEXT NOT NULL,
   action TEXT NOT NULL,
-  target_user_id UUID,
+  target_user_id TEXT,
   details JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
