@@ -188,11 +188,10 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
           <h1 className="text-2xl font-bold text-white">Admin Portal</h1>
           <Button
             onClick={onLogout}
-            variant="outline"
-            className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            <span className="text-white">Logout</span>
+            Logout
           </Button>
         </div>
       </div>
