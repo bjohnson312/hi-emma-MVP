@@ -25,6 +25,7 @@ import { CareTeamView } from "./components/views/CareTeamView";
 import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { clerkClient } from "./lib/clerk-client";
+import AdminPortalApp from "./AdminPortalApp";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<NavigationView>("home");
@@ -34,6 +35,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showAdminPortal, setShowAdminPortal] = useState(false);
 
   const [userId, setUserId] = useState(() => {
     const stored = localStorage.getItem("emma_user_id");
@@ -117,10 +119,22 @@ export default function App() {
     );
   }
 
+  if (showAdminPortal) {
+    return (
+      <>
+        <AdminPortalApp />
+        <Toaster />
+      </>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <>
-        <ClerkLoginPage onLoginSuccess={handleLoginSuccess} />
+        <ClerkLoginPage 
+          onLoginSuccess={handleLoginSuccess}
+          onAdminClick={() => setShowAdminPortal(true)}
+        />
         <Toaster />
       </>
     );

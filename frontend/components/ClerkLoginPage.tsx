@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Shield } from "lucide-react";
 import { clerkClient } from "@/lib/clerk-client";
 
 const MOTIVATIONAL_QUOTES = [
@@ -20,9 +20,10 @@ const MOTIVATIONAL_QUOTES = [
 
 interface ClerkLoginPageProps {
   onLoginSuccess: (userId: string, email: string) => void;
+  onAdminClick?: () => void;
 }
 
-export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
+export function ClerkLoginPage({ onLoginSuccess, onAdminClick }: ClerkLoginPageProps) {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -207,6 +208,19 @@ export function ClerkLoginPage({ onLoginSuccess }: ClerkLoginPageProps) {
           <div className="mt-4 text-center text-xs text-gray-600">
             <p>Secure authentication powered by Hi, Emma</p>
           </div>
+
+          {onAdminClick && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onAdminClick}
+                className="text-xs text-gray-500 hover:text-purple-600 transition-colors flex items-center justify-center gap-1 mx-auto"
+              >
+                <Shield className="w-3 h-3" />
+                Admin Portal
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
