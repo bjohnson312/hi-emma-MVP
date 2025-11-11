@@ -4,6 +4,7 @@ export interface User {
   created_at: Date;
   last_login?: Date;
   is_active: boolean;
+  login_count?: number;
 }
 
 export interface UserListResponse {

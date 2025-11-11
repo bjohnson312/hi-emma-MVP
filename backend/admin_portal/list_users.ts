@@ -12,8 +12,9 @@ export const listUsers = api(
         id::text,
         email,
         created_at,
-        updated_at as last_login,
-        true as is_active
+        last_login,
+        COALESCE(is_active, true) as is_active,
+        COALESCE(login_count, 0) as login_count
       FROM users
       ORDER BY created_at DESC
     `) {
@@ -23,6 +24,7 @@ export const listUsers = api(
         created_at: row.created_at as Date,
         last_login: row.last_login as Date | undefined,
         is_active: row.is_active as boolean,
+        login_count: row.login_count as number,
       });
     }
 

@@ -26,6 +26,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { clerkClient } from "./lib/clerk-client";
 import AdminPortalApp from "./AdminPortalApp";
+import backend from "~backend/client";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<NavigationView>("home");
@@ -70,13 +71,19 @@ export default function App() {
 
   useNotificationPolling(userId, isAuthenticated);
 
-  const handleLoginSuccess = (userId: string, email: string) => {
+  const handleLoginSuccess = async (userId: string, email: string) => {
     setUserId(userId);
     setUserEmail(email);
     setIsAuthenticated(true);
     localStorage.setItem("emma_user_id", userId);
     localStorage.setItem("emma_user_email", email);
     localStorage.setItem("emma_authenticated", "true");
+
+    try {
+      await backend.admin_portal.logAccess({ userId, action: "login" });
+    } catch (error) {
+      console.error("Failed to log access:", error);
+    }
   };
 
   const handleLogout = () => {

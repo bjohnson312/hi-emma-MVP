@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import backend from "~backend/client";
 import type { UserListResponse, UsageStatsResponse } from "~backend/admin_portal/types";
+import type { SystemInfoResponse, AccessStatsResponse } from "~backend/admin_portal/admin_types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
-import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare } from "lucide-react";
+import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX } from "lucide-react";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -12,18 +13,40 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"users" | "usage">("users");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage">("overview");
   const [users, setUsers] = useState<UserListResponse | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStatsResponse | null>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
+  const [accessStats, setAccessStats] = useState<AccessStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [resetPasswordUserId, setResetPasswordUserId] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
+    loadSystemInfo();
+    loadAccessStats();
     loadUsers();
     loadUsageStats();
   }, []);
+
+  const loadSystemInfo = async () => {
+    try {
+      const data = await backend.admin_portal.getSystemInfo();
+      setSystemInfo(data);
+    } catch (error) {
+      console.error("Failed to load system info:", error);
+    }
+  };
+
+  const loadAccessStats = async () => {
+    try {
+      const data = await backend.admin_portal.getAccessStats();
+      setAccessStats(data);
+    } catch (error) {
+      console.error("Failed to load access stats:", error);
+    }
+  };
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -83,6 +106,73 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
     }
   };
 
+  const handleDeactivateUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to deactivate this user?")) return;
+
+    try {
+      const response = await backend.admin_portal.deactivateUser({ userId });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: response.message,
+        });
+        loadUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Deactivate user error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportUsers = async () => {
+    try {
+      const response = await backend.admin_portal.exportUsers();
+      
+      const blob = new Blob([response.csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Users exported successfully",
+      });
+    } catch (error) {
+      console.error("Export users error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export users",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="border-b border-white/10 bg-black/20 backdrop-blur-lg">
@@ -102,6 +192,13 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex gap-4 mb-8">
           <Button
+            onClick={() => setActiveTab("overview")}
+            className={activeTab === "overview" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
+          >
+            <Activity className="w-4 h-4 mr-2" />
+            Overview
+          </Button>
+          <Button
             onClick={() => setActiveTab("users")}
             className={activeTab === "users" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
           >
@@ -112,10 +209,78 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
             onClick={() => setActiveTab("usage")}
             className={activeTab === "usage" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
           >
-            <Activity className="w-4 h-4 mr-2" />
+            <TrendingUp className="w-4 h-4 mr-2" />
             Usage Stats
           </Button>
         </div>
+
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            {systemInfo && (
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
+                <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                  <Code className="w-5 h-5" />
+                  System Information
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-purple-300 text-sm mb-1">Version</p>
+                    <p className="text-white text-xl font-bold">{systemInfo.info.version}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-purple-300 text-sm mb-1">Environment</p>
+                    <p className="text-white text-xl font-bold capitalize">{systemInfo.info.environment}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-purple-300 text-sm mb-1">Release Date</p>
+                    <p className="text-white text-lg">
+                      {new Date(systemInfo.info.releaseTimestamp).toLocaleDateString()}
+                    </p>
+                    <p className="text-purple-300 text-xs">
+                      {new Date(systemInfo.info.releaseTimestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <p className="text-purple-300 text-sm mb-1 flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      Uptime
+                    </p>
+                    <p className="text-white text-xl font-bold">{formatUptime(systemInfo.info.uptime)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {accessStats && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  icon={<Activity className="w-8 h-8" />}
+                  title="Total Accesses"
+                  value={accessStats.stats.totalAccess}
+                  color="purple"
+                />
+                <StatCard
+                  icon={<Users className="w-8 h-8" />}
+                  title="Unique Users"
+                  value={accessStats.stats.uniqueUsers}
+                  color="blue"
+                />
+                <StatCard
+                  icon={<TrendingUp className="w-8 h-8" />}
+                  title="Today's Accesses"
+                  value={accessStats.stats.todayAccess}
+                  color="green"
+                />
+                <StatCard
+                  icon={<Calendar className="w-8 h-8" />}
+                  title="Weekly Accesses"
+                  value={accessStats.stats.weeklyAccess}
+                  color="orange"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === "users" && (
           <div className="space-y-8">
@@ -158,13 +323,22 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                 <h2 className="text-xl font-semibold text-white">
                   Users ({users?.total || 0})
                 </h2>
-                <Button
-                  onClick={loadUsers}
-                  disabled={isLoading}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  Refresh
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleExportUsers}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export CSV
+                  </Button>
+                  <Button
+                    onClick={loadUsers}
+                    disabled={isLoading}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    Refresh
+                  </Button>
+                </div>
               </div>
               
               <div className="overflow-x-auto">
@@ -174,7 +348,10 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                       <th className="text-left text-purple-200 font-medium py-3 px-4">ID</th>
                       <th className="text-left text-purple-200 font-medium py-3 px-4">Email</th>
                       <th className="text-left text-purple-200 font-medium py-3 px-4">Created</th>
+                      <th className="text-left text-purple-200 font-medium py-3 px-4">Last Login</th>
+                      <th className="text-left text-purple-200 font-medium py-3 px-4">Logins</th>
                       <th className="text-left text-purple-200 font-medium py-3 px-4">Status</th>
+                      <th className="text-left text-purple-200 font-medium py-3 px-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -187,6 +364,12 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                         <td className="py-3 px-4 text-white/80">
                           {new Date(user.created_at).toLocaleDateString()}
                         </td>
+                        <td className="py-3 px-4 text-white/80">
+                          {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td className="py-3 px-4 text-white/80">
+                          {user.login_count || 0}
+                        </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded text-xs ${
                             user.is_active 
@@ -195,6 +378,19 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                           }`}>
                             {user.is_active ? "Active" : "Inactive"}
                           </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          {user.is_active && (
+                            <Button
+                              onClick={() => handleDeactivateUser(user.id)}
+                              size="sm"
+                              variant="outline"
+                              className="border-red-500/50 text-red-300 hover:bg-red-500/20"
+                            >
+                              <UserX className="w-4 h-4 mr-1" />
+                              Deactivate
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}
