@@ -88,7 +88,7 @@ export default function App() {
 
   useNotificationPolling(userId, isAuthenticated);
 
-  const handleLoginSuccess = async (userId: string, email: string) => {
+  const handleLoginSuccess = async (userId: string, email: string, isNewSignup?: boolean) => {
     setUserId(userId);
     setUserEmail(email);
     setIsAuthenticated(true);
@@ -100,6 +100,12 @@ export default function App() {
       await backend.admin_portal.logAccess({ userId, action: "login" });
     } catch (error) {
       console.error("Failed to log access:", error);
+    }
+
+    if (isNewSignup) {
+      setShowOnboarding(true);
+    } else {
+      await checkOnboardingStatus(userId);
     }
   };
 

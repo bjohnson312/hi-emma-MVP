@@ -19,7 +19,7 @@ const MOTIVATIONAL_QUOTES = [
 ];
 
 interface ClerkLoginPageProps {
-  onLoginSuccess: (userId: string, email: string) => void;
+  onLoginSuccess: (userId: string, email: string, isNewSignup?: boolean) => void;
   onAdminClick?: () => void;
 }
 
@@ -43,6 +43,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick }: ClerkLoginPageP
 
     try {
       let user;
+      const isNewSignup = isSignup;
       if (isSignup) {
         user = await clerkClient.signUp(email, password);
         toast({
@@ -57,7 +58,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick }: ClerkLoginPageP
         });
       }
       
-      onLoginSuccess(user.id, user.email_addresses[0]?.email_address || email);
+      onLoginSuccess(user.id, user.email_addresses[0]?.email_address || email, isNewSignup);
     } catch (error: any) {
       console.error("Authentication error:", error);
       
