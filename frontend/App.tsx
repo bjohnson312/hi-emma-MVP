@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ConversationalCheckIn from "./components/ConversationalCheckIn";
 import MicrophoneSetup from "./components/MicrophoneSetup";
+import OnboardingFlow from "./components/OnboardingFlow";
 import Sidebar, { type NavigationView } from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
 import MobileMenu from "./components/MobileMenu";
@@ -33,6 +34,7 @@ export default function App() {
   const [userName, setUserName] = useState<string>("");
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [showMicSetup, setShowMicSetup] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -51,6 +53,7 @@ export default function App() {
           setIsAuthenticated(true);
           setUserId(user.id);
           setUserEmail(user.email_addresses[0]?.email_address || "");
+          await checkOnboardingStatus(user.id);
           return;
         }
       }
@@ -63,11 +66,25 @@ export default function App() {
         setIsAuthenticated(true);
         setUserId(storedUserId);
         setUserEmail(storedEmail || "");
+        await checkOnboardingStatus(storedUserId);
       }
     };
     
     checkAuth();
   }, []);
+
+  const checkOnboardingStatus = async (uid: string) => {
+    try {
+      const status = await backend.onboarding.getStatus({ user_id: uid });
+      if (!status.onboarding_completed) {
+        setShowOnboarding(true);
+      } else if (status.preferences?.first_name) {
+        setUserName(status.preferences.first_name);
+      }
+    } catch (error) {
+      console.error("Failed to check onboarding status:", error);
+    }
+  };
 
   useNotificationPolling(userId, isAuthenticated);
 
@@ -144,6 +161,33 @@ export default function App() {
         />
         <Toaster />
       </>
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <div 
+        className="min-h-screen relative"
+        style={{
+          backgroundImage: "url('/background.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed"
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
+        <div className="relative z-10">
+          <OnboardingFlow 
+            userId={userId} 
+            onComplete={(firstName) => {
+              setUserName(firstName);
+              setShowOnboarding(false);
+            }} 
+          />
+        </div>
+        <Toaster />
+      </div>
     );
   }
 
