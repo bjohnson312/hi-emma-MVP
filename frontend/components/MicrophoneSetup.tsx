@@ -27,18 +27,31 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     isSupported: isTTSSupported
   } = useTextToSpeech();
 
-  const handleStartTest = useCallback(() => {
+  const handleStartTest = useCallback(async () => {
     setStep('testing');
     setTestTranscript('');
     resetTranscript();
     
-    if (isTTSSupported) {
-      speak("Let's test your microphone. Please say: Hello Emma");
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      if (isTTSSupported) {
+        speak("Let's test your microphone. Please say: Hello Emma");
+      }
+      
+      setTimeout(() => {
+        startListening();
+      }, isTTSSupported ? 3000 : 500);
+    } catch (err: any) {
+      console.error('Microphone permission error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setStep('intro');
+        alert('Microphone access was denied. Please allow microphone access in your browser settings and try again.');
+      } else {
+        setStep('intro');
+        alert('Unable to access microphone. Please check your browser settings.');
+      }
     }
-    
-    setTimeout(() => {
-      startListening();
-    }, isTTSSupported ? 3000 : 500);
   }, [startListening, speak, resetTranscript, isTTSSupported]);
 
   const handleStopTest = useCallback(() => {
@@ -179,7 +192,13 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
 
           {speechError && (
             <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+              <p className="text-sm font-medium text-red-800 mb-1">Microphone Issue</p>
               <p className="text-sm text-red-600">{speechError}</p>
+              {speechError.includes('denied') && (
+                <p className="text-xs text-red-500 mt-2">
+                  To fix: Click the 🔒 or ⓘ icon in your browser's address bar and allow microphone access.
+                </p>
+              )}
             </div>
           )}
 

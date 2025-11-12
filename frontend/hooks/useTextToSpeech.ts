@@ -37,15 +37,19 @@ export function useTextToSpeech(): UseTextToSpeechResult {
         if (savedVoicePreference?.type === 'elevenlabs') {
           const savedVoice = elVoices.find(v => v.name === savedVoicePreference.name);
           if (savedVoice) {
+            console.log('Setting saved ElevenLabs voice:', savedVoice.name);
             setSelectedElevenLabsVoice(savedVoice);
             setSelectedVoice(null);
           }
         } else if (!savedVoicePreference && elVoices.length > 0) {
           const trinityVoice = elVoices.find(v => v.name === 'Trinity');
           if (trinityVoice) {
+            console.log('No saved preference, auto-selecting Trinity');
             setSelectedElevenLabsVoice(trinityVoice);
             setSelectedVoice(null);
             saveVoicePreference(trinityVoice.name, 'elevenlabs', trinityVoice.id);
+          } else {
+            console.warn('Trinity voice not found in list');
           }
         }
       } catch (error) {
@@ -53,7 +57,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
       }
     };
     fetchElevenLabsVoices();
-  }, []);
+  }, [savedVoicePreference, saveVoicePreference]);
 
   useEffect(() => {
     if (!isSupported) return;
