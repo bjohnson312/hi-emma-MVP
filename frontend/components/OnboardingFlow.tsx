@@ -97,8 +97,8 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       question: "How would you like to receive reminders?",
       options: [
         { value: "voice", label: "Voice (through this app)", icon: MessageSquare },
-        { value: "both", label: "Both Voice and SMS", icon: Bell },
-        { value: "none", label: "No reminders for now", icon: Sparkles }
+        { value: "sms", label: "SMS text messages", icon: Bell },
+        { value: "both", label: "Both Voice and SMS", icon: Heart }
       ],
       type: "choice"
     }
@@ -252,7 +252,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
                   <div className="grid gap-4">
                     {currentQuestion.options.map((option) => {
                       const Icon = option.icon;
-                      const isBothOption = option.value === "both";
+                      const isSmsOption = option.value === "sms";
                       return (
                         <button
                           key={option.value}
@@ -268,7 +268,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
                           <span className="text-lg text-gray-700 font-medium flex-1">
                             {option.label}
                           </span>
-                          {isBothOption && (
+                          {isSmsOption && (
                             <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[#4e8f71] to-[#6656cb] text-white rounded-full">
                               Coming Soon
                             </span>
