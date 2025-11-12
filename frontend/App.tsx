@@ -109,6 +109,23 @@ export default function App() {
     }
   };
 
+  const ensureTrinityVoiceDefault = async () => {
+    try {
+      const savedVoiceType = localStorage.getItem('emma-voice-type');
+      if (!savedVoiceType) {
+        const { voices } = await backend.voice.listVoices();
+        const trinityVoice = voices.find(v => v.name === 'Trinity');
+        if (trinityVoice) {
+          localStorage.setItem('emma-voice-preference', 'Trinity');
+          localStorage.setItem('emma-voice-type', 'elevenlabs');
+          localStorage.setItem('emma-voice-id', trinityVoice.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to set Trinity voice:', error);
+    }
+  };
+
   const handleLogout = () => {
     clerkClient.signOut();
     setIsAuthenticated(false);
@@ -129,14 +146,7 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    const hasCompletedSetup = localStorage.getItem('emma_mic_setup_complete');
-    const isSpeechSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-    
-    if (!hasCompletedSetup && isSpeechSupported && !shareToken) {
-      setShowMicSetup(true);
-    }
-  }, [shareToken]);
+
 
 
 
@@ -186,9 +196,11 @@ export default function App() {
         <div className="relative z-10">
           <OnboardingFlow 
             userId={userId} 
-            onComplete={(firstName) => {
+            onComplete={async (firstName) => {
               setUserName(firstName);
               setShowOnboarding(false);
+              await ensureTrinityVoiceDefault();
+              setShowMicSetup(true);
             }} 
           />
         </div>
@@ -211,7 +223,8 @@ export default function App() {
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
         <div className="relative z-10">
-          <MicrophoneSetup onComplete={() => {
+          <MicrophoneSetup onComplete={async () => {
+            await ensureTrinityVoiceDefault();
             localStorage.setItem('emma_mic_setup_complete', 'true');
             setShowMicSetup(false);
           }} />
