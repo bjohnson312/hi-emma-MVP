@@ -97,7 +97,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       question: "How would you like to receive reminders?",
       options: [
         { value: "voice", label: "Voice (through this app)", icon: MessageSquare },
-        { value: "sms", label: "SMS text messages", icon: Bell },
+        { value: "both", label: "Both Voice and SMS", icon: Bell },
         { value: "none", label: "No reminders for now", icon: Sparkles }
       ],
       type: "choice"
@@ -171,98 +171,116 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-12 border border-[#8BC34A]/20">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#8BC34A] to-[#689F38] rounded-full mb-6 shadow-lg">
-              <Sparkles className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#2E7D32] mb-4">
-              Welcome to Hi, Emma
-            </h1>
+        <div className="text-center mb-6">
+          <div className="inline-block bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4">
+            <h1 className="text-4xl font-bold text-[#6656cb] mb-1">Hi, Emma</h1>
+            <p className="text-lg text-[#323e48]/70">Your voice-first wellness companion</p>
           </div>
-
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-[#8BC34A]/10 to-[#AED581]/10 rounded-2xl p-6 border border-[#8BC34A]/20">
-              <p className="text-lg text-gray-700 leading-relaxed">
-                {emmaMessage}
-              </p>
-            </div>
-          </div>
-
-          {currentStep < questions.length && (
-            <div className="space-y-6">
-              <div className="flex justify-center mb-6">
-                <div className="flex gap-2">
-                  {questions.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`h-2 rounded-full transition-all ${
-                        index === currentStep
-                          ? "w-8 bg-[#8BC34A]"
-                          : index < currentStep
-                          ? "w-2 bg-[#8BC34A]/50"
-                          : "w-2 bg-gray-300"
-                      }`}
-                    />
-                  ))}
-                </div>
+        </div>
+        
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border border-white/40">
+          <div className="bg-gradient-to-r from-[#4e8f71] via-[#364d89] to-[#6656cb] p-6">
+            <div className="flex items-center gap-3 text-white mb-4">
+              <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center shadow-lg">
+                <img src="/logo.png" alt="Emma" className="w-8 h-8 object-contain" />
               </div>
-
-              {currentQuestion.type === "text" && (
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleTextSubmit()}
-                    placeholder={currentQuestion.placeholder}
-                    className="w-full px-6 py-4 text-lg border-2 border-[#8BC34A]/30 rounded-2xl focus:outline-none focus:border-[#8BC34A] transition-colors bg-white/50"
-                    disabled={isLoading}
-                    autoFocus
-                  />
-                  <Button
-                    onClick={handleTextSubmit}
-                    disabled={!textInput.trim() || isLoading}
-                    className="w-full py-6 text-lg bg-gradient-to-r from-[#8BC34A] to-[#689F38] hover:from-[#7CB342] hover:to-[#558B2F] text-white rounded-2xl shadow-lg disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Continue"
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {currentQuestion.type === "choice" && (
-                <div className="grid gap-4">
-                  {currentQuestion.options.map((option) => {
-                    const Icon = option.icon;
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() => handleAnswer(option.value)}
-                        disabled={isLoading}
-                        className="flex items-center gap-4 p-6 bg-white/80 hover:bg-[#8BC34A]/10 border-2 border-[#8BC34A]/20 hover:border-[#8BC34A] rounded-2xl transition-all text-left group disabled:opacity-50"
-                      >
-                        {Icon && (
-                          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-[#8BC34A]/20 to-[#AED581]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Icon className="w-6 h-6 text-[#2E7D32]" />
-                          </div>
-                        )}
-                        <span className="text-lg text-gray-700 font-medium flex-1">
-                          {option.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="flex-1">
+                <h2 className="font-medium text-xl tracking-wide">Welcome to Hi, Emma</h2>
+                <p className="text-xs text-white/90">Let's get to know each other</p>
+              </div>
             </div>
-          )}
+          </div>
+
+          <div className="p-8 md:p-10">
+            <div className="mb-8">
+              <div className="bg-gradient-to-b from-white/60 to-[#f8fdf9]/80 rounded-2xl p-6 border border-[#8BC34A]/10">
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  {emmaMessage}
+                </p>
+              </div>
+            </div>
+
+            {currentStep < questions.length && (
+              <div className="space-y-6">
+                <div className="flex justify-center mb-6">
+                  <div className="flex gap-2">
+                    {questions.map((_, index) => (
+                      <div
+                        key={index}
+                        className={`h-2 rounded-full transition-all ${
+                          index === currentStep
+                            ? "w-8 bg-gradient-to-r from-[#4e8f71] to-[#6656cb]"
+                            : index < currentStep
+                            ? "w-2 bg-[#4e8f71]/50"
+                            : "w-2 bg-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {currentQuestion.type === "text" && (
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleTextSubmit()}
+                      placeholder={currentQuestion.placeholder}
+                      className="w-full px-6 py-4 text-lg border-2 border-[#4e8f71]/30 rounded-2xl focus:outline-none focus:border-[#6656cb] transition-colors bg-white/50"
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                    <Button
+                      onClick={handleTextSubmit}
+                      disabled={!textInput.trim() || isLoading}
+                      className="w-full py-6 text-lg bg-gradient-to-r from-[#4e8f71] via-[#364d89] to-[#6656cb] hover:opacity-90 text-white rounded-2xl shadow-lg disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Continue"
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {currentQuestion.type === "choice" && (
+                  <div className="grid gap-4">
+                    {currentQuestion.options.map((option) => {
+                      const Icon = option.icon;
+                      const isBothOption = option.value === "both";
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => handleAnswer(option.value)}
+                          disabled={isLoading}
+                          className="flex items-center gap-4 p-6 bg-white/80 hover:bg-gradient-to-r hover:from-[#4e8f71]/5 hover:to-[#6656cb]/5 border-2 border-[#4e8f71]/20 hover:border-[#6656cb] rounded-2xl transition-all text-left group disabled:opacity-50 relative"
+                        >
+                          {Icon && (
+                            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-[#4e8f71]/20 to-[#6656cb]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                              <Icon className="w-6 h-6 text-[#364d89]" />
+                            </div>
+                          )}
+                          <span className="text-lg text-gray-700 font-medium flex-1">
+                            {option.label}
+                          </span>
+                          {isBothOption && (
+                            <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[#4e8f71] to-[#6656cb] text-white rounded-full">
+                              Coming Soon
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

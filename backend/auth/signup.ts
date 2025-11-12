@@ -49,6 +49,11 @@ export const signup = api<SignupRequest, SignupResponse>(
       VALUES (${userId}, ${req.email}, ${passwordHash})
     `;
 
+    await db.exec`
+      INSERT INTO onboarding_preferences (user_id, onboarding_completed, onboarding_step)
+      VALUES (${userId}, FALSE, 0)
+    `;
+
     const sessionToken = crypto.randomBytes(32).toString("hex");
 
     return {

@@ -108,11 +108,24 @@ export const chat = api<ChatRequest, ChatResponse>(
       wake_time?: string;
       morning_routine_preferences?: Record<string, any>;
       interaction_count?: number;
+      onboarding_completed?: boolean;
       created_at: Date;
       updated_at: Date;
     }>`
-      SELECT id, user_id, name, wake_time, morning_routine_preferences, interaction_count, created_at, updated_at
+      SELECT id, user_id, name, wake_time, morning_routine_preferences, interaction_count, onboarding_completed, created_at, updated_at
       FROM user_profiles
+      WHERE user_id = ${user_id}
+    `;
+    
+    const onboardingPrefs = await db.queryRow<{
+      first_name: string | null;
+      reason_for_joining: string | null;
+      current_feeling: string | null;
+      preferred_check_in_time: string | null;
+      onboarding_completed: boolean;
+    }>`
+      SELECT first_name, reason_for_joining, current_feeling, preferred_check_in_time, onboarding_completed
+      FROM onboarding_preferences
       WHERE user_id = ${user_id}
     `;
 
@@ -151,11 +164,12 @@ export const chat = api<ChatRequest, ChatResponse>(
 
     const systemPrompt = buildSystemPrompt(
       session_type, 
-      profile?.name || "there", 
+      profile?.name || onboardingPrefs?.first_name || "there", 
       profile?.morning_routine_preferences, 
       memoryContext,
       behaviorPatterns,
-      profile?.interaction_count
+      profile?.interaction_count,
+      onboardingPrefs
     );
     const conversationHistory: AIMessage[] = [
       { role: "system", content: systemPrompt }
@@ -294,9 +308,24 @@ function buildSystemPrompt(
   morningPreferences?: Record<string, any>, 
   memoryContext?: string,
   behaviorPatterns?: any[],
-  interactionCount?: number
+  interactionCount?: number,
+  onboardingPrefs?: { first_name: string | null; reason_for_joining: string | null; current_feeling: string | null; preferred_check_in_time: string | null; onboarding_completed: boolean; } | null
 ): string {  
   let personalizationContext = "";
+  
+  if (onboardingPrefs?.onboarding_completed) {
+    personalizationContext += `\n\nOnboarding Information (use this to personalize the first conversation):`;
+    if (onboardingPrefs.reason_for_joining) {
+      personalizationContext += `\n- Joined because: ${onboardingPrefs.reason_for_joining}`;
+    }
+    if (onboardingPrefs.current_feeling) {
+      personalizationContext += `\n- Current feeling: ${onboardingPrefs.current_feeling}`;
+    }
+    if (onboardingPrefs.preferred_check_in_time) {
+      personalizationContext += `\n- Preferred check-in time: ${onboardingPrefs.preferred_check_in_time}`;
+    }
+    personalizationContext += `\n\nSince this is their first real conversation after onboarding, acknowledge their reason for joining and current feeling. Don't ask for their name - you already know they're ${userName}.`;
+  }
   
   if (interactionCount && interactionCount > 1) {
     personalizationContext += `\n\nYou've had ${interactionCount} interactions with ${userName}. `;
