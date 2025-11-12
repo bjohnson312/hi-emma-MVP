@@ -50,55 +50,33 @@ export function useConversationSession(
     setLoading(true);
     try {
       const profile = await backend.profile.get({ user_id: userId });
-      const userName = profile.profile?.name || "";
+      let userName = profile.profile?.name || "";
+      
+      if (!userName) {
+        const onboardingStatus = await backend.onboarding.getStatus({ user_id: userId });
+        userName = onboardingStatus.preferences?.first_name || "";
+      }
+      
       const timeGreeting = getTimeBasedGreeting();
 
       const firstCheckInGreetings: Record<SessionType, string> = {
-        morning: userName 
-          ? `${timeGreeting}, ${userName}! How did you sleep?` 
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        evening: userName
-          ? `${timeGreeting} ${userName}! How was your day?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        mood: userName
-          ? `${timeGreeting} ${userName}, how are you feeling right now?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        diet: userName
-          ? `${timeGreeting} ${userName}! What have you eaten today?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        doctors_orders: userName
-          ? `${timeGreeting} ${userName}! How are you feeling today?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        nutrition: userName
-          ? `${timeGreeting} ${userName}! I'm here to help with your nutrition. What's on your mind?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        general: userName
-          ? `${timeGreeting} ${userName}! What's on your mind?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?"
+        morning: `${timeGreeting}, ${userName}! How did you sleep?`,
+        evening: `${timeGreeting} ${userName}! How was your day?`,
+        mood: `${timeGreeting} ${userName}, how are you feeling right now?`,
+        diet: `${timeGreeting} ${userName}! What have you eaten today?`,
+        doctors_orders: `${timeGreeting} ${userName}! How are you feeling today?`,
+        nutrition: `${timeGreeting} ${userName}! I'm here to help with your nutrition. What's on your mind?`,
+        general: `${timeGreeting} ${userName}! What's on your mind?`
       };
 
       const resumeGreetings: Record<SessionType, string> = {
-        morning: userName 
-          ? `Welcome back, ${userName}! How are you feeling?` 
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        evening: userName
-          ? `Welcome back, ${userName}! What can I help you with?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        mood: userName
-          ? `Hi again ${userName}, how are you feeling now?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        diet: userName
-          ? `Welcome back ${userName}! What can I help you with?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        doctors_orders: userName
-          ? `Hi again ${userName}! What can I help you with?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        nutrition: userName
-          ? `Welcome back ${userName}! Let's talk about your nutrition.`
-          : "Hi, Emma here, your personal wellness companion. What's your name?",
-        general: userName
-          ? `Welcome back ${userName}! What can I help you with?`
-          : "Hi, Emma here, your personal wellness companion. What's your name?"
+        morning: `Welcome back, ${userName}! How are you feeling?`,
+        evening: `Welcome back, ${userName}! What can I help you with?`,
+        mood: `Hi again ${userName}, how are you feeling now?`,
+        diet: `Welcome back ${userName}! What can I help you with?`,
+        doctors_orders: `Hi again ${userName}! What can I help you with?`,
+        nutrition: `Welcome back ${userName}! Let's talk about your nutrition.`,
+        general: `Welcome back ${userName}! What can I help you with?`
       };
 
       const greetings = isFirstCheckIn ? firstCheckInGreetings : resumeGreetings;
@@ -164,17 +142,6 @@ export function useConversationSession(
     setLoading(true);
 
     try {
-      if (!sessionId && userMessage && !userMessage.includes("@")) {
-        const profile = await backend.profile.get({ user_id: userId });
-        if (!profile.profile) {
-          await backend.profile.create({
-            user_id: userId,
-            name: userMessage
-          });
-          onNameUpdate?.(userMessage);
-        }
-      }
-
       const response = await backend.conversation.chat({
         user_id: userId,
         session_type: sessionType,
