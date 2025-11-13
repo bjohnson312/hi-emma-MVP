@@ -252,7 +252,7 @@ export default function NotificationsView() {
                   </ul>
                 </div>
               )}
-              {pushNotifications.isSubscribed && (
+              {(pushNotifications.isSubscribed || pushNotifications.permission === 'granted') && (
                 <Button
                   onClick={handleTestNotification}
                   variant="outline"
