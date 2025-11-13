@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Volume2, Settings2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -11,6 +11,8 @@ interface MicrophoneSetupProps {
 export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
   const [step, setStep] = useState<'intro' | 'testing' | 'success'>('intro');
   const [testTranscript, setTestTranscript] = useState('');
+  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied' | 'unknown'>('unknown');
+  const [isSecureContext, setIsSecureContext] = useState(true);
   
   const {
     transcript,
@@ -26,6 +28,30 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     speak,
     isSupported: isTTSSupported
   } = useTextToSpeech();
+
+  useEffect(() => {
+    if (!window.isSecureContext) {
+      setIsSecureContext(false);
+      return;
+    }
+
+    async function checkPermission() {
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
+          
+          result.addEventListener('change', () => {
+            setPermissionState(result.state as 'prompt' | 'granted' | 'denied');
+          });
+        }
+      } catch (err) {
+        console.log('Permission query not supported, will request on use');
+      }
+    }
+    
+    checkPermission();
+  }, []);
 
   const handleStartTest = useCallback(async () => {
     setStep('testing');
@@ -76,6 +102,42 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     onComplete?.();
   }, [onComplete]);
 
+  if (!isSecureContext) {
+    return (
+      <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/40">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-[#323e48]">HTTPS Required</h2>
+          <p className="text-[#323e48]/70">
+            Microphone access requires a secure connection (HTTPS). Please access this app via HTTPS.
+          </p>
+          <p className="text-sm text-[#323e48]/60">
+            Current URL: {window.location.href}
+          </p>
+          {window.location.protocol === 'http:' && (
+            <Button
+              onClick={() => {
+                window.location.href = window.location.href.replace('http://', 'https://');
+              }}
+              className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white"
+            >
+              Switch to HTTPS
+            </Button>
+          )}
+          <Button
+            onClick={handleComplete}
+            variant="outline"
+            className="border-[#4e8f71]/30 hover:bg-[#4e8f71]/10"
+          >
+            Continue Without Voice
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!isSpeechSupported) {
     return (
       <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/40">
@@ -112,6 +174,21 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
             </p>
           </div>
 
+          {permissionState === 'denied' && (
+            <div className="bg-red-50 rounded-2xl p-4 border border-red-200 mb-4">
+              <p className="text-sm font-medium text-red-800 mb-1">Microphone Permission Denied</p>
+              <p className="text-sm text-red-600">
+                You previously denied microphone access. To enable it:
+              </p>
+              <ol className="text-xs text-red-500 mt-2 space-y-1 pl-4">
+                <li>1. Click the 🔒 or ⓘ icon in your browser's address bar</li>
+                <li>2. Find the microphone permission setting</li>
+                <li>3. Change it to "Allow"</li>
+                <li>4. Refresh this page</li>
+              </ol>
+            </div>
+          )}
+
           <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-[#4e8f71] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -120,6 +197,11 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
               <div>
                 <p className="font-medium text-[#323e48]">Allow Microphone Access</p>
                 <p className="text-sm text-[#323e48]/70">When prompted, click "Allow" to grant microphone permissions</p>
+                {permissionState === 'granted' && (
+                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" /> Permission already granted
+                  </p>
+                )}
               </div>
             </div>
 
