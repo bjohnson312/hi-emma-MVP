@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Eye, EyeOff, Shield } from "lucide-react";
+import { Eye, EyeOff, Shield, Stethoscope } from "lucide-react";
 import { clerkClient } from "@/lib/clerk-client";
 
 const MOTIVATIONAL_QUOTES = [
@@ -21,9 +21,10 @@ const MOTIVATIONAL_QUOTES = [
 interface ClerkLoginPageProps {
   onLoginSuccess: (userId: string, email: string, isNewSignup?: boolean) => void;
   onAdminClick?: () => void;
+  onProviderClick?: () => void;
 }
 
-export function ClerkLoginPage({ onLoginSuccess, onAdminClick }: ClerkLoginPageProps) {
+export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }: ClerkLoginPageProps) {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -210,19 +211,49 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick }: ClerkLoginPageP
             <p>Secure authentication powered by Hi, Emma</p>
           </div>
 
-          {onAdminClick && (
-            <div className="mt-4 text-center">
+          <div className="mt-6 flex items-center justify-center gap-4">
+            {onAdminClick && (
               <button
                 type="button"
                 onClick={onAdminClick}
-                className="text-xs text-gray-500 hover:text-purple-600 transition-colors flex items-center justify-center gap-1 mx-auto"
+                className="text-xs text-gray-500 hover:text-purple-600 transition-colors flex items-center gap-1"
               >
                 <Shield className="w-3 h-3" />
                 Admin Portal
               </button>
-            </div>
-          )}
+            )}
+            {onProviderClick && (
+              <button
+                type="button"
+                onClick={onProviderClick}
+                className="text-xs text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+              >
+                <Stethoscope className="w-3 h-3" />
+                Provider Portal
+              </button>
+            )}
+          </div>
         </div>
+
+        {onProviderClick && (
+          <div className="mt-6 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-3">
+              <Stethoscope className="w-6 h-6 text-[#6656cb]" />
+              <h3 className="text-lg font-semibold text-gray-900">Healthcare Providers</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Access the Provider Portal for secure patient data management, clinical notes, and HIPAA-compliant messaging.
+            </p>
+            <Button 
+              onClick={onProviderClick}
+              className="w-full"
+              variant="outline"
+            >
+              <Stethoscope className="w-4 h-4 mr-2" />
+              Sign In to Provider Portal
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

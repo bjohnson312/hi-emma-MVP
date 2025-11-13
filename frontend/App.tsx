@@ -27,6 +27,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { clerkClient } from "./lib/clerk-client";
 import AdminPortalApp from "./AdminPortalApp";
+import ProviderPortalApp from "./ProviderPortalApp";
 import backend from "~backend/client";
 
 let serviceWorkerInitialized = false;
@@ -70,6 +71,7 @@ export default function App() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [showProviderPortal, setShowProviderPortal] = useState(false);
 
   const [userId, setUserId] = useState(() => {
     const stored = localStorage.getItem("emma_user_id");
@@ -211,12 +213,22 @@ export default function App() {
     );
   }
 
+  if (showProviderPortal) {
+    return (
+      <>
+        <ProviderPortalApp onBackToSignIn={() => setShowProviderPortal(false)} />
+        <Toaster />
+      </>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <>
         <ClerkLoginPage 
           onLoginSuccess={handleLoginSuccess}
           onAdminClick={() => setShowAdminPortal(true)}
+          onProviderClick={() => setShowProviderPortal(true)}
         />
         <Toaster />
       </>

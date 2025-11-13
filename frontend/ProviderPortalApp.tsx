@@ -3,7 +3,11 @@ import { ProviderLoginPage } from "./components/ProviderLoginPage";
 import { ProviderDashboard } from "./components/ProviderDashboard";
 import { Toaster } from "./components/ui/toaster";
 
-export default function ProviderPortalApp() {
+interface ProviderPortalAppProps {
+  onBackToSignIn?: () => void;
+}
+
+export default function ProviderPortalApp({ onBackToSignIn }: ProviderPortalAppProps) {
   const [token, setToken] = useState<string | null>(null);
   const [providerData, setProviderData] = useState<any>(null);
 
@@ -33,7 +37,10 @@ export default function ProviderPortalApp() {
   return (
     <div className="dark">
       {!token ? (
-        <ProviderLoginPage onLogin={handleLogin} />
+        <ProviderLoginPage 
+          onLogin={handleLogin} 
+          onBackToSignIn={onBackToSignIn}
+        />
       ) : (
         <ProviderDashboard
           token={token}

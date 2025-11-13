@@ -1,218 +1,275 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { Eye, EyeOff, Shield, ArrowLeft } from "lucide-react";
 import backend from "~backend/client";
-import { Lock, Mail, User, Building, FileText } from "lucide-react";
+
+const PROVIDER_QUOTES = [
+  "Excellence in patient care starts here.",
+  "Supporting health professionals in delivering better care.",
+  "Empowering providers with comprehensive patient insights.",
+  "Your dedication to patient wellness matters.",
+  "Together, we improve patient outcomes.",
+];
 
 interface ProviderLoginPageProps {
-  onLogin: (token: string, providerData: any) => void;
+  onLogin: (token: string, data: any) => void;
+  onBackToSignIn?: () => void;
 }
 
-export function ProviderLoginPage({ onLogin }: ProviderLoginPageProps) {
+export function ProviderLoginPage({ onLogin, onBackToSignIn }: ProviderLoginPageProps) {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [credentials, setCredentials] = useState("");
   const [specialty, setSpecialty] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [licenseNumber, setLicenseNumber] = useState("");
+  const [license, setLicense] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { toast } = useToast();
+  
+  const randomQuote = useMemo(() => {
+    return PROVIDER_QUOTES[Math.floor(Math.random() * PROVIDER_QUOTES.length)];
+  }, []);
 
-  const handleLogin = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
+    setErrorMessage("");
+
     try {
-      const response = await backend.provider_auth.login({
-        email,
-        password,
-      });
-
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${response.fullName}`,
-      });
-
-      onLogin(response.token, response);
+      if (isSignup) {
+        const result = await backend.provider_auth.signup({
+          email,
+          password,
+          fullName,
+          specialty,
+          licenseNumber: license,
+        });
+        
+        toast({
+          title: "Welcome to the Provider Portal! 🎉",
+          description: "Your account has been created successfully.",
+        });
+        
+        onLogin(result.token, {
+          providerId: result.providerId,
+          email,
+          fullName,
+        });
+      } else {
+        const result = await backend.provider_auth.login({
+          email,
+          password,
+        });
+        
+        toast({
+          title: "Welcome back! 👋",
+          description: "You've successfully logged in.",
+        });
+        
+        onLogin(result.token, {
+          providerId: result.providerId,
+          email: result.email,
+          fullName: result.fullName,
+        });
+      }
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignup = async () => {
-    setLoading(true);
-    try {
-      const response = await backend.provider_auth.signup({
-        email,
-        password,
-        fullName,
-        credentials: credentials || undefined,
-        specialty: specialty || undefined,
-        organization: organization || undefined,
-        licenseNumber: licenseNumber || undefined,
-      });
-
-      toast({
-        title: "Account created",
-        description: "Your provider account has been created successfully",
-      });
-
-      onLogin(response.token, response);
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        title: "Signup failed",
-        description: error.message || "Could not create account",
-        variant: "destructive",
-      });
+      console.error("Authentication error:", error);
+      
+      let message = "Something went wrong. Please try again.";
+      
+      if (error.message) {
+        const msg = error.message.toLowerCase();
+        
+        if (msg.includes("already exists") || msg.includes("duplicate")) {
+          message = "This email is already registered. Please sign in instead.";
+          setTimeout(() => {
+            setIsSignup(false);
+            setErrorMessage("");
+          }, 3000);
+        } else if (msg.includes("invalid") || msg.includes("not found")) {
+          message = "Invalid credentials. Please check your email and password.";
+        } else {
+          message = error.message;
+        }
+      }
+      
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center px-4 relative"
+      style={{
+        backgroundImage: "url('/background.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed"
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
+      
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <Lock className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Shield className="w-8 h-8 text-[#6656cb]" />
+            <h1 className="text-4xl font-bold text-[#6656cb]">Provider Portal</h1>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Provider Portal
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {isSignup ? "Create your provider account" : "Sign in to access patient data"}
-          </p>
+          <p className="text-[#4e8f71]">Healthcare professional access</p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="provider@hospital.com"
-                className="pl-10"
-              />
-            </div>
+        <div className="mb-6 text-center py-4 px-6 bg-white/20 backdrop-blur-md rounded-lg border border-white/30 shadow-lg">
+          <p className="text-sm italic text-gray-800 font-medium">"{randomQuote}"</p>
+        </div>
+
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-8 border border-white/20">
+          <div className="flex gap-2 mb-6">
+            <Button
+              onClick={() => setIsSignup(false)}
+              variant={!isSignup ? "default" : "outline"}
+              className="flex-1"
+              type="button"
+            >
+              Sign In
+            </Button>
+            <Button
+              onClick={() => setIsSignup(true)}
+              variant={isSignup ? "default" : "outline"}
+              className="flex-1"
+              type="button"
+            >
+              Sign Up
+            </Button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {isSignup && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMessage && (
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                <p className="text-sm">{errorMessage}</p>
+              </div>
+            )}
+            
+            {isSignup && (
+              <>
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium mb-2 text-foreground">
+                    Full Name
+                  </label>
                   <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="Dr. Jane Smith"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Dr. John Smith"
-                    className="pl-10"
+                    required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Credentials (Optional)
-                </label>
-                <Input
-                  value={credentials}
-                  onChange={(e) => setCredentials(e.target.value)}
-                  placeholder="MD, PhD"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Specialty (Optional)
-                </label>
-                <Input
-                  value={specialty}
-                  onChange={(e) => setSpecialty(e.target.value)}
-                  placeholder="Cardiology"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Organization (Optional)
-                </label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div>
+                  <label htmlFor="specialty" className="block text-sm font-medium mb-2 text-foreground">
+                    Specialty
+                  </label>
                   <Input
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    placeholder="City Hospital"
-                    className="pl-10"
+                    id="specialty"
+                    type="text"
+                    placeholder="Cardiology"
+                    value={specialty}
+                    onChange={(e) => setSpecialty(e.target.value)}
+                    required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  License Number (Optional)
-                </label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div>
+                  <label htmlFor="license" className="block text-sm font-medium mb-2 text-foreground">
+                    License Number
+                  </label>
                   <Input
-                    value={licenseNumber}
-                    onChange={(e) => setLicenseNumber(e.target.value)}
-                    placeholder="123456"
-                    className="pl-10"
+                    id="license"
+                    type="text"
+                    placeholder="MD123456"
+                    value={license}
+                    onChange={(e) => setLicense(e.target.value)}
+                    required
                   />
                 </div>
+              </>
+            )}
+            
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-2 text-foreground">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="doctor@hospital.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-2 text-foreground">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-            </>
+              {isSignup && (
+                <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full"
+            >
+              {loading ? "Loading..." : isSignup ? "Create Provider Account" : "Sign In"}
+            </Button>
+          </form>
+
+          <div className="mt-4 text-center text-xs text-gray-600">
+            <p>Secure HIPAA-compliant authentication</p>
+          </div>
+
+          {onBackToSignIn && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onBackToSignIn}
+                className="text-xs text-gray-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1 mx-auto"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Back to Patient Sign In
+              </button>
+            </div>
           )}
-
-          <Button
-            onClick={isSignup ? handleSignup : handleLogin}
-            disabled={loading || !email || !password || (isSignup && !fullName)}
-            className="w-full"
-          >
-            {loading ? "Processing..." : isSignup ? "Create Account" : "Sign In"}
-          </Button>
-
-          <button
-            onClick={() => setIsSignup(!isSignup)}
-            className="w-full text-center text-sm text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            {isSignup
-              ? "Already have an account? Sign in"
-              : "Need an account? Sign up"}
-          </button>
         </div>
       </div>
     </div>
