@@ -19,9 +19,8 @@ vN3kR7mP9qW2sY5tX8cV1bZ4gJ6hL0eM3nK7pQ9rS2uW
 
 ### Secret 3: VAPIDEmail
 ```
-mailto:admin@emma-health.com
+mailto:techadmin@emmahealthapp.com
 ```
-*(You can change this to your actual email)*
 
 ---
 
