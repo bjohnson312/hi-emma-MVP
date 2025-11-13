@@ -3,6 +3,7 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { DoctorsOrder } from "../wellness/types";
 import type { NotificationPreferences } from "./types";
+import { sendPushToUser } from "../push/send";
 
 export const checkMedicationRemindersHandler = api<void, void>(
   { expose: false, method: "POST", path: "/internal/check-medication-reminders" },
@@ -10,8 +11,8 @@ export const checkMedicationRemindersHandler = api<void, void>(
   const now = new Date();
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   
-  const prefsQuery = await db.query<NotificationPreferences & { user_id: string }>`
-    SELECT user_id, medication_reminders_enabled, notification_method, phone_number, push_subscription, timezone
+  const prefsQuery = await db.query<NotificationPreferences & { user_id: string; push_enabled?: boolean }>`
+    SELECT user_id, medication_reminders_enabled, notification_method, phone_number, push_subscription, timezone, push_enabled
     FROM notification_preferences
     WHERE medication_reminders_enabled = true
   `;
@@ -63,8 +64,18 @@ export const checkMedicationRemindersHandler = api<void, void>(
           const scheduledTime = new Date();
           scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-          const title = "💊 Medication Reminder";
-          const message = `Time to take ${order.medication_name} (${order.dosage})`;
+          const title = "💊 Medication Reminder from Emma";
+          const message = `Hi! Emma here 😊 It's time to take ${order.medication_name} (${order.dosage}). Tap here to mark it as taken!`;
+
+          if (pref.push_enabled !== false) {
+            await sendPushToUser(
+              pref.user_id,
+              title,
+              message,
+              '/doctors-orders',
+              '/logo.png'
+            );
+          }
 
           if (pref.notification_method === 'browser' || pref.notification_method === 'both') {
             await db.exec`

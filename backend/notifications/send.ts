@@ -1,6 +1,7 @@
 import { api } from "encore.dev/api";
 import db from "../db";
 import type { SendNotificationRequest, NotificationQueueItem } from "./types";
+import { sendPushToUser } from "../push/send";
 
 export const sendNotification = api<SendNotificationRequest, { success: boolean }>(
   { expose: true, method: "POST", path: "/notifications/send" },
@@ -10,8 +11,9 @@ export const sendNotification = api<SendNotificationRequest, { success: boolean 
     const prefs = await db.queryRow<{
       notification_method: string;
       phone_number?: string;
+      push_enabled?: boolean;
     }>`
-      SELECT notification_method, phone_number
+      SELECT notification_method, phone_number, push_enabled
       FROM notification_preferences
       WHERE user_id = ${user_id}
     `;
@@ -41,9 +43,31 @@ export const sendNotification = api<SendNotificationRequest, { success: boolean 
       `;
     }
 
+    if (prefs.push_enabled !== false) {
+      const url = getNotificationUrl(notification_type, metadata);
+      await sendPushToUser(user_id, title, message, url);
+    }
+
     return { success: true };
   }
 );
+
+function getNotificationUrl(notificationType: string, metadata?: Record<string, any>): string {
+  switch (notificationType) {
+    case 'morning_checkin':
+      return '/morning-routine';
+    case 'medication_reminder':
+      return '/doctors-orders';
+    case 'evening_reflection':
+      return '/evening-routine';
+    case 'mood_checkin':
+      return '/mood';
+    case 'nutrition_log':
+      return '/diet-nutrition';
+    default:
+      return '/';
+  }
+}
 
 interface GetPendingNotificationsRequest {
   user_id: string;

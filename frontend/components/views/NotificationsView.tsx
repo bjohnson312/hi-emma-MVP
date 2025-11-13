@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Bell, Clock, Sun, Moon, Phone } from "lucide-react";
+import { Bell, Clock, Sun, Moon, Phone, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { NotificationPreferences } from "~backend/notifications/types";
 import Tooltip from "@/components/Tooltip";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function NotificationsView() {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
@@ -14,6 +15,7 @@ export default function NotificationsView() {
   const { toast } = useToast();
 
   const userId = "user_1";
+  const pushNotifications = usePushNotifications(userId);
 
   useEffect(() => {
     loadPreferences();
@@ -69,21 +71,50 @@ export default function NotificationsView() {
     }
   };
 
-  const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) {
-      toast({
-        title: "Not Supported",
-        description: "Browser notifications are not supported",
-        variant: "destructive",
-      });
-      return;
+  const handlePushToggle = async () => {
+    if (pushNotifications.isSubscribed) {
+      const success = await pushNotifications.unsubscribe();
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Push notifications disabled",
+        });
+      }
+    } else {
+      const success = await pushNotifications.subscribe();
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Push notifications enabled! You'll receive reminders from Emma.",
+        });
+      } else if (pushNotifications.error) {
+        toast({
+          title: "Error",
+          description: pushNotifications.error,
+          variant: "destructive",
+        });
+      }
     }
+  };
 
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
+  const handleTestNotification = async () => {
+    try {
+      await backend.push.sendPush({
+        userId,
+        title: "👋 Test Notification from Emma",
+        body: "This is a test notification! If you see this, push notifications are working perfectly.",
+        url: "/"
+      });
       toast({
-        title: "Success",
-        description: "Browser notifications enabled",
+        title: "Test Sent",
+        description: "Check your device for the test notification",
+      });
+    } catch (error) {
+      console.error("Failed to send test notification:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send test notification",
+        variant: "destructive",
       });
     }
   };
@@ -155,18 +186,48 @@ export default function NotificationsView() {
               </div>
             )}
 
-            {preferences.notification_method === "browser" || preferences.notification_method === "both" ? (
-              <Tooltip content="Allow browser to show notifications" side="top">
-                <Button
-                  onClick={requestNotificationPermission}
-                  variant="outline"
-                  className="mt-2"
-                >
-                  Enable Browser Notifications
-                </Button>
-              </Tooltip>
-            ) : null}
           </div>
+
+          {pushNotifications.isSupported && (
+            <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Smartphone className="w-5 h-5 text-[#364d89]" />
+                <div className="flex-1">
+                  <p className="font-medium text-[#323e48]">Push Notifications</p>
+                  <p className="text-xs text-[#323e48]/60">
+                    {pushNotifications.isSubscribed 
+                      ? "Receive notifications on this device" 
+                      : "Enable to receive notifications on this device"}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={pushNotifications.isSubscribed}
+                    onChange={handlePushToggle}
+                    disabled={pushNotifications.isLoading}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#4e8f71]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#4e8f71] peer-checked:to-[#364d89]"></div>
+                </label>
+              </div>
+              {pushNotifications.isSubscribed && (
+                <Button
+                  onClick={handleTestNotification}
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                >
+                  Send Test Notification
+                </Button>
+              )}
+              {pushNotifications.permission === 'denied' && (
+                <p className="text-xs text-red-600 mt-2">
+                  Push notifications are blocked. Please enable them in your browser settings.
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <h3 className="font-semibold text-[#323e48] mb-3">Reminder Preferences</h3>
