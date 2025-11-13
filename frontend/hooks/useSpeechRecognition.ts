@@ -46,22 +46,14 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
-      
-      if (event.error === 'no-speech') {
-        return;
-      }
-      
       const errorMessage = event.error === 'not-allowed' 
         ? 'Microphone access was denied. Please allow microphone access in your browser settings.'
-        : event.error === 'aborted'
-        ? null
+        : event.error === 'no-speech'
+        ? 'No speech was detected. Please try again.'
         : event.error === 'network'
         ? 'Network error occurred. Please check your connection.'
         : `Speech recognition error: ${event.error}`;
-      
-      if (errorMessage) {
-        setError(errorMessage);
-      }
+      setError(errorMessage);
       setIsListening(false);
     };
 
@@ -78,24 +70,15 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     };
   }, [isSupported]);
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(() => {
     if (!recognitionRef.current || isListening) return;
 
     setError(null);
-    
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
       recognitionRef.current.start();
       setIsListening(true);
-    } catch (err: any) {
-      console.error('Microphone access error:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setError('Microphone access denied. Click the 🔒 icon in your address bar and allow microphone access.');
-      } else if (err.name === 'NotFoundError') {
-        setError('No microphone found. Please connect a microphone and try again.');
-      } else {
-        setError('Failed to start speech recognition');
-      }
+    } catch (err) {
+      setError('Failed to start speech recognition');
     }
   }, [isListening]);
 
