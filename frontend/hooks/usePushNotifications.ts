@@ -81,10 +81,36 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
       }
 
       console.log('Waiting for service worker...');
-      const registration = await navigator.serviceWorker.ready;
+      
+      let registration: ServiceWorkerRegistration | undefined;
+      
+      try {
+        registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<ServiceWorkerRegistration>((resolve, reject) => {
+            setTimeout(async () => {
+              const reg = await navigator.serviceWorker.getRegistration();
+              if (reg && reg.active) {
+                console.log('Got active registration via getRegistration()');
+                resolve(reg);
+              } else {
+                reject(new Error('Service worker not ready after 5 seconds'));
+              }
+            }, 5000);
+          })
+        ]);
+      } catch (err) {
+        console.error('Service worker ready timeout, trying getRegistration...', err);
+        registration = await navigator.serviceWorker.getRegistration();
+      }
+      
+      if (!registration) {
+        throw new Error('No service worker registration found - please refresh the page');
+      }
+      
       console.log('Service worker ready:', registration);
       
-      if (!registration || !registration.active) {
+      if (!registration.active) {
         throw new Error('Service worker not active - please refresh the page');
       }
 
