@@ -151,6 +151,8 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     if (!text) return;
 
     stop();
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     if (selectedElevenLabsVoice) {
       try {
