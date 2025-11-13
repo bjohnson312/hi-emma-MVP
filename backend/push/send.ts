@@ -8,15 +8,32 @@ const vapidPublicKey = secret("VAPIDPublicKey");
 const vapidPrivateKey = secret("VAPIDPrivateKey");
 const vapidEmail = secret("VAPIDEmail");
 
-webpush.setVapidDetails(
-  vapidEmail(),
-  vapidPublicKey(),
-  vapidPrivateKey()
-);
+function ensureVapidConfigured() {
+  try {
+    const email = vapidEmail();
+    const publicKey = vapidPublicKey();
+    const privateKey = vapidPrivateKey();
+    
+    if (!email || !publicKey || !privateKey) {
+      throw new Error("VAPID keys not configured");
+    }
+    
+    webpush.setVapidDetails(email, publicKey, privateKey);
+    return true;
+  } catch (error) {
+    console.warn("VAPID keys not configured. Push notifications will not work until keys are added to secrets.");
+    return false;
+  }
+}
 
 export const sendPush = api(
   { method: "POST", path: "/push/send", expose: true },
   async (req: SendPushRequest): Promise<{ success: boolean; sent: number; failed: number }> => {
+    if (!ensureVapidConfigured()) {
+      console.warn("Push notification request ignored - VAPID keys not configured");
+      return { success: false, sent: 0, failed: 0 };
+    }
+
     const { userId, title, body, icon = "/logo.png", badge = "/logo.png", url = "/", tag = "emma-notification" } = req;
 
     const subscriptionsQuery = await db.query<PushSubscriptionRecord>`
@@ -91,6 +108,10 @@ export async function sendPushToUser(
   url?: string,
   icon?: string
 ): Promise<void> {
+  if (!ensureVapidConfigured()) {
+    return;
+  }
+  
   try {
     await sendPush({
       userId,
