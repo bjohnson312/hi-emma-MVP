@@ -29,24 +29,34 @@ import { clerkClient } from "./lib/clerk-client";
 import AdminPortalApp from "./AdminPortalApp";
 import backend from "~backend/client";
 
-function registerServiceWorker() {
+let serviceWorkerInitialized = false;
+
+async function registerServiceWorker(): Promise<void> {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return;
   }
   
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js', { 
-          scope: '/',
-          type: 'classic'
-        });
-        
-        console.log('✅ Service Worker registered successfully:', registration.scope);
-      } catch (error) {
-        console.warn('⚠️ Service Worker registration failed:', error instanceof Error ? error.message : 'Unknown error');
-      }
+  if (serviceWorkerInitialized) {
+    return;
+  }
+  
+  serviceWorkerInitialized = true;
+  
+  if (!('serviceWorker' in navigator)) {
+    console.warn('⚠️ Service workers not supported in this browser');
+    return;
+  }
+  
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js', { 
+      scope: '/',
+      type: 'classic'
     });
+    
+    console.log('✅ Service Worker registered successfully:', registration.scope);
+  } catch (error) {
+    console.error('❌ Service Worker registration failed:', error instanceof Error ? error.message : 'Unknown error');
+    serviceWorkerInitialized = false;
   }
 }
 
