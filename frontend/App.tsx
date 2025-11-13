@@ -35,17 +35,25 @@ function registerServiceWorker() {
   }
   
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js', { 
-        scope: '/',
-        type: 'classic'
-      })
-        .then(registration => {
-          console.log('✅ Service Worker registered successfully:', registration.scope);
-        })
-        .catch(error => {
-          console.warn('⚠️ Service Worker registration failed:', error.message);
+    window.addEventListener('load', async () => {
+      try {
+        const swUrl = `${window.location.origin}/sw.js`;
+        const response = await fetch(swUrl, { method: 'HEAD' });
+        
+        if (!response.ok) {
+          console.warn('⚠️ Service Worker file not found, skipping registration');
+          return;
+        }
+        
+        const registration = await navigator.serviceWorker.register('/sw.js', { 
+          scope: '/',
+          type: 'classic'
         });
+        
+        console.log('✅ Service Worker registered successfully:', registration.scope);
+      } catch (error) {
+        console.warn('⚠️ Service Worker registration failed:', error instanceof Error ? error.message : 'Unknown error');
+      }
     });
   }
 }
