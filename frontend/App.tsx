@@ -31,13 +31,24 @@ import backend from "~backend/client";
 
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('Service Worker registered successfully:', registration.scope);
+    window.addEventListener('load', () => {
+      const swUrl = `${window.location.origin}/sw.js`;
+      console.log('Attempting to register service worker at:', swUrl);
+      
+      navigator.serviceWorker.register('/sw.js', { 
+        scope: '/',
+        type: 'classic'
       })
-      .catch(error => {
-        console.error('Service Worker registration failed:', error);
-      });
+        .then(registration => {
+          console.log('✅ Service Worker registered successfully:', registration.scope);
+        })
+        .catch(error => {
+          console.warn('⚠️ Service Worker registration failed (this is OK - push notifications will not work until service worker is registered):', error.message);
+          console.log('💡 Service workers require HTTPS or localhost. If on HTTP, push notifications won\'t work.');
+        });
+    });
+  } else {
+    console.warn('⚠️ Service Workers not supported in this browser');
   }
 }
 
