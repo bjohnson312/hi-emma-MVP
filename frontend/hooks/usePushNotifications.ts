@@ -81,8 +81,43 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
       }
 
       console.log('Waiting for service worker...');
-      const registration = await navigator.serviceWorker.ready;
+      
+      let registration = await navigator.serviceWorker.getRegistration();
+      console.log('Current registration:', registration);
+      
+      if (!registration) {
+        console.log('No registration found, registering new service worker...');
+        registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+          type: 'classic'
+        });
+        console.log('Service worker registered:', registration);
+        
+        await new Promise<void>((resolve) => {
+          if (registration!.active) {
+            resolve();
+          } else {
+            registration!.addEventListener('updatefound', () => {
+              const worker = registration!.installing;
+              if (worker) {
+                worker.addEventListener('statechange', () => {
+                  if (worker.state === 'activated') {
+                    resolve();
+                  }
+                });
+              }
+            });
+          }
+        });
+      } else {
+        await navigator.serviceWorker.ready;
+      }
+      
       console.log('Service worker ready:', registration);
+      
+      if (!registration || (!registration.active && !registration.installing)) {
+        throw new Error('Service worker not active');
+      }
 
       console.log('Fetching VAPID public key...');
       const { publicKey } = await backend.push.getPublicKey();

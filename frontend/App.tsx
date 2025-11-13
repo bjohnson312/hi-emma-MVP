@@ -175,6 +175,8 @@ export default function App() {
     if (match) {
       setShareToken(match[1]);
     }
+    
+    registerServiceWorker();
   }, []);
 
 
