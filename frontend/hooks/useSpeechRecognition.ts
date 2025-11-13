@@ -16,10 +16,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  const isSupported = (
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) &&
-    window.isSecureContext
-  );
+  const isSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
 
   useEffect(() => {
     if (!isSupported) return;
@@ -75,11 +72,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current || isListening) return;
-
-    if (!window.isSecureContext) {
-      setError('Speech recognition requires HTTPS. Please access this app via a secure connection.');
-      return;
-    }
 
     setError(null);
     try {
