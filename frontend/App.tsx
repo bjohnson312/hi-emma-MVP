@@ -30,11 +30,12 @@ import AdminPortalApp from "./AdminPortalApp";
 import backend from "~backend/client";
 
 function registerServiceWorker() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return;
+  }
+  
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      const swUrl = `${window.location.origin}/sw.js`;
-      console.log('Attempting to register service worker at:', swUrl);
-      
       navigator.serviceWorker.register('/sw.js', { 
         scope: '/',
         type: 'classic'
@@ -43,12 +44,9 @@ function registerServiceWorker() {
           console.log('✅ Service Worker registered successfully:', registration.scope);
         })
         .catch(error => {
-          console.warn('⚠️ Service Worker registration failed (this is OK - push notifications will not work until service worker is registered):', error.message);
-          console.log('💡 Service workers require HTTPS or localhost. If on HTTP, push notifications won\'t work.');
+          console.warn('⚠️ Service Worker registration failed:', error.message);
         });
     });
-  } else {
-    console.warn('⚠️ Service Workers not supported in this browser');
   }
 }
 
