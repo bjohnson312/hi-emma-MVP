@@ -46,14 +46,22 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
+      
+      if (event.error === 'no-speech') {
+        return;
+      }
+      
       const errorMessage = event.error === 'not-allowed' 
         ? 'Microphone access was denied. Please allow microphone access in your browser settings.'
-        : event.error === 'no-speech'
-        ? 'No speech was detected. Please try again.'
+        : event.error === 'aborted'
+        ? null
         : event.error === 'network'
         ? 'Network error occurred. Please check your connection.'
         : `Speech recognition error: ${event.error}`;
-      setError(errorMessage);
+      
+      if (errorMessage) {
+        setError(errorMessage);
+      }
       setIsListening(false);
     };
 
