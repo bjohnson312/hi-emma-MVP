@@ -29,6 +29,18 @@ import { clerkClient } from "./lib/clerk-client";
 import AdminPortalApp from "./AdminPortalApp";
 import backend from "~backend/client";
 
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered successfully:', registration.scope);
+      })
+      .catch(error => {
+        console.error('Service Worker registration failed:', error);
+      });
+  }
+}
+
 export default function App() {
   const [currentView, setCurrentView] = useState<NavigationView>("home");
   const [userName, setUserName] = useState<string>("");
@@ -44,6 +56,10 @@ export default function App() {
     const stored = localStorage.getItem("emma_user_id");
     return stored || "";
   });
+
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {

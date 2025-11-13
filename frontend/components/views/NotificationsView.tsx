@@ -81,6 +81,15 @@ export default function NotificationsView() {
         });
       }
     } else {
+      if (pushNotifications.permission === 'denied') {
+        toast({
+          title: "Permission Blocked",
+          description: "Please enable notifications in your browser settings, then try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const success = await pushNotifications.subscribe();
       if (success) {
         toast({
@@ -88,11 +97,19 @@ export default function NotificationsView() {
           description: "Push notifications enabled! You'll receive reminders from Emma.",
         });
       } else if (pushNotifications.error) {
-        toast({
-          title: "Error",
-          description: pushNotifications.error,
-          variant: "destructive",
-        });
+        if (pushNotifications.error.includes('denied')) {
+          toast({
+            title: "Permission Denied",
+            description: "Please allow notifications when your browser asks, or enable them in browser settings.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: pushNotifications.error,
+            variant: "destructive",
+          });
+        }
       }
     }
   };
@@ -211,6 +228,21 @@ export default function NotificationsView() {
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#4e8f71]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#4e8f71] peer-checked:to-[#364d89]"></div>
                 </label>
               </div>
+              {pushNotifications.permission === 'denied' && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
+                  <p className="text-xs text-red-700 font-medium mb-2">
+                    🚫 Notifications Blocked
+                  </p>
+                  <p className="text-xs text-red-600 mb-2">
+                    To enable push notifications, you need to allow them in your browser settings:
+                  </p>
+                  <ul className="text-xs text-red-600 list-disc list-inside space-y-1">
+                    <li>Chrome: Click the lock icon in the address bar → Site settings → Notifications → Allow</li>
+                    <li>Firefox: Click the lock icon → Permissions → Receive notifications → Allow</li>
+                    <li>Safari: Safari menu → Settings for This Website → Notifications → Allow</li>
+                  </ul>
+                </div>
+              )}
               {pushNotifications.isSubscribed && (
                 <Button
                   onClick={handleTestNotification}
@@ -220,11 +252,6 @@ export default function NotificationsView() {
                 >
                   Send Test Notification
                 </Button>
-              )}
-              {pushNotifications.permission === 'denied' && (
-                <p className="text-xs text-red-600 mt-2">
-                  Push notifications are blocked. Please enable them in your browser settings.
-                </p>
               )}
             </div>
           )}
