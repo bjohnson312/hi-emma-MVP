@@ -72,12 +72,21 @@ export default function NotificationsView() {
   };
 
   const handlePushToggle = async () => {
-    if (pushNotifications.isSubscribed) {
-      const success = await pushNotifications.unsubscribe();
-      if (success) {
+    const isCurrentlyEnabled = pushNotifications.isSubscribed || pushNotifications.permission === 'granted';
+    
+    if (isCurrentlyEnabled) {
+      if (pushNotifications.isSubscribed) {
+        const success = await pushNotifications.unsubscribe();
+        if (success) {
+          toast({
+            title: "Success",
+            description: "Push notifications disabled",
+          });
+        }
+      } else {
         toast({
-          title: "Success",
-          description: "Push notifications disabled",
+          title: "Info",
+          description: "Push notifications are already enabled via browser permission",
         });
       }
     } else {
@@ -221,7 +230,7 @@ export default function NotificationsView() {
                   <input 
                     type="checkbox" 
                     className="sr-only peer" 
-                    checked={pushNotifications.isSubscribed}
+                    checked={pushNotifications.isSubscribed || pushNotifications.permission === 'granted'}
                     onChange={handlePushToggle}
                     disabled={pushNotifications.isLoading}
                   />
