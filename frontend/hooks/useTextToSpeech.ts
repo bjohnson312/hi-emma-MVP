@@ -57,7 +57,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
       }
     };
     fetchElevenLabsVoices();
-  }, [savedVoicePreference, saveVoicePreference]);
+  }, [savedVoicePreference]);
 
   useEffect(() => {
     if (!isSupported) return;
