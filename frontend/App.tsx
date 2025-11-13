@@ -131,14 +131,14 @@ export default function App() {
       if (!savedVoiceType) {
         console.log('No saved voice preference, setting Trinity as default...');
         const { voices } = await backend.voice.listVoices();
-        const trinityVoice = voices.find(v => v.name === 'Trinity');
+        const trinityVoice = voices.find(v => v.name.toLowerCase().includes('trinity'));
         if (trinityVoice) {
-          console.log('Setting Trinity voice:', trinityVoice);
-          localStorage.setItem('emma-voice-preference', 'Trinity');
+          console.log('Setting Trinity voice:', trinityVoice.name);
+          localStorage.setItem('emma-voice-preference', trinityVoice.name);
           localStorage.setItem('emma-voice-type', 'elevenlabs');
           localStorage.setItem('emma-voice-id', trinityVoice.id);
         } else {
-          console.warn('Trinity voice not found in ElevenLabs voices');
+          console.warn('Trinity voice not found in ElevenLabs voices. Available:', voices.map(v => v.name));
         }
       } else {
         console.log('Voice preference already set:', savedVoiceType);

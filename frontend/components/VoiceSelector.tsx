@@ -106,8 +106,8 @@ export default function VoiceSelector({
   };
 
   const sortedElevenLabsVoices = [...elevenLabsVoices].sort((a, b) => {
-    if (a.name === 'Trinity') return -1;
-    if (b.name === 'Trinity') return 1;
+    if (a.name.toLowerCase().includes('trinity')) return -1;
+    if (b.name.toLowerCase().includes('trinity')) return 1;
     return 0;
   });
 

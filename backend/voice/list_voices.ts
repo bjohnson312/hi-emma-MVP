@@ -28,10 +28,10 @@ export const listVoices = api(
         description: voice.description,
       }));
 
-      const order = ['Trinity', 'Sarah', 'George', 'Will'];
+      const order = ['trinity', 'sarah', 'george', 'will'];
       voices.sort((a, b) => {
-        const aIndex = order.indexOf(a.name);
-        const bIndex = order.indexOf(b.name);
+        const aIndex = order.findIndex(name => a.name.toLowerCase().includes(name));
+        const bIndex = order.findIndex(name => b.name.toLowerCase().includes(name));
         if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
         if (aIndex !== -1) return -1;
         if (bIndex !== -1) return 1;

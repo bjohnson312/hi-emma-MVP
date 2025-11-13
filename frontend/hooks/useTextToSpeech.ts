@@ -42,14 +42,14 @@ export function useTextToSpeech(): UseTextToSpeechResult {
             setSelectedVoice(null);
           }
         } else if (!savedVoicePreference && elVoices.length > 0) {
-          const trinityVoice = elVoices.find(v => v.name === 'Trinity');
+          const trinityVoice = elVoices.find(v => v.name.toLowerCase().includes('trinity'));
           if (trinityVoice) {
-            console.log('No saved preference, auto-selecting Trinity');
+            console.log('No saved preference, auto-selecting Trinity:', trinityVoice.name);
             setSelectedElevenLabsVoice(trinityVoice);
             setSelectedVoice(null);
             saveVoicePreference(trinityVoice.name, 'elevenlabs', trinityVoice.id);
           } else {
-            console.warn('Trinity voice not found in list');
+            console.warn('Trinity voice not found in list. Available voices:', elVoices.map(v => v.name));
           }
         }
       } catch (error) {
