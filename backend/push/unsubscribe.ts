@@ -3,7 +3,7 @@ import db from "../db";
 import type { UnsubscribeRequest } from "./types";
 
 export const unsubscribe = api(
-  { method: "POST", path: "/push/unsubscribe", expose: true },
+  { method: "POST", path: "/push/unsubscribe", expose: true, auth: false },
   async (req: UnsubscribeRequest): Promise<{ success: boolean }> => {
     const { userId, endpoint } = req;
 

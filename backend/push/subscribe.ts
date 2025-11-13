@@ -3,7 +3,7 @@ import db from "../db";
 import type { SubscribeRequest } from "./types";
 
 export const subscribe = api(
-  { method: "POST", path: "/push/subscribe", expose: true },
+  { method: "POST", path: "/push/subscribe", expose: true, auth: false },
   async (req: SubscribeRequest): Promise<{ success: boolean }> => {
     const { userId, subscription, userAgent } = req;
 

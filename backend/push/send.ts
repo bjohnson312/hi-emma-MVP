@@ -27,7 +27,7 @@ function ensureVapidConfigured() {
 }
 
 export const sendPush = api(
-  { method: "POST", path: "/push/send", expose: true },
+  { method: "POST", path: "/push/send", expose: true, auth: false },
   async (req: SendPushRequest): Promise<{ success: boolean; sent: number; failed: number }> => {
     if (!ensureVapidConfigured()) {
       console.warn("Push notification request ignored - VAPID keys not configured");
