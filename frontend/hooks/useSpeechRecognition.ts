@@ -78,15 +78,24 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     };
   }, [isSupported]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!recognitionRef.current || isListening) return;
 
     setError(null);
+    
     try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       recognitionRef.current.start();
       setIsListening(true);
-    } catch (err) {
-      setError('Failed to start speech recognition');
+    } catch (err: any) {
+      console.error('Microphone access error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Microphone access denied. Click the 🔒 icon in your address bar and allow microphone access.');
+      } else if (err.name === 'NotFoundError') {
+        setError('No microphone found. Please connect a microphone and try again.');
+      } else {
+        setError('Failed to start speech recognition');
+      }
     }
   }, [isListening]);
 
