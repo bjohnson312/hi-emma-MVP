@@ -37,14 +37,6 @@ function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
-        const swUrl = `${window.location.origin}/sw.js`;
-        const response = await fetch(swUrl, { method: 'HEAD' });
-        
-        if (!response.ok) {
-          console.warn('⚠️ Service Worker file not found, skipping registration');
-          return;
-        }
-        
         const registration = await navigator.serviceWorker.register('/sw.js', { 
           scope: '/',
           type: 'classic'
