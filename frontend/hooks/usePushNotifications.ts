@@ -40,7 +40,9 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
   useEffect(() => {
     if (!isSupported) return;
 
-    setPermission(Notification.permission);
+    const currentPermission = Notification.permission;
+    setPermission(currentPermission);
+    console.log('Current notification permission:', currentPermission);
 
     checkSubscription();
   }, [userId, isSupported]);
@@ -67,26 +69,35 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
     setError(null);
 
     try {
+      console.log('Requesting notification permission...');
       const currentPermission = await Notification.requestPermission();
       setPermission(currentPermission);
+      console.log('Permission result:', currentPermission);
 
       if (currentPermission !== 'granted') {
-        setError('Permission denied');
+        setError('Permission denied - please allow notifications in your browser');
         setIsLoading(false);
         return false;
       }
 
+      console.log('Waiting for service worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('Service worker ready:', registration);
 
+      console.log('Fetching VAPID public key...');
       const { publicKey } = await backend.push.getPublicKey();
+      console.log('Got public key');
 
+      console.log('Subscribing to push manager...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey)
       });
+      console.log('Push subscription created');
 
       const subscriptionJson = subscription.toJSON();
 
+      console.log('Saving subscription to backend...');
       await backend.push.subscribe({
         userId,
         subscription: {
@@ -98,13 +109,26 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
         },
         userAgent: navigator.userAgent
       });
+      console.log('Subscription saved successfully');
 
       setIsSubscribed(true);
       setIsLoading(false);
       return true;
     } catch (err) {
       console.error('Error subscribing to push notifications:', err);
-      setError(err instanceof Error ? err.message : 'Failed to subscribe');
+      
+      let errorMessage = 'Failed to subscribe';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        if (err.message.includes('not configured')) {
+          errorMessage = 'Push notifications are not configured on the server. Please add VAPID keys to Settings.';
+        } else if (err.message.includes('permission')) {
+          errorMessage = 'Permission denied - please allow notifications in your browser settings';
+        }
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
       return false;
     }
