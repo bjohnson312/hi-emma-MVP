@@ -1,5 +1,10 @@
 import { api } from "encore.dev/api";
+import { secret } from "encore.dev/config";
 import db from "../db";
+
+const secrets = {
+  OpenAIKey: secret("OpenAIKey"),
+};
 
 export interface ConversationMemory {
   id: number;
@@ -183,7 +188,7 @@ Example output:
 ]}`;
 
   try {
-    const openaiKey = process.env.OPENAI_API_KEY;
+    const openaiKey = secrets.OpenAIKey?.();
     if (!openaiKey) {
       console.warn("OpenAI API key not set, skipping memory extraction");
       return;
