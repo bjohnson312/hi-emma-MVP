@@ -6,6 +6,7 @@ interface UseSpeechRecognitionResult {
   isSupported: boolean;
   startListening: () => void;
   stopListening: () => void;
+  restartListening: () => Promise<void>;
   resetTranscript: () => void;
   error: string | null;
 }
@@ -98,12 +99,38 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     setError(null);
   }, []);
 
+  const restartListening = useCallback(async () => {
+    if (!recognitionRef.current) return;
+
+    setError(null);
+    
+    if (isListening) {
+      try {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      } catch (err) {
+        console.warn('Error stopping recognition:', err);
+      }
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (err) {
+      console.error('Failed to restart speech recognition:', err);
+      setError('Failed to start speech recognition');
+    }
+  }, [isListening]);
+
   return {
     transcript,
     isListening,
     isSupported,
     startListening,
     stopListening,
+    restartListening,
     resetTranscript,
     error,
   };

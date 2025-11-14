@@ -18,6 +18,7 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     isSupported: isSpeechSupported,
     startListening,
     stopListening,
+    restartListening,
     resetTranscript,
     error: speechError
   } = useSpeechRecognition();
@@ -27,12 +28,12 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     isSupported: isTTSSupported
   } = useTextToSpeech();
 
-  const handleStartTest = useCallback(() => {
+  const handleStartTest = useCallback(async () => {
     setStep('testing');
     setTestTranscript('');
     resetTranscript();
-    startListening();
-  }, [startListening, resetTranscript]);
+    await restartListening();
+  }, [restartListening, resetTranscript]);
 
   const handleStopTest = useCallback(() => {
     stopListening();
