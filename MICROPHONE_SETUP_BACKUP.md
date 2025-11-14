@@ -1,3 +1,19 @@
+# Microphone Setup - Code Backup (Before iOS Safari Fix)
+
+This file contains the original code for easy revert if needed.
+
+## Date: 2025-11-14
+
+## Files backed up:
+1. `/frontend/components/MicrophoneSetup.tsx`
+2. `/frontend/hooks/useSpeechRecognition.ts`
+3. `/frontend/components/ConversationalCheckIn.tsx`
+
+---
+
+## MicrophoneSetup.tsx (Original)
+
+```tsx
 import { useState, useCallback } from 'react';
 import { Mic, MicOff, Volume2, Settings2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,12 +43,32 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     isSupported: isTTSSupported
   } = useTextToSpeech();
 
-  const handleStartTest = useCallback(() => {
+  const handleStartTest = useCallback(async () => {
     setStep('testing');
     setTestTranscript('');
     resetTranscript();
-    startListening();
-  }, [startListening, resetTranscript]);
+    
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      if (isTTSSupported) {
+        speak("Let's test your microphone. Please say: Hello Emma");
+      }
+      
+      setTimeout(() => {
+        startListening();
+      }, isTTSSupported ? 3000 : 500);
+    } catch (err: any) {
+      console.error('Microphone permission error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setStep('intro');
+        alert('Microphone access was denied. Please allow microphone access in your browser settings and try again.');
+      } else {
+        setStep('intro');
+        alert('Unable to access microphone. Please check your browser settings.');
+      }
+    }
+  }, [startListening, speak, resetTranscript, isTTSSupported]);
 
   const handleStopTest = useCallback(() => {
     stopListening();
@@ -57,24 +93,21 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
   }, [onComplete]);
 
   if (!isSpeechSupported) {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     return (
       <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/40">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-blue-100 flex items-center justify-center">
-            <Mic className="w-8 h-8 text-blue-500" />
+          <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h2 className="text-2xl font-bold text-[#323e48]">Voice Input Not Available</h2>
+          <h2 className="text-2xl font-bold text-[#323e48]">Speech Not Supported</h2>
           <p className="text-[#323e48]/70">
-            {isIOS 
-              ? "Voice input isn't available in Safari on iOS. You can still chat with Emma by typing your messages."
-              : "Your browser doesn't support voice input. Please use Chrome, Edge, or desktop Safari for voice features."}
+            Your browser doesn't support speech recognition. Please use Chrome, Edge, or Safari for the best voice experience.
           </p>
           <Button
             onClick={handleComplete}
             className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white"
           >
-            Continue with Typing
+            Continue Without Voice
           </Button>
         </div>
       </div>
@@ -127,19 +160,6 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-[#6656cb]/20 to-[#364d89]/20 rounded-2xl p-5 border-2 border-[#6656cb]/40">
-            <div className="flex items-center gap-3 mb-2">
-              <Mic className="w-6 h-6 text-[#6656cb]" />
-              <p className="font-bold text-[#323e48] text-lg">Ready to Test?</p>
-            </div>
-            <p className="text-[#323e48] font-medium">
-              When you click "Test Microphone", please say:
-            </p>
-            <p className="text-2xl font-bold text-[#6656cb] mt-2">
-              "Hello Emma"
-            </p>
-          </div>
-
           <div className="flex gap-3">
             <Button
               onClick={handleStartTest}
@@ -187,16 +207,14 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
           )}
 
           {speechError && (
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
-              <p className="text-sm font-medium text-amber-900 mb-1">Voice Input Unavailable</p>
-              <p className="text-sm text-amber-800 mb-3">{speechError}</p>
-              <Button
-                onClick={handleComplete}
-                variant="outline"
-                className="w-full border-amber-300 hover:bg-amber-100 text-amber-900"
-              >
-                Continue with Typing Instead
-              </Button>
+            <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+              <p className="text-sm font-medium text-red-800 mb-1">Microphone Issue</p>
+              <p className="text-sm text-red-600">{speechError}</p>
+              {speechError.includes('denied') && (
+                <p className="text-xs text-red-500 mt-2">
+                  To fix: Click the 🔒 or ⓘ icon in your browser's address bar and allow microphone access.
+                </p>
+              )}
             </div>
           )}
 
@@ -283,3 +301,7 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     </div>
   );
 }
+```
+
+## To Revert:
+Simply copy the code above back into `/frontend/components/MicrophoneSetup.tsx`
