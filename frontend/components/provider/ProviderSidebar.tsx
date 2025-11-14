@@ -58,8 +58,8 @@ export default function ProviderSidebar({
   return (
     <aside
       className="
-        hidden md:flex md:flex-col
-        sticky top-0 left-0 h-screen
+        flex flex-col
+        h-screen
         bg-gradient-to-b from-[#4e8f71] via-[#364d89] to-[#6656cb]
         shadow-2xl
         w-72 lg:w-80
