@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, Download, Users, Activity, Pill, Apple } from "lucide-react";
+import { BarChart3, TrendingUp, Download, Users, Activity, Pill, Apple, Filter } from "lucide-react";
 
 const ADHERENCE_DATA = [
   { month: "Jan", meds: 85, routines: 78, meals: 82 },
@@ -32,22 +32,69 @@ const RISK_DISTRIBUTION = [
   { level: "Low Risk", count: 13, percentage: 54.2, color: "bg-green-500" },
 ];
 
+const PATIENT_LIST = [
+  { id: "all", name: "All Patients" },
+  { id: "1", name: "Sarah Johnson" },
+  { id: "2", name: "Michael Chen" },
+  { id: "3", name: "Emily Rodriguez" },
+  { id: "4", name: "Robert Wilson" },
+  { id: "5", name: "Linda Martinez" },
+  { id: "6", name: "James Thompson" },
+];
+
 export default function AnalyticsView() {
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [selectedPatient, setSelectedPatient] = useState<string>("all");
   const [timeRange, setTimeRange] = useState<string>("6months");
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Analytics & Reporting</h2>
-          <p className="text-gray-600">Comprehensive insights across your patient population</p>
+          <p className="text-gray-600">
+            {selectedPatient === "all" 
+              ? "Comprehensive insights across your patient population"
+              : `Analytics for ${PATIENT_LIST.find(p => p.id === selectedPatient)?.name}`
+            }
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Filter className="w-4 h-4" />
+            Filter by Patient:
+          </div>
+          <div className="relative flex-1 max-w-xs">
+            <select
+              value={selectedPatient}
+              onChange={(e) => setSelectedPatient(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-[#6656cb]"
+            >
+              {PATIENT_LIST.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedPatient !== "all" && (
+            <Button
+              onClick={() => setSelectedPatient("all")}
+              variant="outline"
+              size="sm"
+            >
+              Clear Filter
+            </Button>
+          )}
         </div>
       </div>
 

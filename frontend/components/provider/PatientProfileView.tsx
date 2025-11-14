@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertTriangle, Sunrise, Heart, Stethoscope, Apple, Moon, TrendingUp, TrendingDown, Pill, Activity } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, AlertTriangle, Sunrise, Heart, Stethoscope, Apple, Moon, TrendingUp, TrendingDown, Pill, Activity, Users, MessageSquare, Send, Mail, Phone } from "lucide-react";
 
 const DEMO_PATIENT = {
   id: "1",
@@ -44,6 +45,64 @@ const MEAL_LOGS = [
   { meal: "Dinner", time: "6:00 PM", items: ["Salmon", "Broccoli", "Quinoa"], calories: 520 },
 ];
 
+const PATIENT_CARE_TEAM = [
+  { 
+    id: "1", 
+    name: "Dr. Robert Smith", 
+    role: "Primary Care Provider", 
+    email: "dr.smith@hospital.com", 
+    phone: "(555) 123-4567",
+    permissions: "Full Access"
+  },
+  { 
+    id: "2", 
+    name: "Nurse Emma Johnson", 
+    role: "Care Coordinator", 
+    email: "emma.j@hospital.com", 
+    phone: "(555) 234-5678",
+    permissions: "Read/Write"
+  },
+  { 
+    id: "3", 
+    name: "John Johnson (Son)", 
+    role: "Family Member", 
+    email: "john.j@email.com", 
+    phone: "(555) 345-6789",
+    permissions: "Read Only"
+  },
+];
+
+const PATIENT_MESSAGES = [
+  {
+    id: "1",
+    sender: "Dr. Smith",
+    message: "Good morning Sarah! How are you feeling today?",
+    time: "9:00 AM",
+    type: "provider",
+  },
+  {
+    id: "2",
+    sender: "Sarah Johnson",
+    message: "Good morning Doctor. I'm feeling a bit better today. The new medication seems to be helping.",
+    time: "9:15 AM",
+    type: "patient",
+  },
+  {
+    id: "3",
+    sender: "Dr. Smith",
+    message: "That's wonderful to hear! Have you been taking it as prescribed?",
+    time: "9:20 AM",
+    type: "provider",
+  },
+  {
+    id: "4",
+    sender: "Sarah Johnson",
+    message: "Yes, twice daily with meals. I set up reminders on my phone.",
+    time: "9:25 AM",
+    type: "patient",
+  },
+];
+
 interface PatientProfileViewProps {
   patientId: string;
   onBack: () => void;
@@ -51,6 +110,7 @@ interface PatientProfileViewProps {
 
 export default function PatientProfileView({ patientId, onBack }: PatientProfileViewProps) {
   const [activeTab, setActiveTab] = useState<string>("morning");
+  const [newMessage, setNewMessage] = useState("");
 
   const tabs = [
     { id: "morning", label: "Morning Routine", icon: Sunrise },
@@ -58,6 +118,8 @@ export default function PatientProfileView({ patientId, onBack }: PatientProfile
     { id: "doctors", label: "Doctor's Orders", icon: Stethoscope },
     { id: "nutrition", label: "Diet & Nutrition", icon: Apple },
     { id: "evening", label: "Evening Routine", icon: Moon },
+    { id: "careteam", label: "Care Team", icon: Users },
+    { id: "communications", label: "Communications", icon: MessageSquare },
   ];
 
   return (
@@ -323,6 +385,149 @@ export default function PatientProfileView({ patientId, onBack }: PatientProfile
                     <p className="text-sm text-gray-600">Avg bedtime: 10:15 PM</p>
                     <p className="text-xs text-gray-500 mt-2">Avg sleep: 7.2 hours</p>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "careteam" && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient's Care Team</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Healthcare providers and family members with access to this patient's data
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {PATIENT_CARE_TEAM.map((member) => (
+                  <div
+                    key={member.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-[#6656cb] transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="w-12 h-12 rounded-full bg-[#6656cb] text-white flex items-center justify-center font-bold">
+                          {member.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-lg font-semibold text-gray-900">{member.name}</h4>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded border border-blue-300">
+                              {member.permissions}
+                            </span>
+                          </div>
+                          
+                          <p className="text-sm text-gray-600 mb-2">{member.role}</p>
+                          
+                          <div className="flex flex-col gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4" />
+                              {member.email}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4" />
+                              {member.phone}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Team Collaboration</h4>
+                <p className="text-sm text-gray-600">
+                  All care team members can view this patient's wellness data according to their permission level. 
+                  Family members have read-only access to support care coordination.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "communications" && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Secure Messaging</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  HIPAA-compliant communication with {DEMO_PATIENT.name}
+                </p>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 p-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#6656cb] text-white flex items-center justify-center font-bold">
+                      SJ
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{DEMO_PATIENT.name}</h4>
+                      <p className="text-sm text-gray-600">Patient • Last active 10m ago</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                  {PATIENT_MESSAGES.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.type === "provider" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[70%] rounded-lg p-3 ${
+                          msg.type === "provider"
+                            ? "bg-[#6656cb] text-white"
+                            : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        <p className="text-sm font-medium mb-1">{msg.sender}</p>
+                        <p className="text-sm">{msg.message}</p>
+                        <p className={`text-xs mt-2 ${
+                          msg.type === "provider" ? "text-purple-200" : "text-gray-500"
+                        }`}>
+                          {msg.time}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 border-t border-gray-200 bg-gray-50">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          setNewMessage("");
+                        }
+                      }}
+                    />
+                    <Button>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    🔒 HIPAA-compliant secure messaging
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Message History</h4>
+                  <p className="text-2xl font-bold text-blue-600 mb-1">47</p>
+                  <p className="text-sm text-gray-600">Total messages exchanged</p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Response Time</h4>
+                  <p className="text-2xl font-bold text-green-600 mb-1">2.5 hrs</p>
+                  <p className="text-sm text-gray-600">Average response time</p>
                 </div>
               </div>
             </div>
