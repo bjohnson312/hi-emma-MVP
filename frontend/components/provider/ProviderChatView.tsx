@@ -79,9 +79,17 @@ export default function ProviderChatView() {
   const startConversation = async () => {
     setLoading(true);
     try {
-      const providerId = localStorage.getItem("provider_data") 
-        ? JSON.parse(localStorage.getItem("provider_data")!).id 
-        : "demo-provider";
+      let providerId = "demo-provider";
+      
+      try {
+        const providerDataStr = localStorage.getItem("provider_data");
+        if (providerDataStr) {
+          const providerData = JSON.parse(providerDataStr);
+          providerId = providerData.id || providerData.email || "demo-provider";
+        }
+      } catch (e) {
+        console.log("Using default provider ID");
+      }
 
       const response = await backend.provider_chat.chat({
         provider_id: providerId,
@@ -120,9 +128,17 @@ export default function ProviderChatView() {
     setLoading(true);
 
     try {
-      const providerId = localStorage.getItem("provider_data") 
-        ? JSON.parse(localStorage.getItem("provider_data")!).id 
-        : "demo-provider";
+      let providerId = "demo-provider";
+      
+      try {
+        const providerDataStr = localStorage.getItem("provider_data");
+        if (providerDataStr) {
+          const providerData = JSON.parse(providerDataStr);
+          providerId = providerData.id || providerData.email || "demo-provider";
+        }
+      } catch (e) {
+        console.log("Using default provider ID");
+      }
 
       const response = await backend.provider_chat.chat({
         provider_id: providerId,
@@ -198,9 +214,17 @@ export default function ProviderChatView() {
     setLoading(true);
 
     try {
-      const providerId = localStorage.getItem("provider_data") 
-        ? JSON.parse(localStorage.getItem("provider_data")!).id 
-        : "demo-provider";
+      let providerId = "demo-provider";
+      
+      try {
+        const providerDataStr = localStorage.getItem("provider_data");
+        if (providerDataStr) {
+          const providerData = JSON.parse(providerDataStr);
+          providerId = providerData.id || providerData.email || "demo-provider";
+        }
+      } catch (e) {
+        console.log("Using default provider ID");
+      }
 
       const response = await backend.provider_chat.chat({
         provider_id: providerId,
