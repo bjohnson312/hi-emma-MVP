@@ -155,83 +155,58 @@ async function getProviderAppointmentsSummary(providerId: string): Promise<strin
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
 
-  const patientCountResult = await db.queryRow<{ count: number }>`
-    SELECT COUNT(DISTINCT user_id) as count
-    FROM user_profiles
-  `;
+  const demoAppointments = [
+    {
+      time: "9:00 AM",
+      patient: "Sarah Johnson",
+      type: "Annual Physical",
+      duration: "30 min",
+      status: "Scheduled"
+    },
+    {
+      time: "10:00 AM", 
+      patient: "Michael Chen",
+      type: "Follow-up Visit",
+      duration: "15 min",
+      status: "Scheduled"
+    },
+    {
+      time: "11:00 AM",
+      patient: "Emma Rodriguez", 
+      type: "New Patient Consultation",
+      duration: "45 min",
+      status: "Scheduled"
+    },
+    {
+      time: "2:00 PM",
+      patient: "David Park",
+      type: "Mental Health Check-in",
+      duration: "30 min",
+      status: "Scheduled"
+    },
+    {
+      time: "3:30 PM",
+      patient: "Lisa Anderson",
+      type: "Nutrition Counseling",
+      duration: "30 min",
+      status: "Scheduled"
+    }
+  ];
 
-  const todayActivity = await db.query<{
-    user_id: string;
-    name: string;
-    activity_type: string;
-    last_active: Date;
-  }>`
-    SELECT DISTINCT ON (ch.user_id)
-      ch.user_id,
-      up.name,
-      ch.conversation_type as activity_type,
-      ch.created_at as last_active
-    FROM conversation_history ch
-    JOIN user_profiles up ON ch.user_id = up.user_id
-    WHERE ch.created_at >= CURRENT_DATE
-    ORDER BY ch.user_id, ch.created_at DESC
-  `;
+  let summary = `**Today's Appointments - ${today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}**\n\n`;
+  summary += `You have ${demoAppointments.length} appointments scheduled today:\n\n`;
 
-  const upcomingCheckIns = await db.query<{
-    user_id: string;
-    name: string;
-    preferred_time: string | null;
-  }>`
-    SELECT 
-      up.user_id,
-      up.name,
-      op.preferred_check_in_time as preferred_time
-    FROM user_profiles up
-    LEFT JOIN onboarding_preferences op ON up.user_id = op.user_id
-    WHERE up.interaction_count > 0
-    ORDER BY op.preferred_check_in_time
-    LIMIT 10
-  `;
+  demoAppointments.forEach(apt => {
+    summary += `• **${apt.time}** - ${apt.patient}\n`;
+    summary += `  ${apt.type} (${apt.duration})\n`;
+    summary += `  Status: ${apt.status}\n\n`;
+  });
 
-  let activityList: any[] = [];
-  for await (const activity of todayActivity) {
-    activityList.push(activity);
-  }
-
-  let upcomingList: any[] = [];
-  for await (const upcoming of upcomingCheckIns) {
-    upcomingList.push(upcoming);
-  }
-
-  const patientCount = patientCountResult?.count || 0;
-
-  let summary = `**Today's Appointments & Activity Overview**\n\n`;
-  summary += `Total Active Patients: ${patientCount}\n`;
-  summary += `Patients Active Today: ${activityList.length}\n\n`;
-
-  if (activityList.length > 0) {
-    summary += `**Patients Who've Checked In Today:**\n`;
-    activityList.forEach(activity => {
-      const time = new Date(activity.last_active).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      const activityName = activity.activity_type === 'morning' ? 'Morning routine' : 
-                           activity.activity_type === 'evening' ? 'Evening check-in' :
-                           activity.activity_type === 'mood' ? 'Mood check' :
-                           'General conversation';
-      summary += `- ${activity.name}: ${activityName} at ${time}\n`;
-    });
-    summary += `\n`;
-  }
-
-  if (upcomingList.length > 0) {
-    summary += `**Scheduled Patient Check-ins:**\n`;
-    upcomingList.forEach(patient => {
-      if (patient.preferred_time) {
-        summary += `- ${patient.name}: Prefers check-ins at ${patient.preferred_time}\n`;
-      } else {
-        summary += `- ${patient.name}: No preferred time set\n`;
-      }
-    });
-  }
+  summary += `**Next Appointment:** ${demoAppointments[0].patient} at ${demoAppointments[0].time}\n`;
+  summary += `**Total Scheduled Time:** ${demoAppointments.reduce((sum, apt) => {
+    const mins = parseInt(apt.duration.split(' ')[0]);
+    return sum + mins;
+  }, 0)} minutes\n`;
 
   return summary;
 }
