@@ -40,7 +40,7 @@ export const complete = api(
     else if (hour >= 12 && hour < 17) timeGreeting = "Good afternoon";
     else if (hour >= 17 && hour < 22) timeGreeting = "Good evening";
     
-    const welcomeMessage = `${timeGreeting}, ${firstName}! Welcome to Hi, Emma. Your wellness journey has begun.|||Let's get started, how did you sleep?`;
+    const welcomeMessage = `${timeGreeting}, ${firstName}! Welcome to Hi, Emma. Your wellness journey has begun. Let's get started, how did you sleep?`;
 
     return {
       success: true,
