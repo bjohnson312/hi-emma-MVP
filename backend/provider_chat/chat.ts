@@ -404,14 +404,39 @@ export const chat = api<ProviderChatRequest, ProviderChatResponse>(
       recentHistory.push(entry);
     }
 
-    let contextInfo = "";
+    const isFirstMessage = recentHistory.length === 0;
     const userMessageLower = user_message.toLowerCase();
     
-    if (userMessageLower.includes("daily summary") || (userMessageLower.includes("summary") && userMessageLower.includes("day"))) {
+    if (isFirstMessage && (userMessageLower === "hello" || userMessageLower === "hi")) {
+      const greeting = "Good morning! How are you doing today? Would you like me to give you a summary of your appointments today or do you have questions about a specific patient?";
+      
+      await db.exec`
+        INSERT INTO provider_chat_history 
+          (provider_id, session_id, user_message, emma_response)
+        VALUES 
+          (${provider_id}, ${session.id}, ${user_message}, ${greeting})
+      `;
+
+      await db.exec`
+        UPDATE provider_chat_sessions
+        SET last_activity_at = NOW()
+        WHERE id = ${session.id}
+      `;
+
+      return {
+        emma_reply: greeting,
+        session_id: session.id,
+        conversation_complete: false
+      };
+    }
+
+    let contextInfo = "";
+    
+    if (userMessageLower.includes("daily summary") && !userMessageLower.includes("appointment")) {
       contextInfo = await getDailySummary(provider_id);
     } else if (userMessageLower.includes("appointment") || userMessageLower.includes("schedule") || 
-               (userMessageLower.includes("today") && !userMessageLower.includes("summary")) ||
-               userMessageLower.includes("check-in")) {
+               userMessageLower.includes("check-in") ||
+               (userMessageLower.includes("summary") && userMessageLower.includes("today"))) {
       contextInfo = await getProviderAppointmentsSummary(provider_id);
     }
     
