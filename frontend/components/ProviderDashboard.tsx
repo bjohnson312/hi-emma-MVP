@@ -9,6 +9,8 @@ import CareTeamView from "./provider/CareTeamView";
 import CommunicationsView from "./provider/CommunicationsView";
 import ProviderSettingsView from "./provider/ProviderSettingsView";
 import HelpView from "./provider/HelpView";
+import VisitsView from "./provider/VisitsView";
+import AppointmentDetailView from "./provider/AppointmentDetailView";
 import { MessageCircle, Home as HomeIcon, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +23,7 @@ interface ProviderDashboardProps {
 export function ProviderDashboard({ token, providerData, onLogout }: ProviderDashboardProps) {
   const [currentView, setCurrentView] = useState<ProviderView>("chat");
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const renderMainContent = () => {
@@ -33,6 +36,15 @@ export function ProviderDashboard({ token, providerData, onLogout }: ProviderDas
       );
     }
 
+    if (selectedAppointment) {
+      return (
+        <AppointmentDetailView
+          appointmentId={selectedAppointment}
+          onBack={() => setSelectedAppointment(null)}
+        />
+      );
+    }
+
     switch (currentView) {
       case "chat":
         return <ProviderChatView />;
@@ -40,6 +52,8 @@ export function ProviderDashboard({ token, providerData, onLogout }: ProviderDas
         return <HomeDashboard />;
       case "patients":
         return <EnhancedPatientList onSelectPatient={setSelectedPatient} />;
+      case "visits":
+        return <VisitsView onSelectAppointment={setSelectedAppointment} />;
       case "analytics":
         return <AnalyticsView />;
       case "communications":
