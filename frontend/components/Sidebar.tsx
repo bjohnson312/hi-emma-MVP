@@ -127,7 +127,7 @@ export default function Sidebar({ currentView, onNavigate, userName, onLogout }:
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto space-y-2" aria-label="Main navigation">
+          <nav className="flex-1 overflow-y-auto space-y-2 pb-4" aria-label="Main navigation">
             <div className="space-y-1">
               {mainNavItems.map((item) => {
                 const Icon = item.icon;
