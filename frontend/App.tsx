@@ -268,7 +268,6 @@ export default function App() {
   }
 
   if (showMicSetup) {
-    const welcomeMessage = localStorage.getItem('emma_welcome_message') || undefined;
     return (
       <div 
         className="min-h-screen relative flex items-center justify-center p-4"
@@ -283,11 +282,9 @@ export default function App() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
         <div className="relative z-10">
           <MicrophoneSetup 
-            welcomeMessage={welcomeMessage}
             onComplete={async () => {
               await ensureTrinityVoiceDefault();
               localStorage.setItem('emma_mic_setup_complete', 'true');
-              localStorage.removeItem('emma_welcome_message');
               setShowMicSetup(false);
             }} 
           />

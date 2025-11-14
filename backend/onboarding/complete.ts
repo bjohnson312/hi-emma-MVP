@@ -32,10 +32,21 @@ export const complete = api(
       WHERE user_id = ${req.user_id}
     `;
 
-    const checkInTime = prefs.preferred_check_in_time || "tomorrow morning";
     const firstName = prefs.first_name || "there";
+    const reminderPref = prefs.reminder_preference || "voice";
     
-    const welcomeMessage = `Got it, ${firstName}. I'll check in ${checkInTime} to help you start your day with purpose. Welcome to your wellness story!`;
+    let checkInMessage = "";
+    if (reminderPref === "voice") {
+      checkInMessage = "I'll check in through voice";
+    } else if (reminderPref === "sms") {
+      checkInMessage = "I'll check in via SMS";
+    } else if (reminderPref === "both") {
+      checkInMessage = "I'll check in both through voice and SMS";
+    } else {
+      checkInMessage = "I'll check in";
+    }
+    
+    const welcomeMessage = `Welcome to Hi, Emma ${firstName}! Your wellness journey has begun. ${checkInMessage}.`;
 
     return {
       success: true,

@@ -101,6 +101,15 @@ export function useConversationSession(
   const loadOrStartConversation = async () => {
     setLoading(true);
     try {
+      const welcomeMessage = localStorage.getItem('emma_welcome_message');
+      
+      if (welcomeMessage) {
+        localStorage.removeItem('emma_welcome_message');
+        addMessage("emma", welcomeMessage);
+        setLoading(false);
+        return;
+      }
+      
       const today = new Date().toISOString().split('T')[0];
       const response = await backend.conversation.getConversationByDate({
         user_id: userId,
