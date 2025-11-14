@@ -105,8 +105,16 @@ export function useConversationSession(
       
       if (welcomeMessage) {
         localStorage.removeItem('emma_welcome_message');
-        addMessage("emma", welcomeMessage);
-        setLoading(false);
+        
+        const messages = welcomeMessage.split('|||');
+        messages.forEach((msg, index) => {
+          setTimeout(() => {
+            addMessage("emma", msg.trim());
+            if (index === messages.length - 1) {
+              setLoading(false);
+            }
+          }, index * 1200);
+        });
         return;
       }
       

@@ -33,20 +33,14 @@ export const complete = api(
     `;
 
     const firstName = prefs.first_name || "there";
-    const reminderPref = prefs.reminder_preference || "voice";
     
-    let checkInMessage = "";
-    if (reminderPref === "voice") {
-      checkInMessage = "I'll check in through voice";
-    } else if (reminderPref === "sms") {
-      checkInMessage = "I'll check in via SMS";
-    } else if (reminderPref === "both") {
-      checkInMessage = "I'll check in both through voice and SMS";
-    } else {
-      checkInMessage = "I'll check in";
-    }
+    const hour = new Date().getHours();
+    let timeGreeting = "Hi";
+    if (hour >= 5 && hour < 12) timeGreeting = "Good morning";
+    else if (hour >= 12 && hour < 17) timeGreeting = "Good afternoon";
+    else if (hour >= 17 && hour < 22) timeGreeting = "Good evening";
     
-    const welcomeMessage = `Welcome to Hi, Emma ${firstName}! Your wellness journey has begun. ${checkInMessage}.`;
+    const welcomeMessage = `${timeGreeting}, ${firstName}! Welcome to Hi, Emma. Your wellness journey has begun.|||Let's get started, how did you sleep?`;
 
     return {
       success: true,
