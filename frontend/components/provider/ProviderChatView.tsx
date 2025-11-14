@@ -133,11 +133,13 @@ export default function ProviderChatView() {
       setSessionId(response.session_id);
       setMessages(prev => [...prev, { sender: "emma", text: response.emma_reply }]);
       setConversationComplete(response.conversation_complete);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to send message:", error);
+      const errorMessage = error?.message || error?.toString() || "Unknown error";
+      console.error("Error details:", errorMessage);
       setMessages(prev => [...prev, { 
         sender: "emma", 
-        text: "I apologize, but I'm having trouble processing that right now. Please try again." 
+        text: `I apologize, but I'm having trouble processing that right now. Error: ${errorMessage}. Please try again.` 
       }]);
     } finally {
       setLoading(false);
