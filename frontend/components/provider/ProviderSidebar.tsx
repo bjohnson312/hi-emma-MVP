@@ -63,9 +63,10 @@ export default function ProviderSidebar({
         bg-gradient-to-b from-[#4e8f71] via-[#364d89] to-[#6656cb]
         shadow-2xl
         w-72 lg:w-80
+        overflow-hidden
       "
     >
-      <div className="flex flex-col h-full p-6">
+      <div className="flex flex-col h-full p-6 overflow-hidden">
         <div className="mb-8">
           <div className="flex justify-center mb-4">
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
@@ -86,7 +87,7 @@ export default function ProviderSidebar({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto" aria-label="Main navigation">
+        <nav className="flex-1 overflow-y-auto pb-4" aria-label="Main navigation">
           <div className="space-y-1 flex flex-col">
           {navItems.map((item) => {
             const Icon = item.icon;
