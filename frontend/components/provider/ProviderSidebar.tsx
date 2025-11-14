@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { id: "chat", label: "Chat", icon: MessageCircle, tooltip: "Chat with Emma AI assistant" },
   { id: "home", label: "Dashboard", icon: Home, tooltip: "Overview of patients and alerts" },
   { id: "patients", label: "Patients", icon: Users, tooltip: "View and manage patient list" },
-  { id: "visits", label: "Visits", icon: Calendar, tooltip: "Appointments and patient visits" },
+  { id: "visits", label: "Visits", icon: Calendar, badge: "coming-soon", tooltip: "Appointments and patient visits" },
   { id: "analytics", label: "Analytics", icon: BarChart3, badge: "beta", tooltip: "Reports and insights across patients" },
   { id: "communications", label: "Messages", icon: MessageSquare, tooltip: "Secure messaging with patients" },
   { id: "care-team", label: "Care Team", icon: UserPlus, tooltip: "Manage providers and team members" },
@@ -111,7 +111,7 @@ export default function ProviderSidebar({
                   <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
                   {item.badge && (
                     <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                      {item.badge === "beta" ? "Beta" : "Soon"}
+                      {item.badge === "beta" ? "Beta" : "Coming Soon"}
                     </StatusBadge>
                   )}
                 </button>
