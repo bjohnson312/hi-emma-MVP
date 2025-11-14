@@ -152,14 +152,88 @@ async function getDailySummary(providerId: string): Promise<string> {
 }
 
 async function getProviderAppointmentsSummary(providerId: string): Promise<string> {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
   const patientCountResult = await db.queryRow<{ count: number }>`
     SELECT COUNT(DISTINCT user_id) as count
     FROM user_profiles
   `;
 
+  const todayActivity = await db.query<{
+    user_id: string;
+    name: string;
+    activity_type: string;
+    last_active: Date;
+  }>`
+    SELECT DISTINCT ON (ch.user_id)
+      ch.user_id,
+      up.name,
+      ch.conversation_type as activity_type,
+      ch.created_at as last_active
+    FROM conversation_history ch
+    JOIN user_profiles up ON ch.user_id = up.user_id
+    WHERE ch.created_at >= CURRENT_DATE
+    ORDER BY ch.user_id, ch.created_at DESC
+  `;
+
+  const upcomingCheckIns = await db.query<{
+    user_id: string;
+    name: string;
+    preferred_time: string | null;
+  }>`
+    SELECT 
+      up.user_id,
+      up.name,
+      op.preferred_check_in_time as preferred_time
+    FROM user_profiles up
+    LEFT JOIN onboarding_preferences op ON up.user_id = op.user_id
+    WHERE up.interaction_count > 0
+    ORDER BY op.preferred_check_in_time
+    LIMIT 10
+  `;
+
+  let activityList: any[] = [];
+  for await (const activity of todayActivity) {
+    activityList.push(activity);
+  }
+
+  let upcomingList: any[] = [];
+  for await (const upcoming of upcomingCheckIns) {
+    upcomingList.push(upcoming);
+  }
+
   const patientCount = patientCountResult?.count || 0;
 
-  return `Today you have ${patientCount} active patients in the system.`;
+  let summary = `**Today's Appointments & Activity Overview**\n\n`;
+  summary += `Total Active Patients: ${patientCount}\n`;
+  summary += `Patients Active Today: ${activityList.length}\n\n`;
+
+  if (activityList.length > 0) {
+    summary += `**Patients Who've Checked In Today:**\n`;
+    activityList.forEach(activity => {
+      const time = new Date(activity.last_active).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const activityName = activity.activity_type === 'morning' ? 'Morning routine' : 
+                           activity.activity_type === 'evening' ? 'Evening check-in' :
+                           activity.activity_type === 'mood' ? 'Mood check' :
+                           'General conversation';
+      summary += `- ${activity.name}: ${activityName} at ${time}\n`;
+    });
+    summary += `\n`;
+  }
+
+  if (upcomingList.length > 0) {
+    summary += `**Scheduled Patient Check-ins:**\n`;
+    upcomingList.forEach(patient => {
+      if (patient.preferred_time) {
+        summary += `- ${patient.name}: Prefers check-ins at ${patient.preferred_time}\n`;
+      } else {
+        summary += `- ${patient.name}: No preferred time set\n`;
+      }
+    });
+  }
+
+  return summary;
 }
 
 async function searchPatientInfo(providerId: string, query: string): Promise<string> {
@@ -170,9 +244,11 @@ async function searchPatientInfo(providerId: string, query: string): Promise<str
     name: string;
     wake_time: string | null;
     interaction_count: number;
+    onboarding_completed: boolean;
   }>`
-    SELECT user_id, name, wake_time, interaction_count
+    SELECT user_id, name, wake_time, interaction_count, onboarding_completed
     FROM user_profiles
+    ORDER BY interaction_count DESC
     LIMIT 10
   `;
 
@@ -185,13 +261,109 @@ async function searchPatientInfo(providerId: string, query: string): Promise<str
     return "No patient information found.";
   }
 
-  let summary = "Here's what I found:\n\n";
-  for (const patient of results.slice(0, 5)) {
-    summary += `- ${patient.name}: ${patient.interaction_count || 0} interactions`;
+  let summary = "**Patient List:**\n\n";
+  for (const patient of results) {
+    summary += `**${patient.name}**\n`;
+    summary += `- User ID: ${patient.user_id}\n`;
+    summary += `- Interactions: ${patient.interaction_count || 0}\n`;
+    summary += `- Status: ${patient.onboarding_completed ? 'Active' : 'Onboarding'}\n`;
     if (patient.wake_time) {
-      summary += `, wakes at ${patient.wake_time}`;
+      summary += `- Wake Time: ${patient.wake_time}\n`;
     }
-    summary += "\n";
+    summary += `\n`;
+  }
+
+  return summary;
+}
+
+async function getSpecificPatientInfo(providerId: string, patientName: string): Promise<string> {
+  const searchPattern = `%${patientName.toLowerCase()}%`;
+  
+  const patient = await db.queryRow<{
+    user_id: string;
+    name: string;
+    wake_time: string | null;
+    interaction_count: number;
+    onboarding_completed: boolean;
+    created_at: Date;
+  }>`
+    SELECT user_id, name, wake_time, interaction_count, onboarding_completed, created_at
+    FROM user_profiles
+    WHERE LOWER(name) LIKE ${searchPattern}
+    ORDER BY interaction_count DESC
+    LIMIT 1
+  `;
+
+  if (!patient) {
+    return `No patient found matching "${patientName}".`;
+  }
+
+  const recentActivity = await db.query<{
+    conversation_type: string;
+    created_at: Date;
+  }>`
+    SELECT conversation_type, created_at
+    FROM conversation_history
+    WHERE user_id = ${patient.user_id}
+    ORDER BY created_at DESC
+    LIMIT 5
+  `;
+
+  const careTeamMembers = await db.query<{
+    name: string;
+    relationship: string;
+    phone: string | null;
+  }>`
+    SELECT name, relationship, phone
+    FROM care_team_members
+    WHERE user_id = ${patient.user_id}
+    LIMIT 5
+  `;
+
+  let activityList: any[] = [];
+  for await (const activity of recentActivity) {
+    activityList.push(activity);
+  }
+
+  let careTeamList: any[] = [];
+  for await (const member of careTeamMembers) {
+    careTeamList.push(member);
+  }
+
+  let summary = `**Patient: ${patient.name}**\n\n`;
+  summary += `**Profile:**\n`;
+  summary += `- User ID: ${patient.user_id}\n`;
+  summary += `- Total Interactions: ${patient.interaction_count || 0}\n`;
+  summary += `- Status: ${patient.onboarding_completed ? 'Active' : 'Onboarding'}\n`;
+  summary += `- Member Since: ${new Date(patient.created_at).toLocaleDateString()}\n`;
+  if (patient.wake_time) {
+    summary += `- Typical Wake Time: ${patient.wake_time}\n`;
+  }
+  summary += `\n`;
+
+  if (activityList.length > 0) {
+    summary += `**Recent Activity:**\n`;
+    activityList.forEach(activity => {
+      const date = new Date(activity.created_at);
+      const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const activityName = activity.conversation_type === 'morning' ? 'Morning routine' : 
+                           activity.conversation_type === 'evening' ? 'Evening check-in' :
+                           activity.conversation_type === 'mood' ? 'Mood check' :
+                           'Conversation';
+      summary += `- ${activityName} (${timeStr})\n`;
+    });
+    summary += `\n`;
+  }
+
+  if (careTeamList.length > 0) {
+    summary += `**Care Team:**\n`;
+    careTeamList.forEach(member => {
+      summary += `- ${member.name} (${member.relationship})`;
+      if (member.phone) {
+        summary += ` - ${member.phone}`;
+      }
+      summary += `\n`;
+    });
   }
 
   return summary;
@@ -235,13 +407,22 @@ export const chat = api<ProviderChatRequest, ProviderChatResponse>(
     let contextInfo = "";
     const userMessageLower = user_message.toLowerCase();
     
-    if (userMessageLower.includes("daily summary") || userMessageLower.includes("summary") || (userMessageLower.includes("today") && userMessageLower.includes("summary"))) {
+    if (userMessageLower.includes("daily summary") || (userMessageLower.includes("summary") && userMessageLower.includes("day"))) {
       contextInfo = await getDailySummary(provider_id);
-    } else if (userMessageLower.includes("appointment") || userMessageLower.includes("schedule") || userMessageLower.includes("today")) {
+    } else if (userMessageLower.includes("appointment") || userMessageLower.includes("schedule") || 
+               (userMessageLower.includes("today") && !userMessageLower.includes("summary")) ||
+               userMessageLower.includes("check-in")) {
       contextInfo = await getProviderAppointmentsSummary(provider_id);
     }
     
-    if (userMessageLower.includes("patient") && !userMessageLower.includes("summary")) {
+    const patientNameMatch = userMessageLower.match(/(?:about|for|patient)\s+([a-z]+(?:\s+[a-z]+)?)/i);
+    if (patientNameMatch && patientNameMatch[1]) {
+      const patientName = patientNameMatch[1].trim();
+      const specificInfo = await getSpecificPatientInfo(provider_id, patientName);
+      contextInfo += "\n\n" + specificInfo;
+    } else if ((userMessageLower.includes("patient") || userMessageLower.includes("list")) && 
+               !userMessageLower.includes("summary") && 
+               !patientNameMatch) {
       const searchInfo = await searchPatientInfo(provider_id, user_message);
       contextInfo += "\n\n" + searchInfo;
     }
@@ -253,22 +434,39 @@ Your personality:
 - Efficient and helpful
 - Knowledgeable about patient care workflows
 - Keep responses concise (2-4 sentences unless providing detailed information)
+- When presenting data, format it clearly and mention key highlights
 
 Your capabilities:
-- Provide summaries of appointments and schedules
-- Search and retrieve patient information
-- Answer questions about specific patients
-- Help with care team coordination
-- Provide insights from patient data
+- Provide daily summaries and appointment overviews
+- Show today's patient activity and check-ins
+- Search and retrieve detailed patient information
+- Answer questions about specific patients (by name)
+- Show patient lists with activity levels
+- Access care team information
+- Provide insights from patient interaction data
+
+How to help providers:
+- When asked about "today" or "appointments", share the appointment summary showing:
+  * Active patients today
+  * Who has checked in
+  * Upcoming scheduled check-ins
+- When asked about a specific patient by name, provide their detailed profile including:
+  * Basic information and status
+  * Recent activity history
+  * Care team members
+- When asked about "patients" generally, show a list of all patients with their activity levels
+- Use the data provided in the context below to give accurate, helpful responses
+- Highlight important information (like patients who haven't checked in yet)
 
 Important guidelines:
 - Always maintain patient confidentiality
-- Provide accurate information based on available data
+- Provide accurate information based on available data provided in the context
 - If you don't have specific information, say so clearly
 - Be supportive of the provider's workflow
 - Keep responses professional but conversational
+- When presenting lists or data, format them clearly
 
-${contextInfo ? `\nCurrent context:\n${contextInfo}` : ""}`;
+${contextInfo ? `\n**Current Data Context:**\n${contextInfo}` : ""}`;
 
     const conversationHistory: AIMessage[] = [
       { role: "system", content: systemPrompt }
