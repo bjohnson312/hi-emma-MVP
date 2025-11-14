@@ -72,14 +72,14 @@ async function getDailySummary(providerId: string): Promise<string> {
     created_at: Date;
   }>`
     SELECT 
-      wj.user_id,
+      wje.user_id,
       up.name,
-      wj.title,
-      wj.created_at
-    FROM wellness_journal wj
-    JOIN user_profiles up ON wj.user_id = up.user_id
-    WHERE wj.created_at >= CURRENT_DATE
-    ORDER BY wj.created_at DESC
+      wje.title,
+      wje.created_at
+    FROM wellness_journal_entries wje
+    JOIN user_profiles up ON wje.user_id = up.user_id
+    WHERE wje.created_at >= CURRENT_DATE
+    ORDER BY wje.created_at DESC
     LIMIT 5
   `;
 
