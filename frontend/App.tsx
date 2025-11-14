@@ -251,11 +251,14 @@ export default function App() {
         <div className="relative z-10">
           <OnboardingFlow 
             userId={userId} 
-            onComplete={async (firstName) => {
+            onComplete={async (firstName, welcomeMessage) => {
               setUserName(firstName);
               setShowOnboarding(false);
               await ensureTrinityVoiceDefault();
               setShowMicSetup(true);
+              if (welcomeMessage) {
+                localStorage.setItem('emma_welcome_message', welcomeMessage);
+              }
             }} 
           />
         </div>
@@ -265,6 +268,7 @@ export default function App() {
   }
 
   if (showMicSetup) {
+    const welcomeMessage = localStorage.getItem('emma_welcome_message') || undefined;
     return (
       <div 
         className="min-h-screen relative flex items-center justify-center p-4"
@@ -278,11 +282,15 @@ export default function App() {
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
         <div className="relative z-10">
-          <MicrophoneSetup onComplete={async () => {
-            await ensureTrinityVoiceDefault();
-            localStorage.setItem('emma_mic_setup_complete', 'true');
-            setShowMicSetup(false);
-          }} />
+          <MicrophoneSetup 
+            welcomeMessage={welcomeMessage}
+            onComplete={async () => {
+              await ensureTrinityVoiceDefault();
+              localStorage.setItem('emma_mic_setup_complete', 'true');
+              localStorage.removeItem('emma_welcome_message');
+              setShowMicSetup(false);
+            }} 
+          />
         </div>
         <Toaster />
       </div>

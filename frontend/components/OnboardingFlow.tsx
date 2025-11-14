@@ -5,7 +5,7 @@ import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2 } from "luc
 
 interface OnboardingFlowProps {
   userId: string;
-  onComplete: (firstName: string) => void;
+  onComplete: (firstName: string, welcomeMessage?: string) => void;
 }
 
 interface Question {
@@ -141,11 +141,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       
       if (response.onboarding_completed) {
         const completionResponse = await backend.onboarding.complete({ user_id: userId });
-        setEmmaMessage(completionResponse.welcome_message);
-        
-        setTimeout(() => {
-          onComplete(firstName);
-        }, 2000);
+        onComplete(firstName, completionResponse.welcome_message);
       } else {
         if (response.next_question) {
           setEmmaMessage(response.next_question);

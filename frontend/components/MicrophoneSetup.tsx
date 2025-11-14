@@ -6,9 +6,10 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 
 interface MicrophoneSetupProps {
   onComplete?: () => void;
+  welcomeMessage?: string;
 }
 
-export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
+export default function MicrophoneSetup({ onComplete, welcomeMessage }: MicrophoneSetupProps) {
   const [step, setStep] = useState<'intro' | 'testing' | 'success'>('intro');
   const [testTranscript, setTestTranscript] = useState('');
   
@@ -82,7 +83,21 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/40">
+    <div className="max-w-2xl mx-auto space-y-4">
+      {welcomeMessage && (
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/40">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4e8f71]/20 to-[#6656cb]/20 flex items-center justify-center flex-shrink-0">
+              <img src="/logo.png" alt="Emma" className="w-6 h-6 object-contain" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-[#323e48]/60 mb-1">Emma says:</p>
+              <p className="text-lg text-[#323e48] leading-relaxed">{welcomeMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/40">
       {step === 'intro' && (
         <div className="space-y-6">
           <div className="text-center">
@@ -280,6 +295,7 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
