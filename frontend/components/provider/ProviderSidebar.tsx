@@ -59,7 +59,7 @@ export default function ProviderSidebar({
     <aside
       className="
         flex flex-col
-        h-screen
+        h-[calc(100vh-72px)] md:h-screen
         bg-gradient-to-b from-[#4e8f71] via-[#364d89] to-[#6656cb]
         shadow-2xl
         w-72 lg:w-80
