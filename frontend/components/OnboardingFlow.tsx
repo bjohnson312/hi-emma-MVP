@@ -23,7 +23,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   const [currentFeeling, setCurrentFeeling] = useState("");
   const [preferredCheckIn, setPreferredCheckIn] = useState("");
   const [reminderPreference, setReminderPreference] = useState("");
-  const [emmaMessage, setEmmaMessage] = useState("Hi there! I'm Emma, your personal wellness companion. Let's get to know each other.");
+  const [emmaMessage, setEmmaMessage] = useState("Hi there! I'm Emma, your personal wellness companion. Let's get to know each other. What's your name?");
   const [isLoading, setIsLoading] = useState(false);
   const [textInput, setTextInput] = useState("");
 
@@ -137,6 +137,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       }
 
       const response = await backend.onboarding.updateStep(updateData);
+      setIsLoading(false);
       
       if (response.onboarding_completed) {
         const completionResponse = await backend.onboarding.complete({ user_id: userId });
@@ -144,7 +145,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
         
         setTimeout(() => {
           onComplete(firstName);
-        }, 3000);
+        }, 2000);
       } else {
         if (response.next_question) {
           setEmmaMessage(response.next_question);
@@ -155,7 +156,6 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     } catch (error) {
       console.error("Failed to update onboarding step:", error);
       setEmmaMessage("Oops! Something went wrong. Let's try that again.");
-    } finally {
       setIsLoading(false);
     }
   };
