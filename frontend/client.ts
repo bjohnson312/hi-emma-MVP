@@ -35,6 +35,7 @@ const BROWSER = typeof globalThis === "object" && ("window" in globalThis);
 export class Client {
     public readonly admin_auth: admin_auth.ServiceClient
     public readonly admin_portal: admin_portal.ServiceClient
+    public readonly appointments: appointments.ServiceClient
     public readonly auth: auth.ServiceClient
     public readonly care_team: care_team.ServiceClient
     public readonly conversation: conversation.ServiceClient
@@ -46,6 +47,7 @@ export class Client {
     public readonly patient_sharing: patient_sharing.ServiceClient
     public readonly profile: profile.ServiceClient
     public readonly provider_auth: provider_auth.ServiceClient
+    public readonly provider_chat: provider_chat.ServiceClient
     public readonly provider_portal: provider_portal.ServiceClient
     public readonly push: push.ServiceClient
     public readonly voice: voice.ServiceClient
@@ -67,6 +69,7 @@ export class Client {
         const base = new BaseClient(this.target, this.options)
         this.admin_auth = new admin_auth.ServiceClient(base)
         this.admin_portal = new admin_portal.ServiceClient(base)
+        this.appointments = new appointments.ServiceClient(base)
         this.auth = new auth.ServiceClient(base)
         this.care_team = new care_team.ServiceClient(base)
         this.conversation = new conversation.ServiceClient(base)
@@ -78,6 +81,7 @@ export class Client {
         this.patient_sharing = new patient_sharing.ServiceClient(base)
         this.profile = new profile.ServiceClient(base)
         this.provider_auth = new provider_auth.ServiceClient(base)
+        this.provider_chat = new provider_chat.ServiceClient(base)
         this.provider_portal = new provider_portal.ServiceClient(base)
         this.push = new push.ServiceClient(base)
         this.voice = new voice.ServiceClient(base)
@@ -223,6 +227,74 @@ export namespace admin_portal {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/users/reset-password`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_reset_password_resetPassword>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { createAction as api_appointments_create_action_createAction } from "~backend/appointments/create_action";
+import { createNote as api_appointments_create_note_createNote } from "~backend/appointments/create_note";
+import { generateSummary as api_appointments_generate_summary_generateSummary } from "~backend/appointments/generate_summary";
+import { getAppointmentDetail as api_appointments_get_appointment_detail_getAppointmentDetail } from "~backend/appointments/get_appointment_detail";
+import { getAppointments as api_appointments_get_appointments_getAppointments } from "~backend/appointments/get_appointments";
+import { getDailySummary as api_appointments_get_daily_summary_getDailySummary } from "~backend/appointments/get_daily_summary";
+
+export namespace appointments {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.createAction = this.createAction.bind(this)
+            this.createNote = this.createNote.bind(this)
+            this.generateSummary = this.generateSummary.bind(this)
+            this.getAppointmentDetail = this.getAppointmentDetail.bind(this)
+            this.getAppointments = this.getAppointments.bind(this)
+            this.getDailySummary = this.getDailySummary.bind(this)
+            this.seedDemoData = this.seedDemoData.bind(this)
+        }
+
+        public async createAction(params: RequestType<typeof api_appointments_create_action_createAction>): Promise<ResponseType<typeof api_appointments_create_action_createAction>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/appointments/create-action`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_appointments_create_action_createAction>
+        }
+
+        public async createNote(params: RequestType<typeof api_appointments_create_note_createNote>): Promise<ResponseType<typeof api_appointments_create_note_createNote>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/appointments/create-note`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_appointments_create_note_createNote>
+        }
+
+        public async generateSummary(params: RequestType<typeof api_appointments_generate_summary_generateSummary>): Promise<ResponseType<typeof api_appointments_generate_summary_generateSummary>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/appointments/generate-summary`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_appointments_generate_summary_generateSummary>
+        }
+
+        public async getAppointmentDetail(params: RequestType<typeof api_appointments_get_appointment_detail_getAppointmentDetail>): Promise<ResponseType<typeof api_appointments_get_appointment_detail_getAppointmentDetail>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/appointments/detail`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_appointments_get_appointment_detail_getAppointmentDetail>
+        }
+
+        public async getAppointments(params: RequestType<typeof api_appointments_get_appointments_getAppointments>): Promise<ResponseType<typeof api_appointments_get_appointments_getAppointments>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/appointments/list`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_appointments_get_appointments_getAppointments>
+        }
+
+        public async getDailySummary(params: RequestType<typeof api_appointments_get_daily_summary_getDailySummary>): Promise<ResponseType<typeof api_appointments_get_daily_summary_getDailySummary>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/appointments/daily-summary`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_appointments_get_daily_summary_getDailySummary>
+        }
+
+        public async seedDemoData(): Promise<void> {
+            await this.baseClient.callTypedAPI(`/appointments/seed-demo-data`, {method: "POST", body: undefined})
         }
     }
 }
@@ -985,6 +1057,37 @@ export namespace provider_auth {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/provider/signup`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_provider_auth_signup_signup>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { chat as api_provider_chat_chat_chat } from "~backend/provider_chat/chat";
+import { getHistory as api_provider_chat_history_getHistory } from "~backend/provider_chat/history";
+
+export namespace provider_chat {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.chat = this.chat.bind(this)
+            this.getHistory = this.getHistory.bind(this)
+        }
+
+        public async chat(params: RequestType<typeof api_provider_chat_chat_chat>): Promise<ResponseType<typeof api_provider_chat_chat_chat>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/provider-chat/chat`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_provider_chat_chat_chat>
+        }
+
+        public async getHistory(params: RequestType<typeof api_provider_chat_history_getHistory>): Promise<ResponseType<typeof api_provider_chat_history_getHistory>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/provider-chat/history`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_provider_chat_history_getHistory>
         }
     }
 }

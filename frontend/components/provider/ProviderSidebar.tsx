@@ -1,8 +1,9 @@
-import { Home, Users, BarChart3, MessageSquare, Settings, LogOut, UserPlus, HelpCircle, FileText, Shield } from "lucide-react";
+import { Home, Users, BarChart3, MessageSquare, Settings, LogOut, UserPlus, HelpCircle, FileText, Shield, MessageCircle } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Tooltip from "@/components/Tooltip";
 
 export type ProviderView = 
+  | "chat"
   | "home" 
   | "patients" 
   | "analytics" 
@@ -28,6 +29,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { id: "chat", label: "Chat", icon: MessageCircle, tooltip: "Chat with Emma AI assistant" },
   { id: "home", label: "Dashboard", icon: Home, tooltip: "Overview of patients and alerts" },
   { id: "patients", label: "Patients", icon: Users, tooltip: "View and manage patient list" },
   { id: "analytics", label: "Analytics", icon: BarChart3, badge: "beta", tooltip: "Reports and insights across patients" },
