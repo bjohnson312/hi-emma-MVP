@@ -27,30 +27,17 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
     isSupported: isTTSSupported
   } = useTextToSpeech();
 
-  const handleStartTest = useCallback(async () => {
+  const handleStartTest = useCallback(() => {
     setStep('testing');
     setTestTranscript('');
     resetTranscript();
     
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      if (isTTSSupported) {
-        speak("Let's test your microphone. Please say: Hello Emma");
-      }
-      
+    startListening();
+    
+    if (isTTSSupported) {
       setTimeout(() => {
-        startListening();
-      }, isTTSSupported ? 3000 : 500);
-    } catch (err: any) {
-      console.error('Microphone permission error:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setStep('intro');
-        alert('Microphone access was denied. Please allow microphone access in your browser settings and try again.');
-      } else {
-        setStep('intro');
-        alert('Unable to access microphone. Please check your browser settings.');
-      }
+        speak("I'm listening. Please say: Hello Emma");
+      }, 500);
     }
   }, [startListening, speak, resetTranscript, isTTSSupported]);
 
@@ -77,21 +64,24 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
   }, [onComplete]);
 
   if (!isSpeechSupported) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     return (
       <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/40">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-red-500" />
+          <div className="w-16 h-16 mx-auto rounded-full bg-blue-100 flex items-center justify-center">
+            <Mic className="w-8 h-8 text-blue-500" />
           </div>
-          <h2 className="text-2xl font-bold text-[#323e48]">Speech Not Supported</h2>
+          <h2 className="text-2xl font-bold text-[#323e48]">Voice Input Not Available</h2>
           <p className="text-[#323e48]/70">
-            Your browser doesn't support speech recognition. Please use Chrome, Edge, or Safari for the best voice experience.
+            {isIOS 
+              ? "Voice input isn't available in Safari on iOS. You can still chat with Emma by typing your messages."
+              : "Your browser doesn't support speech recognition. Please use Chrome, Edge, or Safari for voice features."}
           </p>
           <Button
             onClick={handleComplete}
             className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white"
           >
-            Continue Without Voice
+            Continue with Typing
           </Button>
         </div>
       </div>
@@ -191,14 +181,18 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
           )}
 
           {speechError && (
-            <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-              <p className="text-sm font-medium text-red-800 mb-1">Microphone Issue</p>
-              <p className="text-sm text-red-600">{speechError}</p>
-              {speechError.includes('denied') && (
-                <p className="text-xs text-red-500 mt-2">
-                  To fix: Click the 🔒 or ⓘ icon in your browser's address bar and allow microphone access.
-                </p>
-              )}
+            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+              <p className="text-sm font-medium text-amber-800 mb-1">Unable to Use Microphone</p>
+              <p className="text-sm text-amber-700">{speechError}</p>
+              <div className="mt-3 pt-3 border-t border-amber-200">
+                <Button
+                  onClick={handleComplete}
+                  variant="outline"
+                  className="w-full border-amber-300 hover:bg-amber-100 text-amber-900"
+                >
+                  Continue with Typing Instead
+                </Button>
+              </div>
             </div>
           )}
 

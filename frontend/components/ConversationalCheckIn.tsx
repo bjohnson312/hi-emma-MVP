@@ -388,11 +388,6 @@ export default function ConversationalCheckIn({
           </div>
         ) : (
           <div className="space-y-2">
-            {speechError && (
-              <div className="text-xs text-red-500 px-2">
-                {speechError}
-              </div>
-            )}
             <div className="flex gap-2">
               <Input
                 ref={inputRef}
