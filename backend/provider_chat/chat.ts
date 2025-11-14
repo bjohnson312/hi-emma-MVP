@@ -39,6 +39,118 @@ async function callAI(messages: AIMessage[]): Promise<string> {
   return data.choices[0].message.content;
 }
 
+async function getDailySummary(providerId: string): Promise<string> {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  const patientCountResult = await db.queryRow<{ count: number }>`
+    SELECT COUNT(DISTINCT user_id) as count
+    FROM user_profiles
+  `;
+
+  const recentMorningCheckIns = await db.query<{
+    user_id: string;
+    name: string;
+    created_at: Date;
+  }>`
+    SELECT DISTINCT ON (ch.user_id) 
+      ch.user_id,
+      up.name,
+      ch.created_at
+    FROM conversation_history ch
+    JOIN user_profiles up ON ch.user_id = up.user_id
+    WHERE ch.conversation_type = 'morning'
+      AND ch.created_at >= CURRENT_DATE
+    ORDER BY ch.user_id, ch.created_at DESC
+    LIMIT 10
+  `;
+
+  const recentJournalEntries = await db.query<{
+    user_id: string;
+    name: string;
+    title: string;
+    created_at: Date;
+  }>`
+    SELECT 
+      wj.user_id,
+      up.name,
+      wj.title,
+      wj.created_at
+    FROM wellness_journal wj
+    JOIN user_profiles up ON wj.user_id = up.user_id
+    WHERE wj.created_at >= CURRENT_DATE
+    ORDER BY wj.created_at DESC
+    LIMIT 5
+  `;
+
+  const activePatients = await db.query<{
+    user_id: string;
+    name: string;
+    interaction_count: number;
+    wake_time: string | null;
+  }>`
+    SELECT user_id, name, interaction_count, wake_time
+    FROM user_profiles
+    ORDER BY interaction_count DESC
+    LIMIT 5
+  `;
+
+  let morningCheckInsList: any[] = [];
+  for await (const checkIn of recentMorningCheckIns) {
+    morningCheckInsList.push(checkIn);
+  }
+
+  let journalEntriesList: any[] = [];
+  for await (const entry of recentJournalEntries) {
+    journalEntriesList.push(entry);
+  }
+
+  let activePatientsList: any[] = [];
+  for await (const patient of activePatients) {
+    activePatientsList.push(patient);
+  }
+
+  const patientCount = patientCountResult?.count || 0;
+
+  let summary = `📊 **Daily Summary for ${today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**\n\n`;
+  
+  summary += `**Overview:**\n`;
+  summary += `- Total Active Patients: ${patientCount}\n`;
+  summary += `- Morning Check-ins Today: ${morningCheckInsList.length}\n`;
+  summary += `- Journal Entries Today: ${journalEntriesList.length}\n\n`;
+
+  if (morningCheckInsList.length > 0) {
+    summary += `**Morning Check-ins Completed:**\n`;
+    morningCheckInsList.forEach(checkIn => {
+      const time = new Date(checkIn.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      summary += `- ${checkIn.name} (${time})\n`;
+    });
+    summary += `\n`;
+  }
+
+  if (journalEntriesList.length > 0) {
+    summary += `**Recent Journal Entries:**\n`;
+    journalEntriesList.forEach(entry => {
+      const time = new Date(entry.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      summary += `- ${entry.name}: "${entry.title}" (${time})\n`;
+    });
+    summary += `\n`;
+  }
+
+  if (activePatientsList.length > 0) {
+    summary += `**Most Active Patients:**\n`;
+    activePatientsList.forEach(patient => {
+      summary += `- ${patient.name}: ${patient.interaction_count || 0} interactions`;
+      if (patient.wake_time) {
+        summary += `, typically wakes at ${patient.wake_time}`;
+      }
+      summary += `\n`;
+    });
+  }
+
+  return summary;
+}
+
 async function getProviderAppointmentsSummary(providerId: string): Promise<string> {
   const patientCountResult = await db.queryRow<{ count: number }>`
     SELECT COUNT(DISTINCT user_id) as count
@@ -123,11 +235,13 @@ export const chat = api<ProviderChatRequest, ProviderChatResponse>(
     let contextInfo = "";
     const userMessageLower = user_message.toLowerCase();
     
-    if (userMessageLower.includes("appointment") || userMessageLower.includes("schedule") || userMessageLower.includes("today")) {
+    if (userMessageLower.includes("daily summary") || userMessageLower.includes("summary") || (userMessageLower.includes("today") && userMessageLower.includes("summary"))) {
+      contextInfo = await getDailySummary(provider_id);
+    } else if (userMessageLower.includes("appointment") || userMessageLower.includes("schedule") || userMessageLower.includes("today")) {
       contextInfo = await getProviderAppointmentsSummary(provider_id);
     }
     
-    if (userMessageLower.includes("patient") || userMessageLower.includes("user")) {
+    if (userMessageLower.includes("patient") && !userMessageLower.includes("summary")) {
       const searchInfo = await searchPatientInfo(provider_id, user_message);
       contextInfo += "\n\n" + searchInfo;
     }
