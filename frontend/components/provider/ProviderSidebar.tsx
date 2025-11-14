@@ -82,7 +82,8 @@ export default function ProviderSidebar({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto space-y-1" aria-label="Main navigation">
+        <nav className="flex-1 overflow-y-auto" aria-label="Main navigation">
+          <div className="space-y-1 flex flex-col">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -113,6 +114,7 @@ export default function ProviderSidebar({
               </Tooltip>
             );
           })}
+          </div>
         </nav>
 
         <div className="pt-4 mt-4 border-t border-white/30">
