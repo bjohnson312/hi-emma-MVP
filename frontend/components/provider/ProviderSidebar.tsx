@@ -27,16 +27,13 @@ interface NavItem {
   tooltip: string;
 }
 
-const mainNavItems: NavItem[] = [
+const navItems: NavItem[] = [
   { id: "home", label: "Dashboard", icon: Home, tooltip: "Overview of patients and alerts" },
   { id: "patients", label: "Patients", icon: Users, tooltip: "View and manage patient list" },
   { id: "analytics", label: "Analytics", icon: BarChart3, badge: "beta", tooltip: "Reports and insights across patients" },
   { id: "communications", label: "Messages", icon: MessageSquare, tooltip: "Secure messaging with patients" },
   { id: "care-team", label: "Care Team", icon: UserPlus, tooltip: "Manage providers and team members" },
   { id: "notes", label: "Notes", icon: FileText, badge: "coming-soon", tooltip: "Clinical notes and documentation" },
-];
-
-const bottomNavItems: NavItem[] = [
   { id: "settings", label: "Settings", icon: Settings, tooltip: "Configure preferences and profile" },
   { id: "help", label: "Help / Resources", icon: HelpCircle, tooltip: "Get support and learning resources" },
 ];
@@ -85,72 +82,37 @@ export default function ProviderSidebar({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto space-y-2" aria-label="Main navigation">
-          <div className="space-y-1">
-            {mainNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentView === item.id;
-              
-              return (
-                <Tooltip key={item.id} content={item.tooltip} side="right">
-                  <button
-                    onClick={() => onNavigate(item.id)}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                      transition-all duration-200
-                      ${isActive 
-                        ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
-                        : "text-white/90 hover:bg-white/15 hover:shadow-md"
-                      }
-                    `}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
-                    {item.badge && (
-                      <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                        {item.badge === "beta" ? "Beta" : "Soon"}
-                      </StatusBadge>
-                    )}
-                  </button>
-                </Tooltip>
-              );
-            })}
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-white/30">
-            {bottomNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentView === item.id;
-              
-              return (
-                <Tooltip key={item.id} content={item.tooltip} side="right">
-                  <button
-                    onClick={() => onNavigate(item.id)}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                      transition-all duration-200
-                      ${isActive 
-                        ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
-                        : "text-white/90 hover:bg-white/15 hover:shadow-md"
-                      }
-                    `}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
-                    {item.badge && (
-                      <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                        {item.badge === "beta" ? "Beta" : "Soon"}
-                      </StatusBadge>
-                    )}
-                  </button>
-                </Tooltip>
-              );
-            })}
-          </div>
+        <nav className="flex-1 overflow-y-auto space-y-1" aria-label="Main navigation">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+            
+            return (
+              <Tooltip key={item.id} content={item.tooltip} side="right">
+                <button
+                  onClick={() => onNavigate(item.id)}
+                  className={`
+                    w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                    transition-all duration-200
+                    ${isActive 
+                      ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
+                      : "text-white/90 hover:bg-white/15 hover:shadow-md"
+                    }
+                  `}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
+                  {item.badge && (
+                    <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
+                      {item.badge === "beta" ? "Beta" : "Soon"}
+                    </StatusBadge>
+                  )}
+                </button>
+              </Tooltip>
+            );
+          })}
         </nav>
 
         <div className="pt-4 mt-4 border-t border-white/30">
