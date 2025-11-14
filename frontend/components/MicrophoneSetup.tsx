@@ -173,10 +173,10 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
               )}
             </div>
             <h2 className="text-2xl font-bold text-[#323e48] mb-2">
-              {isListening ? 'Listening...' : 'Waiting for Permission...'}
+              {isListening ? 'Listening...' : 'Getting Ready...'}
             </h2>
             <p className="text-[#323e48]/70">
-              {isListening ? 'Say: "Hello Emma"' : 'Please allow microphone access when prompted'}
+              {isListening ? 'Say: "Hello Emma"' : 'Starting microphone...'}
             </p>
           </div>
 

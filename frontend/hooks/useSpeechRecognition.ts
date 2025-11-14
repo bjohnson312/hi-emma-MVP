@@ -105,22 +105,38 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     setError(null);
     
     if (isListening) {
+      return new Promise<void>((resolve) => {
+        const handleEnd = () => {
+          recognitionRef.current.removeEventListener('end', handleEnd);
+          try {
+            recognitionRef.current.start();
+            setIsListening(true);
+            resolve();
+          } catch (err) {
+            console.error('Failed to start speech recognition after stop:', err);
+            setError('Failed to start speech recognition');
+            resolve();
+          }
+        };
+        
+        recognitionRef.current.addEventListener('end', handleEnd);
+        
+        try {
+          recognitionRef.current.stop();
+        } catch (err) {
+          console.warn('Error stopping recognition:', err);
+          recognitionRef.current.removeEventListener('end', handleEnd);
+          resolve();
+        }
+      });
+    } else {
       try {
-        recognitionRef.current.stop();
-        setIsListening(false);
+        recognitionRef.current.start();
+        setIsListening(true);
       } catch (err) {
-        console.warn('Error stopping recognition:', err);
+        console.error('Failed to start speech recognition:', err);
+        setError('Failed to start speech recognition');
       }
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    try {
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch (err) {
-      console.error('Failed to restart speech recognition:', err);
-      setError('Failed to start speech recognition');
     }
   }, [isListening]);
 
