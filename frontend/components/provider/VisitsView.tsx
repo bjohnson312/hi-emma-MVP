@@ -12,7 +12,8 @@ export default function VisitsView({ onSelectAppointment }: { onSelectAppointmen
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const defaultDate = new Date("2025-11-14");
+  const [currentDate, setCurrentDate] = useState(defaultDate);
 
   useEffect(() => {
     loadAppointments();
@@ -32,9 +33,22 @@ export default function VisitsView({ onSelectAppointment }: { onSelectAppointmen
         console.log("Using default provider ID");
       }
 
+      const startDate = new Date(currentDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(startDate);
+      if (viewType === "day") {
+        endDate.setDate(endDate.getDate() + 1);
+      } else if (viewType === "week") {
+        endDate.setDate(endDate.getDate() + 7);
+      } else {
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+
       const result = await backend.appointments.getAppointments({
         provider_id: providerId,
-        view_type: viewType,
+        start_date: startDate,
+        end_date: endDate,
         status: statusFilter === "all" ? undefined : statusFilter,
       });
 
