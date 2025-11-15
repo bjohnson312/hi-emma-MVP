@@ -39,6 +39,7 @@ export class Client {
     public readonly auth: auth.ServiceClient
     public readonly care_team: care_team.ServiceClient
     public readonly conversation: conversation.ServiceClient
+    public readonly insights: insights.ServiceClient
     public readonly journal: journal.ServiceClient
     public readonly journey: journey.ServiceClient
     public readonly morning: morning.ServiceClient
@@ -73,6 +74,7 @@ export class Client {
         this.auth = new auth.ServiceClient(base)
         this.care_team = new care_team.ServiceClient(base)
         this.conversation = new conversation.ServiceClient(base)
+        this.insights = new insights.ServiceClient(base)
         this.journal = new journal.ServiceClient(base)
         this.journey = new journey.ServiceClient(base)
         this.morning = new morning.ServiceClient(base)
@@ -534,6 +536,53 @@ export namespace conversation {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/conversation/session/${encodeURIComponent(params.session_id)}/context`, {method: "PUT", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_conversation_session_updateSessionContext>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { applySuggestion as api_insights_apply_suggestion_applySuggestion } from "~backend/insights/apply_suggestion";
+import { detectIntents as api_insights_detect_intents_detectIntents } from "~backend/insights/detect_intents";
+import { dismissSuggestion as api_insights_dismiss_suggestion_dismissSuggestion } from "~backend/insights/dismiss_suggestion";
+import { getSuggestions as api_insights_get_suggestions_getSuggestions } from "~backend/insights/get_suggestions";
+
+export namespace insights {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.applySuggestion = this.applySuggestion.bind(this)
+            this.detectIntents = this.detectIntents.bind(this)
+            this.dismissSuggestion = this.dismissSuggestion.bind(this)
+            this.getSuggestions = this.getSuggestions.bind(this)
+        }
+
+        public async applySuggestion(params: RequestType<typeof api_insights_apply_suggestion_applySuggestion>): Promise<ResponseType<typeof api_insights_apply_suggestion_applySuggestion>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/insights/apply`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_insights_apply_suggestion_applySuggestion>
+        }
+
+        public async detectIntents(params: RequestType<typeof api_insights_detect_intents_detectIntents>): Promise<ResponseType<typeof api_insights_detect_intents_detectIntents>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/insights/detect`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_insights_detect_intents_detectIntents>
+        }
+
+        public async dismissSuggestion(params: RequestType<typeof api_insights_dismiss_suggestion_dismissSuggestion>): Promise<ResponseType<typeof api_insights_dismiss_suggestion_dismissSuggestion>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/insights/dismiss`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_insights_dismiss_suggestion_dismissSuggestion>
+        }
+
+        public async getSuggestions(params: RequestType<typeof api_insights_get_suggestions_getSuggestions>): Promise<ResponseType<typeof api_insights_get_suggestions_getSuggestions>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/insights/suggestions`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_insights_get_suggestions_getSuggestions>
         }
     }
 }
