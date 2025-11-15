@@ -190,11 +190,29 @@ export function useConversationSession(
         });
       }
 
-      if (response.detected_insights && response.detected_insights.length > 0) {
-        const highConfidenceInsights = response.detected_insights.filter(
-          (insight: any) => insight.confidence >= 0.6
-        );
-        setPendingSuggestions(prev => [...prev, ...highConfidenceInsights]);
+      if (response.auto_applied_insights && response.auto_applied_insights.length > 0) {
+        const intentLabels: Record<string, string> = {
+          morning_routine: "Morning Routine",
+          evening_routine: "Evening Routine",
+          diet_nutrition: "Diet & Nutrition",
+          doctors_orders: "Doctor's Orders",
+          mood: "Mood Log",
+          symptoms: "Symptoms",
+          wellness_general: "Wellness Journal"
+        };
+        
+        response.auto_applied_insights.forEach((insight: any) => {
+          const label = intentLabels[insight.intentType] || "Wellness";
+          
+          toast({
+            title: `✨ Added to ${label}`,
+            description: insight.emmaSuggestionText || "I've saved that for you!",
+          });
+        });
+      }
+
+      if (response.detected_insights && Array.isArray(response.detected_insights) && response.detected_insights.length > 0) {
+        setPendingSuggestions(prev => [...prev, ...(response.detected_insights || [])]);
       }
 
       setTimeout(() => {

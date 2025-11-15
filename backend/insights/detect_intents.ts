@@ -12,14 +12,18 @@ import type {
 const openAIKey = secret("OpenAIKey");
 
 async function getRoutineCompletion(userId: string): Promise<RoutineCompletion> {
-  const morningPref = await db.queryRow<{ has_morning: boolean }>`
-    SELECT COUNT(*) > 0 as has_morning
+  const morningPref = await db.queryRow<{ activity_count: number }>`
+    SELECT 
+      CASE 
+        WHEN COUNT(*) = 0 THEN 0
+        ELSE COALESCE(jsonb_array_length(activities), 0)
+      END as activity_count
     FROM morning_routine_preferences
-    WHERE user_id = ${userId}
+    WHERE user_id = ${userId} AND is_active = true
   `;
 
-  const eveningCheckin = await db.queryRow<{ has_evening: boolean }>`
-    SELECT COUNT(*) > 0 as has_evening
+  const eveningCheckin = await db.queryRow<{ entry_count: number }>`
+    SELECT COUNT(*) as entry_count
     FROM wellness_journal_entries
     WHERE user_id = ${userId}
       AND entry_type = 'evening_routine'
@@ -39,8 +43,8 @@ async function getRoutineCompletion(userId: string): Promise<RoutineCompletion> 
   `;
 
   return {
-    morningCompleted: morningPref?.has_morning || false,
-    eveningCompleted: eveningCheckin?.has_evening || false,
+    morningCompleted: (morningPref?.activity_count || 0) >= 3,
+    eveningCompleted: (eveningCheckin?.entry_count || 0) >= 2,
     dietSetupComplete: dietSetup?.has_diet || false,
     doctorsOrdersCount: doctorsOrders?.count || 0
   };
@@ -94,17 +98,19 @@ Rules:
 3. Confidence should be HIGH (>0.7) only if the information is explicit and actionable
 4. Focus on the PRIORITY intents first - only detect others if very clear
 5. For routine activities, only detect if they mention DOING or WANTING TO DO the activity
-6. Return empty array if no clear intents detected
+6. Return empty intents array if no clear intents detected
 
-Return a JSON array of detected intents with this structure:
-[
-  {
-    "intentType": "morning_routine",
-    "extractedData": {"activity": "yoga", "duration": 20, "frequency": "daily"},
-    "confidence": 0.9,
-    "suggestionText": "I noticed you mentioned doing yoga this morning. Would you like me to add that to your morning routine?"
-  }
-]
+Return a JSON object with an 'intents' array like this:
+{
+  "intents": [
+    {
+      "intentType": "morning_routine",
+      "extractedData": {"activity": "yoga", "duration": 20, "frequency": "daily"},
+      "confidence": 0.9,
+      "suggestionText": "I noticed you mentioned doing yoga this morning. Would you like me to add that to your morning routine?"
+    }
+  ]
+}
 
 User message: "${userMessage}"
 Emma's response: "${emmaResponse}"`;
@@ -157,11 +163,20 @@ export const detectIntents = api<IntentDetectionRequest, IntentDetectionResponse
     const completion = await getRoutineCompletion(userId);
     const priorityIntents = determineIntentPriority(completion);
 
+    console.log('🔍 Intent Detection:', {
+      userId,
+      completion,
+      priorityIntents: priorityIntents.slice(0, 3),
+      userMessage: userMessage.substring(0, 50)
+    });
+
     const detectedIntents = await callAIForIntentDetection(
       userMessage,
       emmaResponse,
       priorityIntents
     );
+
+    console.log(`✨ Detected ${detectedIntents.length} intents`);
 
     const insights: DetectedInsight[] = [];
 

@@ -2,6 +2,7 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { ApplySuggestionRequest, ApplySuggestionResponse } from "./types";
 import { addFromConversation } from "../wellness_journal/add_manual";
+import { addActivity } from "../morning/add_activity";
 
 export const applySuggestion = api<ApplySuggestionRequest, ApplySuggestionResponse>(
   { expose: true, method: "POST", path: "/insights/apply" },
@@ -79,43 +80,49 @@ export const applySuggestion = api<ApplySuggestionRequest, ApplySuggestionRespon
 );
 
 async function applyMorningRoutine(userId: string, data: Record<string, any>): Promise<void> {
-  const existing = await db.queryRow<{ id: number }>`
-    SELECT id FROM morning_routine_preferences WHERE user_id = ${userId}
-  `;
-
-  if (existing) {
-    await db.exec`
-      UPDATE morning_routine_preferences
-      SET activities = COALESCE(activities, '[]'::jsonb) || ${JSON.stringify([{
-        id: `activity-${Date.now()}`,
+  try {
+    await addActivity({
+      user_id: userId,
+      activity: {
+        id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         name: data.activity || data.name,
         duration_minutes: data.duration || 10,
-        icon: data.icon || "Circle",
-        completed: false
-      }])}::jsonb,
-      updated_at = NOW()
-      WHERE user_id = ${userId}
-    `;
-  } else {
-    await db.exec`
-      INSERT INTO morning_routine_preferences (user_id, activities)
-      VALUES (${userId}, ${JSON.stringify([{
-        id: `activity-${Date.now()}`,
-        name: data.activity || data.name,
-        duration_minutes: data.duration || 10,
-        icon: data.icon || "Circle",
-        completed: false
-      }])})
-    `;
+        icon: data.icon || "⭐",
+        description: data.description || ""
+      }
+    });
+    
+    console.log('✅ Applied morning routine activity:', data.activity || data.name);
+    
+  } catch (error: any) {
+    if (error.message?.includes("already in your routine")) {
+      console.log('ℹ️  Activity already exists, skipping');
+      return;
+    }
+    
+    if (error.message?.includes("No active morning routine found")) {
+      console.log('ℹ️  No routine found, creating basic routine first');
+      await db.exec`
+        INSERT INTO morning_routine_preferences (user_id, routine_name, activities, is_active)
+        VALUES (
+          ${userId}, 
+          'My Morning Routine',
+          ${JSON.stringify([{
+            id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            name: data.activity || data.name,
+            duration_minutes: data.duration || 10,
+            icon: data.icon || "⭐",
+            description: data.description || ""
+          }])}::jsonb,
+          true
+        )
+      `;
+      console.log('✅ Created new routine with activity');
+      return;
+    }
+    
+    throw error;
   }
-
-  await addFromConversation({
-    user_id: userId,
-    conversation_text: `Added ${data.activity || data.name} to morning routine`,
-    session_type: "morning_routine",
-    title: "Morning Routine Update",
-    tags: ["morning_routine", "routine_update"]
-  });
 }
 
 async function applyEveningRoutine(userId: string, data: Record<string, any>): Promise<void> {

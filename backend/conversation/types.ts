@@ -31,6 +31,7 @@ export interface ChatResponse {
   goals_updated?: boolean;
   routine_activity_added?: boolean;
   detected_insights?: any[];
+  auto_applied_insights?: any[];
 }
 
 export interface GetOrCreateSessionRequest {

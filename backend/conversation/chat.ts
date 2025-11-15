@@ -11,6 +11,7 @@ import { updateJourneyProgress } from "../journey/update_progress";
 import { addActivity } from "../morning/add_activity";
 import type { MorningRoutineActivity } from "../morning/routine_types";
 import { detectIntents } from "../insights/detect_intents";
+import { applySuggestion } from "../insights/apply_suggestion";
 
 const openAIKey = secret("OpenAIKey");
 
@@ -294,6 +295,8 @@ export const chat = api<ChatRequest, ChatResponse>(
     }
 
     let detectedInsights: any[] = [];
+    let autoAppliedInsights: any[] = [];
+    
     try {
       const insightResponse = await detectIntents({
         sessionId: session.id,
@@ -301,7 +304,27 @@ export const chat = api<ChatRequest, ChatResponse>(
         userMessage: user_message,
         emmaResponse: cleanedReply
       });
+      
       detectedInsights = insightResponse.insights || [];
+      
+      for (const insight of detectedInsights) {
+        if (insight.confidence >= 0.75) {
+          try {
+            console.log('🚀 Auto-applying insight:', insight.intentType, 'confidence:', insight.confidence);
+            
+            await applySuggestion({
+              suggestionId: insight.id,
+              userId: user_id
+            });
+            
+            autoAppliedInsights.push(insight);
+            console.log('✅ Auto-applied successfully');
+            
+          } catch (error) {
+            console.error('❌ Failed to auto-apply insight:', error);
+          }
+        }
+      }
     } catch (error) {
       console.error("Failed to detect intents:", error);
     }
@@ -312,7 +335,8 @@ export const chat = api<ChatRequest, ChatResponse>(
       conversation_complete: conversationComplete,
       journal_entry_created: !!journalEntryId,
       routine_activity_added: activityAdded,
-      detected_insights: detectedInsights
+      detected_insights: detectedInsights.filter(i => i.confidence < 0.75),
+      auto_applied_insights: autoAppliedInsights
     };
   }
 );

@@ -190,6 +190,39 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
     setEditedActivities(editedActivities.filter((_, i) => i !== index));
   }
 
+  async function quickRemoveActivity(activityId: string) {
+    if (!routine) return;
+    
+    const activity = routine.activities.find(a => a.id === activityId);
+    if (!activity) return;
+    
+    try {
+      const updatedActivities = routine.activities.filter(a => a.id !== activityId);
+      const totalDuration = updatedActivities.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
+      
+      await backend.morning.createRoutinePreference({
+        user_id: userId,
+        routine_name: routine.routine_name || "My Routine",
+        activities: updatedActivities,
+        duration_minutes: totalDuration
+      });
+      
+      await loadData();
+      
+      toast({
+        title: "Removed",
+        description: `"${activity.name}" has been removed from your routine.`,
+      });
+    } catch (error) {
+      console.error('Failed to remove activity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove activity.",
+        variant: "destructive"
+      });
+    }
+  }
+
   async function saveEdit() {
     if (!routine || editedActivities.length === 0) {
       toast({
@@ -618,42 +651,54 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
             {routine.activities.map((activity) => {
               const isCompleted = completedToday.includes(activity.id);
               return (
-                <button
-                  key={activity.id}
-                  onClick={() => toggleActivity(activity.id)}
-                  className={`w-full text-left p-3 rounded-lg transition-all flex items-center gap-3 group ${
-                    isCompleted
-                      ? "bg-green-50 hover:bg-green-100"
-                      : "bg-[#f8f9fa] hover:bg-white hover:shadow-sm"
-                  }`}
-                >
-                  <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                    isCompleted
-                      ? "bg-green-500 border-green-500"
-                      : "bg-white border-[#323e48]/30 group-hover:border-[#4e8f71]"
-                  }`}>
-                    {isCompleted && (
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                  
-                  <span className="text-lg mr-2">{activity.icon}</span>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium text-[#323e48] ${isCompleted ? 'line-through opacity-60' : ''}`}>
-                        {activity.name}
-                      </span>
-                      {activity.duration_minutes && (
-                        <span className="text-xs text-[#323e48]/50">
-                          {activity.duration_minutes} min
-                        </span>
+                <div key={activity.id} className="relative group">
+                  <button
+                    onClick={() => toggleActivity(activity.id)}
+                    className={`w-full text-left p-3 rounded-lg transition-all flex items-center gap-3 ${
+                      isCompleted
+                        ? "bg-green-50 hover:bg-green-100"
+                        : "bg-[#f8f9fa] hover:bg-white hover:shadow-sm"
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      isCompleted
+                        ? "bg-green-500 border-green-500"
+                        : "bg-white border-[#323e48]/30 group-hover:border-[#4e8f71]"
+                    }`}>
+                      {isCompleted && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
                       )}
                     </div>
-                  </div>
-                </button>
+                    
+                    <span className="text-lg mr-2">{activity.icon}</span>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium text-[#323e48] ${isCompleted ? 'line-through opacity-60' : ''}`}>
+                          {activity.name}
+                        </span>
+                        {activity.duration_minutes && (
+                          <span className="text-xs text-[#323e48]/50">
+                            {activity.duration_minutes} min
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      quickRemoveActivity(activity.id);
+                    }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    title="Remove activity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               );
             })}
           </div>
