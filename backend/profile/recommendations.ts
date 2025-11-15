@@ -131,26 +131,30 @@ export const getRecommendations = api(
       });
     }
 
-    const journalEntriesQuery = await db.query`
-      SELECT COUNT(*) as count FROM wellness_journal 
-       WHERE user_id = ${req.user_id} AND ai_generated = false
-    `;
-    const journalEntries = [];
-    for await (const entry of journalEntriesQuery) {
-      journalEntries.push(entry);
-    }
+    try {
+      const journalEntriesQuery = await db.query`
+        SELECT COUNT(*) as count FROM wellness_journal_entries 
+         WHERE user_id = ${req.user_id} AND ai_generated = false
+      `;
+      const journalEntries = [];
+      for await (const entry of journalEntriesQuery) {
+        journalEntries.push(entry);
+      }
 
-    const manualEntryCount = journalEntries[0]?.count || 0;
-    if (interactionCount >= 10 && manualEntryCount === 0) {
-      recommendations.push({
-        id: "try_journaling",
-        category: "wellness",
-        title: "Try Personal Journaling",
-        description: "Journaling can help you process thoughts and track your progress. Want to give it a try?",
-        action: "Write a journal entry",
-        priority: "low",
-        reasoning: "You haven't tried manual journaling yet"
-      });
+      const manualEntryCount = journalEntries[0]?.count || 0;
+      if (interactionCount >= 10 && manualEntryCount === 0) {
+        recommendations.push({
+          id: "try_journaling",
+          category: "wellness",
+          title: "Try Personal Journaling",
+          description: "Journaling can help you process thoughts and track your progress. Want to give it a try?",
+          action: "Write a journal entry",
+          priority: "low",
+          reasoning: "You haven't tried manual journaling yet"
+        });
+      }
+    } catch (error) {
+      console.error('Error loading journal entry recommendations:', error);
     }
 
     return { recommendations: recommendations.slice(0, 5) };
