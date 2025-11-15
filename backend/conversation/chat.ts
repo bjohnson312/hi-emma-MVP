@@ -10,6 +10,7 @@ import { trackInteraction, getBehaviorPatterns } from "../profile/personalizatio
 import { updateJourneyProgress } from "../journey/update_progress";
 import { addActivity } from "../morning/add_activity";
 import type { MorningRoutineActivity } from "../morning/routine_types";
+import { detectIntents } from "../insights/detect_intents";
 
 const openAIKey = secret("OpenAIKey");
 
@@ -292,12 +293,26 @@ export const chat = api<ChatRequest, ChatResponse>(
       await updateJourneyProgress(user_id, "first_conversation", true);
     }
 
+    let detectedInsights: any[] = [];
+    try {
+      const insightResponse = await detectIntents({
+        sessionId: session.id,
+        userId: user_id,
+        userMessage: user_message,
+        emmaResponse: cleanedReply
+      });
+      detectedInsights = insightResponse.insights || [];
+    } catch (error) {
+      console.error("Failed to detect intents:", error);
+    }
+
     return {
       emma_reply: cleanedReply,
       session_id: session.id,
       conversation_complete: conversationComplete,
       journal_entry_created: !!journalEntryId,
-      routine_activity_added: activityAdded
+      routine_activity_added: activityAdded,
+      detected_insights: detectedInsights
     };
   }
 );

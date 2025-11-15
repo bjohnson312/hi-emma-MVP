@@ -9,11 +9,20 @@ interface Message {
   timestamp: Date;
 }
 
+interface DetectedInsight {
+  id: string;
+  intentType: string;
+  extractedData: Record<string, any>;
+  confidence: number;
+  emmaSuggestionText?: string;
+}
+
 interface UseConversationSessionReturn {
   messages: Message[];
   sessionId: number | null;
   loading: boolean;
   conversationComplete: boolean;
+  pendingSuggestions: DetectedInsight[];
   addMessage: (sender: "emma" | "user", text: string) => void;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   setSessionId: React.Dispatch<React.SetStateAction<number | null>>;
@@ -21,6 +30,7 @@ interface UseConversationSessionReturn {
   loadOrStartConversation: () => Promise<void>;
   sendMessage: (userMessage: string) => Promise<void>;
   resetConversation: (isFirstCheckIn?: boolean) => Promise<void>;
+  clearSuggestion: (suggestionId: string) => void;
 }
 
 export function useConversationSession(
@@ -32,6 +42,7 @@ export function useConversationSession(
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [conversationComplete, setConversationComplete] = useState(false);
+  const [pendingSuggestions, setPendingSuggestions] = useState<DetectedInsight[]>([]);
   const { toast } = useToast();
 
   const addMessage = useCallback((sender: "emma" | "user", text: string) => {
@@ -179,6 +190,13 @@ export function useConversationSession(
         });
       }
 
+      if (response.detected_insights && response.detected_insights.length > 0) {
+        const highConfidenceInsights = response.detected_insights.filter(
+          (insight: any) => insight.confidence >= 0.6
+        );
+        setPendingSuggestions(prev => [...prev, ...highConfidenceInsights]);
+      }
+
       setTimeout(() => {
         addMessage("emma", response.emma_reply);
         setConversationComplete(response.conversation_complete || false);
@@ -200,20 +218,27 @@ export function useConversationSession(
     setMessages([]);
     setSessionId(null);
     setConversationComplete(false);
+    setPendingSuggestions([]);
     await startConversation(isFirstCheckIn);
   };
+
+  const clearSuggestion = useCallback((suggestionId: string) => {
+    setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+  }, []);
 
   return {
     messages,
     sessionId,
     loading,
     conversationComplete,
+    pendingSuggestions,
     addMessage,
     setMessages,
     setSessionId,
     setConversationComplete,
     loadOrStartConversation,
     sendMessage,
-    resetConversation
+    resetConversation,
+    clearSuggestion
   };
 }

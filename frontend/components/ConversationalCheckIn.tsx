@@ -10,6 +10,7 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import VoiceSelector from "@/components/VoiceSelector";
 import Tooltip from "@/components/Tooltip";
+import InsightsSuggestionPanel from "@/components/InsightsSuggestionPanel";
 
 interface ConversationalCheckInProps {
   userId: string;
@@ -30,6 +31,7 @@ export default function ConversationalCheckIn({
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
+  const [showSuggestionPanel, setShowSuggestionPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastMessageCountRef = useRef(0);
@@ -60,12 +62,14 @@ export default function ConversationalCheckIn({
     messages,
     loading,
     conversationComplete,
+    pendingSuggestions,
     setMessages,
     setSessionId,
     setConversationComplete,
     loadOrStartConversation,
     sendMessage,
-    resetConversation
+    resetConversation,
+    clearSuggestion
   } = useConversationSession(userId, sessionType, onNameUpdate);
 
   const {
@@ -185,7 +189,27 @@ export default function ConversationalCheckIn({
 
   const handleEndConversation = async () => {
     if (loading) return;
-    await sendMessage("I need to go now, let's talk later");
+    
+    if (pendingSuggestions.length > 0) {
+      setShowSuggestionPanel(true);
+    } else {
+      await sendMessage("I need to go now, let's talk later");
+    }
+  };
+
+  const handleSuggestionApply = (suggestionId: string) => {
+    clearSuggestion(suggestionId);
+  };
+
+  const handleSuggestionDismiss = (suggestionId: string) => {
+    clearSuggestion(suggestionId);
+  };
+
+  const handleCloseSuggestionPanel = async () => {
+    setShowSuggestionPanel(false);
+    if (!conversationComplete) {
+      await sendMessage("I need to go now, let's talk later");
+    }
   };
 
   const cancelReset = () => {
@@ -478,6 +502,16 @@ export default function ConversationalCheckIn({
             </div>
           )}
         </div>
+      )}
+
+      {showSuggestionPanel && pendingSuggestions.length > 0 && (
+        <InsightsSuggestionPanel
+          suggestions={pendingSuggestions}
+          userId={userId}
+          onApply={handleSuggestionApply}
+          onDismiss={handleSuggestionDismiss}
+          onClose={handleCloseSuggestionPanel}
+        />
       )}
     </div>
   );
