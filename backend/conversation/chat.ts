@@ -228,30 +228,34 @@ export const chat = api<ChatRequest, ChatResponse>(
       }
     }
 
-    const routineActivityMatch = emmaReply.match(/ADD_ROUTINE_ACTIVITY:\s*\{([^}]+)\}/s);
-    if (routineActivityMatch && session_type === "morning") {
-      try {
-        const activityData = routineActivityMatch[1].trim();
-        const nameMatch = activityData.match(/name:\s*"([^"]+)"/);
-        const durationMatch = activityData.match(/duration:\s*(\d+)/);
-        const iconMatch = activityData.match(/icon:\s*"([^"]+)"/);
-        
-        if (nameMatch) {
-          const activity: MorningRoutineActivity = {
-            id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-            name: nameMatch[1],
-            duration_minutes: durationMatch ? parseInt(durationMatch[1]) : 5,
-            icon: iconMatch ? iconMatch[1] : "Circle"
-          };
+    const routineActivityMatches = emmaReply.matchAll(/ADD_ROUTINE_ACTIVITY:\s*\{([^}]+)\}/gs);
+    
+    for (const routineActivityMatch of routineActivityMatches) {
+      if (session_type === "morning") {
+        try {
+          const activityData = routineActivityMatch[1].trim();
+          const nameMatch = activityData.match(/name:\s*"([^"]+)"/);
+          const durationMatch = activityData.match(/duration:\s*(\d+)/);
+          const iconMatch = activityData.match(/icon:\s*"([^"]+)"/);
+          
+          if (nameMatch) {
+            const activity: MorningRoutineActivity = {
+              id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+              name: nameMatch[1],
+              duration_minutes: durationMatch ? parseInt(durationMatch[1]) : 5,
+              icon: iconMatch ? iconMatch[1] : "Circle"
+            };
 
-          await addActivity({ user_id, activity });
-          activityAdded = true;
-          cleanedReply = emmaReply.replace(/ADD_ROUTINE_ACTIVITY:\s*\{[^}]+\}/s, '').trim();
+            await addActivity({ user_id, activity });
+            activityAdded = true;
+          }
+        } catch (error) {
+          console.error("Failed to add routine activity:", error);
         }
-      } catch (error) {
-        console.error("Failed to add routine activity:", error);
       }
     }
+    
+    cleanedReply = cleanedReply.replace(/ADD_ROUTINE_ACTIVITY:\s*\{[^}]+\}/gs, '').trim();
 
     await db.exec`
       INSERT INTO conversation_history 
