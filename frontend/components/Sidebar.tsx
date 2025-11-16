@@ -152,7 +152,7 @@ export default function Sidebar({ currentView, onNavigate, userName, onLogout }:
                       <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
                       {item.badge && (
                         <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Soon" : "Exp"}
+                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Coming Soon" : "Exp"}
                         </StatusBadge>
                       )}
                     </button>
@@ -185,7 +185,7 @@ export default function Sidebar({ currentView, onNavigate, userName, onLogout }:
                       <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
                       {item.badge && (
                         <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Soon" : "Exp"}
+                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Coming Soon" : "Exp"}
                         </StatusBadge>
                       )}
                     </button>
