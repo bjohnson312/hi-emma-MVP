@@ -134,7 +134,7 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
               <p className="font-bold text-[#323e48] text-lg">Ready to Test?</p>
             </div>
             <p className="text-[#323e48] font-medium">
-              When you click "Test Microphone", please say:
+              When you're ready, tap Test Microphone and say:
             </p>
             <p className="text-2xl font-bold text-[#6656cb] mt-2">
               "Hello Emma"
