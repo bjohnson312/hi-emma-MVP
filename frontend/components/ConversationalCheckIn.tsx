@@ -236,7 +236,7 @@ export default function ConversationalCheckIn({
       <div className="text-center">
         <div className="inline-block bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4">
           <h1 className="text-4xl font-bold text-[#6656cb] mb-1">Hi, Emma</h1>
-          <p className="text-lg text-[#323e48]/70">Wellness That Listens. Support That Lasts.</p>
+          <p className="text-lg text-[#4e8f71]">Wellness That Listens. Support That Lasts.</p>
         </div>
       </div>
       
