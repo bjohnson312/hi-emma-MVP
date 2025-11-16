@@ -66,7 +66,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
         { value: "routine", label: "Getting back into a healthy routine", icon: Coffee },
         { value: "stress", label: "Managing stress better", icon: Heart },
         { value: "nutrition", label: "Eating better", icon: Sparkles },
-        { value: "consistency", label: "Managing my care routine", icon: Bell },
+        { value: "consistency", label: "Managing my care routine or chronic condition", icon: Bell },
         { value: "other", label: "Something else", icon: MessageSquare }
       ],
       type: "choice"
