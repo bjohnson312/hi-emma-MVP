@@ -113,7 +113,7 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
               </div>
               <div>
                 <p className="font-medium text-[#323e48]">Test Your Voice</p>
-                <p className="text-sm text-[#323e48]/70">We'll ask you to say a short phrase to test the microphone</p>
+                <p className="text-sm text-[#323e48]/70">Say a quick phrase so Emma can recognize your voice.</p>
               </div>
             </div>
 
