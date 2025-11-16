@@ -120,7 +120,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#6656cb] mb-2">Hi, Emma</h1>
-          <p className="text-[#4e8f71]">Your personal wellness companion</p>
+          <p className="text-[#4e8f71]">Wellness That Listens. Support That Lasts.</p>
         </div>
 
         <div className="mb-6 text-center py-4 px-6 bg-white/20 backdrop-blur-md rounded-lg border border-white/30 shadow-lg">
