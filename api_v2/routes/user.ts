@@ -6,103 +6,102 @@ import {
   shouldSuggestRoutine,
   type TimeOfDay,
 } from '../business/routine';
-import {
-  detectIntentFromMessage,
-  shouldTriggerAction,
-  generateSuggestedAction,
-} from '../business/insights';
+import { UserDataAccess } from '../data/user.data';
+import { SessionDataAccess } from '../data/session.data';
+import { RoutineDataAccess } from '../data/routine.data';
+import { canResumeSession } from '../business/session';
 
-/**
- * User routes - User profile, preferences, and current context.
- * 
- * NEW IN PHASE 1:
- * - /current-context endpoint for app launch
- * - Returns backend-generated greeting + suggestions
- */
+const userData = new UserDataAccess();
+const sessionData = new SessionDataAccess();
+const routineData = new RoutineDataAccess();
+
 export const userRoutes = {
-  /**
-   * Gets user profile.
-   * 
-   * GET /api/v2/user/profile
-   */
   getProfile: async (userId: string): Promise<ApiResponse<UserProfile>> => {
     try {
-      // TODO: Implement database query
-      throw new Error('getProfile() not yet implemented - requires database integration');
+      const profile = await userData.getUserProfile(userId);
+      
+      if (!profile) {
+        return errorResponse('USER_NOT_FOUND', 'User profile not found');
+      }
+
+      const email = await userData.getUserEmail(userId);
+      
+      return successResponse({
+        userId: profile.id,
+        name: profile.name,
+        email: email || undefined,
+        timezone: profile.timezone,
+        onboardingCompleted: profile.onboardingCompleted,
+        preferences: {
+          voicePreference: profile.voicePreference,
+          notificationPreferences: profile.notificationPreferences,
+        },
+        createdAt: profile.createdAt.toISOString(),
+      });
     } catch (error: any) {
       return errorResponse('USER_ERROR', error.message);
     }
   },
 
-  /**
-   * Updates user profile.
-   * 
-   * PATCH /api/v2/user/profile
-   */
   updateProfile: async (
     userId: string,
     updates: Partial<UserProfile>
   ): Promise<ApiResponse<UserProfile>> => {
     try {
-      // TODO: Implement database update
-      throw new Error('updateProfile() not yet implemented - requires database integration');
+      await userData.updateUserProfile(userId, {
+        name: updates.name,
+        timezone: updates.timezone,
+      });
+      
+      return userRoutes.getProfile(userId);
     } catch (error: any) {
       return errorResponse('USER_ERROR', error.message);
     }
   },
 
-  /**
-   * Gets user preferences.
-   * 
-   * GET /api/v2/user/preferences
-   */
   getPreferences: async (userId: string): Promise<ApiResponse<UserPreferences>> => {
     try {
-      // TODO: Implement database query
-      throw new Error('getPreferences() not yet implemented - requires database integration');
+      const profile = await userData.getUserProfile(userId);
+      
+      if (!profile) {
+        return errorResponse('USER_NOT_FOUND', 'User profile not found');
+      }
+      
+      return successResponse({
+        voicePreference: profile.voicePreference,
+        notificationPreferences: profile.notificationPreferences,
+        morningRoutinePreferences: profile.morningRoutinePreferences,
+        wellnessGoals: profile.wellnessGoals,
+        dietaryPreferences: profile.dietaryPreferences,
+        healthConditions: profile.healthConditions,
+        lifestylePreferences: profile.lifestylePreferences,
+      });
     } catch (error: any) {
       return errorResponse('USER_ERROR', error.message);
     }
   },
 
-  /**
-   * Updates user preferences.
-   * 
-   * PATCH /api/v2/user/preferences
-   */
   updatePreferences: async (
     userId: string,
     updates: Partial<UserPreferences>
   ): Promise<ApiResponse<UserPreferences>> => {
     try {
-      // TODO: Implement database update
-      throw new Error('updatePreferences() not yet implemented - requires database integration');
+      await userData.updateUserProfile(userId, {
+        voicePreference: updates.voicePreference,
+        wellnessGoals: updates.wellnessGoals,
+        dietaryPreferences: updates.dietaryPreferences,
+        healthConditions: updates.healthConditions,
+        lifestylePreferences: updates.lifestylePreferences,
+        morningRoutinePreferences: updates.morningRoutinePreferences,
+        notificationPreferences: updates.notificationPreferences,
+      });
+      
+      return userRoutes.getPreferences(userId);
     } catch (error: any) {
       return errorResponse('USER_ERROR', error.message);
     }
   },
 
-  /**
-   * Gets current context for user (NEW - Phase 1).
-   * 
-   * THIS IS THE KEY ENDPOINT FOR APP LAUNCH.
-   * 
-   * Returns:
-   * - Backend-generated greeting (NO client-side time logic)
-   * - Time of day classification (server-side)
-   * - Routine suggestions (if appropriate)
-   * - Active session info (if resumable)
-   * 
-   * Frontend calls this on app launch to get:
-   * 1. Greeting to display
-   * 2. Toast notifications for suggested actions
-   * 3. Session recovery info
-   * 
-   * GET /api/v2/user/current-context
-   * 
-   * @param userId - User ID from auth middleware
-   * @returns Current context with greeting and suggestions
-   */
   getCurrentContext: async (userId: string): Promise<ApiResponse<{
     greeting: string;
     timeOfDay: TimeOfDay;
@@ -125,40 +124,34 @@ export const userRoutes = {
     };
   }>> => {
     try {
-      // STEP 1: Get user profile from database
-      // TODO: Replace with actual database query
-      const userProfile = {
-        userId,
-        name: 'User', // TODO: Get from database
-        timezone: 'America/New_York', // TODO: Get from database
-        email: 'user@example.com',
-        currentStreak: 0,
-        lastCheckInDate: undefined,
-        recentMood: undefined,
-        preferences: {
-          morningRoutineTime: '07:00',
-          eveningRoutineTime: '20:00',
-        },
-      };
+      let profile = await userData.getUserProfile(userId);
       
-      // STEP 2: Determine time of day (SERVER-SIDE, timezone-aware)
+      if (!profile) {
+        profile = await userData.createUserProfile({
+          userId,
+          name: 'User',
+          timezone: 'America/New_York',
+        });
+      }
+      
+      const streak = await userData.getUserStreak(userId);
+      const recentMood = await userData.getRecentMood(userId);
+      
       const currentTime = new Date();
-      const timeOfDay = determineTimeOfDay(currentTime, userProfile.timezone);
+      const timeOfDay = determineTimeOfDay(currentTime, profile.timezone);
       
-      // STEP 3: Generate greeting (BACKEND, not frontend)
       const greeting = generateGreeting({
-        userName: userProfile.name,
+        userName: profile.name,
         timeOfDay,
         sessionType: 'general',
         isFirstCheckIn: true,
         userContext: {
-          currentStreak: userProfile.currentStreak,
-          lastCheckInDate: userProfile.lastCheckInDate,
-          recentMood: userProfile.recentMood,
+          currentStreak: streak.currentStreak,
+          lastCheckInDate: streak.lastCheckInDate,
+          recentMood: recentMood?.moodScore,
         },
       });
       
-      // STEP 4: Check for routine suggestions
       const suggestions: Array<{
         type: string;
         priority: 'high' | 'medium' | 'low';
@@ -170,13 +163,18 @@ export const userRoutes = {
         };
       }> = [];
       
-      // Check morning routine
+      const routinePrefs = await routineData.getRoutinePreferences(userId);
+      const morningCompletedToday = await routineData.isRoutineCompletedToday(userId);
+      
       const morningCheck = shouldSuggestRoutine({
         routineType: 'morning',
         currentTime,
-        timezone: userProfile.timezone,
-        userPreferences: userProfile.preferences,
-        completedToday: false, // TODO: Check database
+        timezone: profile.timezone,
+        userPreferences: {
+          morningRoutineTime: routinePrefs?.wakeTime || profile.wakeTime,
+          eveningRoutineTime: profile.morningRoutinePreferences?.eveningRoutineTime as string,
+        },
+        completedToday: morningCompletedToday,
       });
       
       if (morningCheck.shouldSuggest && morningCheck.priority !== 'low') {
@@ -192,13 +190,15 @@ export const userRoutes = {
         });
       }
       
-      // Check evening routine
       const eveningCheck = shouldSuggestRoutine({
         routineType: 'evening',
         currentTime,
-        timezone: userProfile.timezone,
-        userPreferences: userProfile.preferences,
-        completedToday: false, // TODO: Check database
+        timezone: profile.timezone,
+        userPreferences: {
+          morningRoutineTime: routinePrefs?.wakeTime || profile.wakeTime,
+          eveningRoutineTime: profile.morningRoutinePreferences?.eveningRoutineTime as string,
+        },
+        completedToday: false,
       });
       
       if (eveningCheck.shouldSuggest && eveningCheck.priority !== 'low') {
@@ -214,11 +214,36 @@ export const userRoutes = {
         });
       }
       
-      // STEP 5: Check for active/resumable sessions
-      // TODO: Query database for today's sessions
-      const activeSession = undefined; // Placeholder
+      const todaySessions = await sessionData.getTodaySessions(userId);
+      let activeSession = undefined;
       
-      // STEP 6: Return context
+      if (todaySessions.length > 0) {
+        const mostRecent = todaySessions[0];
+        const canResume = canResumeSession(
+          {
+            id: mostRecent.id,
+            userId: mostRecent.userId,
+            type: mostRecent.sessionType,
+            startedAt: mostRecent.startedAt.toISOString(),
+            lastMessageAt: mostRecent.lastActivityAt.toISOString(),
+            messageCount: mostRecent.messageCount,
+            completed: mostRecent.completed,
+            context: mostRecent.context,
+          },
+          currentTime
+        );
+        
+        if (canResume.canResume) {
+          activeSession = {
+            id: mostRecent.id,
+            type: mostRecent.sessionType,
+            canResume: true,
+            lastMessageAt: mostRecent.lastActivityAt.toISOString(),
+            messageCount: mostRecent.messageCount,
+          };
+        }
+      }
+      
       return successResponse({
         greeting,
         timeOfDay,
@@ -230,30 +255,26 @@ export const userRoutes = {
     }
   },
 
-  /**
-   * Gets simple greeting for display (lightweight).
-   * 
-   * GET /api/v2/user/greeting
-   * 
-   * @param userId - User ID
-   * @returns Just the greeting string
-   */
   getGreeting: async (userId: string): Promise<ApiResponse<{
     greeting: string;
     timeOfDay: TimeOfDay;
   }>> => {
     try {
-      // TODO: Get user profile
-      const userProfile = {
-        name: 'User',
-        timezone: 'America/New_York',
-      };
+      let profile = await userData.getUserProfile(userId);
+      
+      if (!profile) {
+        profile = await userData.createUserProfile({
+          userId,
+          name: 'User',
+          timezone: 'America/New_York',
+        });
+      }
       
       const currentTime = new Date();
-      const timeOfDay = determineTimeOfDay(currentTime, userProfile.timezone);
+      const timeOfDay = determineTimeOfDay(currentTime, profile.timezone);
       
       const greeting = generateGreeting({
-        userName: userProfile.name,
+        userName: profile.name,
         timeOfDay,
         sessionType: 'general',
         isFirstCheckIn: true,

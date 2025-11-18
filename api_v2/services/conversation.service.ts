@@ -13,7 +13,6 @@ import type {
   NormalizedConversationInput,
 } from '../providers/provider.types';
 
-// Import business logic
 import {
   determineTimeOfDay,
   generateGreeting,
@@ -36,84 +35,34 @@ import {
   generateSessionSummary,
   checkSessionWarnings,
   type SessionState,
+  type SessionType,
 } from '../business/session';
 
-/**
- * ConversationService - Provider-agnostic conversation management with business logic.
- * 
- * NEW ARCHITECTURE (Phase 1):
- * ===========================
- * 
- * This service now uses pure business logic functions from /business/ modules:
- * 
- * 1. Time-of-day classification (NO client-side Date usage)
- * 2. Greeting generation (NO frontend templates)
- * 3. Intent detection (BEFORE calling provider)
- * 4. Session management (Backend-driven state)
- * 
- * FLOW:
- * -----
- * Frontend calls → Routes → Service (HERE) → Business Logic → Provider (if needed)
- * 
- * SERVICE RESPONSIBILITIES:
- * - Get user data from database (TODO: implement DB calls)
- * - Call business logic functions (PURE, no I/O)
- * - Decide whether to call provider or return directly
- * - Post-process provider responses
- * - Store results in database
- * 
- * PROVIDER RESPONSIBILITIES (delegated):
- * - ONLY generate conversational responses
- * - NO business logic
- * - NO greeting generation
- * - NO time-of-day logic
- * 
- * FUTURE IMPLEMENTATION (Phase 2+):
- * - Replace TODO comments with actual database calls
- * - Add caching layer
- * - Add error handling and retry logic
- */
-export class ConversationService {
-  /**
-   * Current conversation provider (OpenAI by default).
-   * Can be switched to Voiceflow or any other provider.
-   */
-  private provider: IConversationProvider = new OpenAIProvider();
+import { UserDataAccess } from '../data/user.data';
+import { SessionDataAccess } from '../data/session.data';
+import { ConversationDataAccess } from '../data/conversation.data';
+import { RoutineDataAccess } from '../data/routine.data';
 
-  /**
-   * Sends a message in a conversation.
-   * 
-   * NEW LOGIC (Phase 1):
-   * 1. Get user context (timezone, preferences) from DB
-   * 2. Determine time of day using SERVER time + user timezone
-   * 3. Check if this is first message → return greeting (NO provider call)
-   * 4. Detect intent from message
-   * 5. If high-confidence actionable intent → return action (NO provider call)
-   * 6. Otherwise → call provider for conversational response
-   * 7. Post-process response (extract journal entries, activities)
-   * 
-   * @param userId - User ID sending message
-   * @param req - Message request
-   * @returns Conversation response
-   */
+export class ConversationService {
+  private provider: IConversationProvider = new OpenAIProvider();
+  private userData = new UserDataAccess();
+  private sessionData = new SessionDataAccess();
+  private conversationData = new ConversationDataAccess();
+  private routineData = new RoutineDataAccess();
+
   async sendMessage(userId: string, req: SendMessageRequest): Promise<SendMessageResponse> {
-    // STEP 1: Get user context from database
-    // TODO: Replace with actual database call
     const userProfile = await this.getUserProfile(userId);
-    const timezone = userProfile.timezone || 'America/New_York';
+    const timezone = userProfile.timezone;
     const currentTime = new Date();
     
-    // STEP 2: Determine time of day (BACKEND, not client)
     const timeOfDay = determineTimeOfDay(currentTime, timezone);
     
-    // STEP 3: Get or create session
     const session = await this.getOrCreateSession(
       userId,
       req.sessionType || determineSessionType(req.sessionType as any, timeOfDay),
       timeOfDay
     );
     
-    // STEP 4: If first message in session, return greeting (NO provider call)
     if (session.messageCount === 0 && !req.message) {
       const greeting = generateGreeting({
         userName: userProfile.name,
@@ -127,8 +76,7 @@ export class ConversationService {
         },
       });
       
-      // Store greeting as first message
-      await this.storeMessage(session.id, 'assistant', greeting);
+      await this.storeMessage(session.id, userId, 'assistant', greeting, session.type);
       
       return {
         response: greeting,
@@ -138,10 +86,8 @@ export class ConversationService {
       };
     }
     
-    // STEP 5: Detect intent from user message (BACKEND logic)
     const detectedIntent = detectIntentFromMessage(req.message);
     
-    // STEP 6: Validate intent against context
     const intentValidation = validateIntentContext(detectedIntent, {
       timeOfDay,
       activeRoutine: session.context?.routineType,
@@ -155,22 +101,23 @@ export class ConversationService {
       };
     }
     
-    // STEP 7: If actionable intent with high confidence, return action (NO provider call)
     if (shouldTriggerAction(detectedIntent)) {
       const suggestedAction = generateSuggestedAction(detectedIntent);
       
-      // Special handling for routine start
       if (detectedIntent.intent === 'start_morning_routine' || detectedIntent.intent === 'start_evening_routine') {
         const routineType = detectedIntent.intent === 'start_morning_routine' ? 'morning' : 'evening';
+        const completedToday = await this.routineData.isRoutineCompletedToday(userId);
+        const routinePrefs = await this.routineData.getRoutinePreferences(userId);
+        
         const shouldStart = shouldSuggestRoutine({
           routineType,
           currentTime,
           timezone,
           userPreferences: {
-            morningRoutineTime: userProfile.preferences?.morningRoutineTime,
+            morningRoutineTime: routinePrefs?.wakeTime,
             eveningRoutineTime: userProfile.preferences?.eveningRoutineTime,
           },
-          completedToday: false, // TODO: check database
+          completedToday,
         });
         
         if (!shouldStart.shouldSuggest) {
@@ -181,13 +128,12 @@ export class ConversationService {
           };
         }
         
-        // Return action to start routine
         const response = intentValidation.warning 
           ? `${intentValidation.warning} Let's start your ${routineType} routine!`
           : `Let's start your ${routineType} routine! I'll guide you through it.`;
         
-        await this.storeMessage(session.id, 'user', req.message);
-        await this.storeMessage(session.id, 'assistant', response);
+        await this.storeMessage(session.id, userId, 'user', req.message, session.type);
+        await this.storeMessage(session.id, userId, 'assistant', response, session.type);
         
         return {
           response,
@@ -198,12 +144,11 @@ export class ConversationService {
         };
       }
       
-      // Other actionable intents (mood logging, meal tracking, etc.)
       if (suggestedAction) {
         const response = this.getActionConfirmationMessage(detectedIntent.intent, detectedIntent.entities);
         
-        await this.storeMessage(session.id, 'user', req.message);
-        await this.storeMessage(session.id, 'assistant', response);
+        await this.storeMessage(session.id, userId, 'user', req.message, session.type);
+        await this.storeMessage(session.id, userId, 'assistant', response, session.type);
         
         return {
           response,
@@ -215,7 +160,6 @@ export class ConversationService {
       }
     }
     
-    // STEP 8: Normal conversation → call provider
     const providerInput: NormalizedConversationInput = {
       userId,
       sessionId: session.id,
@@ -225,19 +169,16 @@ export class ConversationService {
     
     const providerResponse = await this.provider.sendMessage(providerInput);
     
-    // STEP 9: Post-process provider response
-    // TODO: Detect JOURNAL_ENTRY and ADD_ROUTINE_ACTIVITY tags
+    await this.storeMessage(session.id, userId, 'user', req.message, session.type);
+    await this.storeMessage(session.id, userId, 'assistant', providerResponse.response, session.type);
     
-    // STEP 10: Store messages
-    await this.storeMessage(session.id, 'user', req.message);
-    await this.storeMessage(session.id, 'assistant', providerResponse.response);
-    
-    // STEP 11: Check if session should auto-complete
     const updatedSession = await this.getSession(session.id);
     const autoComplete = shouldAutoCompleteSession(updatedSession);
     if (autoComplete.shouldComplete) {
       await this.completeSession(session.id);
     }
+    
+    await this.userData.incrementInteractionCount(userId);
     
     return {
       response: providerResponse.response,
@@ -249,39 +190,52 @@ export class ConversationService {
     };
   }
 
-  /**
-   * Retrieves all conversation sessions for a user.
-   * 
-   * TODO: Implement database query
-   */
   async getSessions(userId: string): Promise<ConversationSession[]> {
-    throw new Error('getSessions() not yet implemented - requires database integration');
+    const sessions = await this.sessionData.getRecentSessions(userId, 20);
+    
+    return sessions.map(s => ({
+      id: s.id,
+      userId: s.userId,
+      type: s.sessionType,
+      currentStep: s.currentStep,
+      context: s.context,
+      startedAt: s.startedAt.toISOString(),
+      lastActivityAt: s.lastActivityAt.toISOString(),
+      completed: s.completed,
+    }));
   }
 
-  /**
-   * Retrieves all messages for a specific session.
-   * 
-   * TODO: Implement database query
-   */
   async getSessionMessages(userId: string, sessionId: string): Promise<Message[]> {
-    throw new Error('getSessionMessages() not yet implemented - requires database integration');
+    const messages = await this.conversationData.getConversationHistory(userId, sessionId);
+    
+    const result: Message[] = [];
+    for (const msg of messages) {
+      if (msg.userMessage) {
+        result.push({
+          role: 'user',
+          content: msg.userMessage,
+          timestamp: msg.createdAt.toISOString(),
+        });
+      }
+      result.push({
+        role: 'assistant',
+        content: msg.emmaResponse,
+        timestamp: msg.createdAt.toISOString(),
+      });
+    }
+    
+    return result.reverse();
   }
 
-  /**
-   * Ends a conversation session.
-   */
   async endSession(userId: string, sessionId: string, req: EndSessionRequest): Promise<EndSessionResponse> {
     const session = await this.getSession(sessionId);
     
-    // Generate summary
     const summary = req.generateSummary 
       ? generateSessionSummary(session)
       : undefined;
     
-    // Mark as complete
     await this.completeSession(sessionId);
     
-    // Call provider to end session (may generate insights)
     const result = await this.provider.endSession(sessionId, req.generateSummary);
     
     return {
@@ -292,18 +246,10 @@ export class ConversationService {
     };
   }
 
-  /**
-   * Deletes a conversation session.
-   * 
-   * TODO: Implement database deletion
-   */
   async deleteSession(userId: string, sessionId: string): Promise<void> {
-    throw new Error('deleteSession() not yet implemented - requires database integration');
+    throw new Error('deleteSession() not yet implemented - requires database deletion logic');
   }
 
-  /**
-   * Retrieves conversation memory.
-   */
   async getMemory(userId: string): Promise<ConversationMemory> {
     if (this.provider.getMemory) {
       const providerMemory = await this.provider.getMemory(userId);
@@ -316,9 +262,6 @@ export class ConversationService {
     throw new Error('getMemory() not yet implemented - requires database integration');
   }
 
-  /**
-   * Clears conversation memory.
-   */
   async clearMemory(userId: string): Promise<void> {
     if (this.provider.clearMemory) {
       await this.provider.clearMemory(userId);
@@ -327,13 +270,6 @@ export class ConversationService {
     throw new Error('clearMemory() not yet implemented - requires database integration');
   }
 
-  // ==================== Private Helper Methods ====================
-
-  /**
-   * Gets user profile from database.
-   * 
-   * TODO: Replace with actual database query
-   */
   private async getUserProfile(userId: string): Promise<{
     name: string;
     timezone: string;
@@ -342,100 +278,126 @@ export class ConversationService {
     recentMood?: number;
     preferences?: Record<string, any>;
   }> {
-    // Placeholder: return mock data
+    let profile = await this.userData.getUserProfile(userId);
+    
+    if (!profile) {
+      profile = await this.userData.createUserProfile({
+        userId,
+        name: 'User',
+        timezone: 'America/New_York',
+      });
+    }
+    
+    const streak = await this.userData.getUserStreak(userId);
+    const recentMood = await this.userData.getRecentMood(userId);
+    
     return {
-      name: 'User',
-      timezone: 'America/New_York',
-      currentStreak: 0,
-      preferences: {},
+      name: profile.name,
+      timezone: profile.timezone,
+      currentStreak: streak.currentStreak,
+      lastCheckInDate: streak.lastCheckInDate,
+      recentMood: recentMood?.moodScore,
+      preferences: {
+        ...profile.morningRoutinePreferences,
+        morningRoutineTime: profile.wakeTime,
+      },
     };
   }
 
-  /**
-   * Gets or creates a conversation session.
-   * 
-   * TODO: Replace with actual database query/insert
-   */
   private async getOrCreateSession(
     userId: string,
     sessionType: string,
     timeOfDay: TimeOfDay
   ): Promise<SessionState> {
-    // TODO: Check for existing session today
-    // const existingSession = await db.query(...)
+    const existingSession = await this.sessionData.getActiveSession(userId, sessionType as SessionType);
     
-    // Placeholder: create new session
-    const newSession: SessionState = {
-      id: this.generateSessionId(),
-      userId,
-      type: sessionType as any,
-      startedAt: new Date().toISOString(),
-      lastMessageAt: new Date().toISOString(),
-      messageCount: 0,
-      completed: false,
-      context: {
-        timeOfDay,
-      },
-    };
+    if (existingSession) {
+      const canResume = canResumeSession(
+        {
+          id: existingSession.id,
+          userId: existingSession.userId,
+          type: existingSession.sessionType,
+          startedAt: existingSession.startedAt.toISOString(),
+          lastMessageAt: existingSession.lastActivityAt.toISOString(),
+          messageCount: existingSession.messageCount,
+          completed: existingSession.completed,
+          context: existingSession.context,
+        },
+        new Date()
+      );
+      
+      if (canResume.canResume) {
+        return {
+          id: existingSession.id,
+          userId: existingSession.userId,
+          type: existingSession.sessionType,
+          startedAt: existingSession.startedAt.toISOString(),
+          lastMessageAt: existingSession.lastActivityAt.toISOString(),
+          messageCount: existingSession.messageCount,
+          completed: existingSession.completed,
+          context: existingSession.context,
+        };
+      }
+    }
     
-    // TODO: Store in database
+    const newSession = await this.sessionData.createSession(userId, sessionType as SessionType, {
+      timeOfDay,
+    });
     
-    return newSession;
-  }
-
-  /**
-   * Gets a session by ID.
-   * 
-   * TODO: Replace with actual database query
-   */
-  private async getSession(sessionId: string): Promise<SessionState> {
-    // Placeholder
     return {
-      id: sessionId,
-      userId: 'placeholder',
-      type: 'general',
-      startedAt: new Date().toISOString(),
-      lastMessageAt: new Date().toISOString(),
+      id: newSession.id,
+      userId: newSession.userId,
+      type: newSession.sessionType,
+      startedAt: newSession.startedAt.toISOString(),
+      lastMessageAt: newSession.lastActivityAt.toISOString(),
       messageCount: 0,
       completed: false,
-      context: { timeOfDay: 'morning' },
+      context: { timeOfDay },
     };
   }
 
-  /**
-   * Stores a message in the database.
-   * 
-   * TODO: Replace with actual database insert
-   */
+  private async getSession(sessionId: string): Promise<SessionState> {
+    const session = await this.sessionData.getSessionById(sessionId);
+    
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`);
+    }
+    
+    return {
+      id: session.id,
+      userId: session.userId,
+      type: session.sessionType,
+      startedAt: session.startedAt.toISOString(),
+      lastMessageAt: session.lastActivityAt.toISOString(),
+      messageCount: session.messageCount,
+      completed: session.completed,
+      context: session.context,
+    };
+  }
+
   private async storeMessage(
     sessionId: string,
+    userId: string,
     role: 'user' | 'assistant',
-    content: string
+    content: string,
+    conversationType: SessionType
   ): Promise<void> {
-    // TODO: Insert into conversation_history table
-    // TODO: Update session.messageCount
-    // TODO: Update session.lastMessageAt
+    await this.conversationData.storeMessage({
+      userId,
+      sessionId,
+      conversationType,
+      userMessage: role === 'user' ? content : undefined,
+      emmaResponse: role === 'assistant' ? content : undefined,
+      context: { role },
+    });
+    
+    await this.sessionData.updateSession(sessionId, {});
   }
 
-  /**
-   * Marks session as complete.
-   * 
-   * TODO: Replace with actual database update
-   */
   private async completeSession(sessionId: string): Promise<void> {
-    // TODO: UPDATE conversation_sessions SET completed = true
+    await this.sessionData.endSession(sessionId);
   }
 
-  /**
-   * Generates a unique session ID.
-   */
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Gets confirmation message for detected action.
-   */
   private getActionConfirmationMessage(intent: IntentType, entities: Record<string, any>): string {
     switch (intent) {
       case 'log_mood':
