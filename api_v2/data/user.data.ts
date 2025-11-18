@@ -63,7 +63,7 @@ export class UserDataAccess {
       [userId]
     );
 
-    if (result.length === 0) {
+    if (!result || result.length === 0) {
       return null;
     }
 
@@ -129,15 +129,19 @@ export class UserDataAccess {
       [data.userId, data.name, timezone]
     );
 
+    if (!result || result.length === 0) {
+      throw new Error('Failed to create user profile');
+    }
+
     const row = result[0];
     return {
       id: row.user_id,
       name: row.name,
-      timezone: row.timezone,
+      timezone: row.timezone || 'America/New_York',
       voicePreference: row.voice_preference,
-      onboardingCompleted: row.onboarding_completed,
+      onboardingCompleted: row.onboarding_completed || false,
       wakeTime: row.wake_time,
-      interactionCount: row.interaction_count,
+      interactionCount: row.interaction_count || 0,
       lastInteractionAt: row.last_interaction_at,
       wellnessGoals: row.wellness_goals || [],
       dietaryPreferences: row.dietary_preferences || {},
