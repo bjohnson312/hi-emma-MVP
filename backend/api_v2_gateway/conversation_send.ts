@@ -13,15 +13,10 @@ function getTimeOfDay(): string {
 export const conversationSend = api(
   { method: "POST", path: "/api/v2/conversations/send", expose: true },
   async (req: ConversationSendRequest): Promise<ConversationSendResponse> => {
-    const profileResult = await Array.fromAsync(
-      db.query<{
-        name: string;
-        timezone: string | null;
-      }>(
-        `SELECT name, timezone FROM user_profiles WHERE user_id = $1`,
-        [req.userId]
-      )
-    );
+    const profileResult = await db.queryAll<{
+      name: string;
+      timezone: string | null;
+    }>`SELECT name, timezone FROM user_profiles WHERE user_id = ${req.userId}`;
 
     let userName = "User";
     let timezone = "America/New_York";
@@ -33,47 +28,26 @@ export const conversationSend = api(
 
     const timeOfDay = getTimeOfDay();
 
-    const historyResult = await Array.fromAsync(
-      db.query<{
-        user_message: string | null;
-        emma_response: string;
-      }>(
-        `SELECT user_message, emma_response
-         FROM conversation_history
-         WHERE user_id = $1 AND context->>'sessionId' = $2
-         ORDER BY created_at DESC
-         LIMIT 10`,
-        [req.userId, req.sessionId]
-      )
-    );
+    const historyResult = await db.queryAll<{
+      user_message: string | null;
+      emma_response: string;
+    }>`SELECT user_message, emma_response
+       FROM conversation_history
+       WHERE user_id = ${req.userId} AND context->>'sessionId' = ${req.sessionId}
+       ORDER BY created_at DESC
+       LIMIT 10`;
 
     const response = `I understand you said: "${req.message}". As Emma, I'm here to help with your wellness journey. This is a simplified response - full AI integration will be added next.`;
 
-    await Array.fromAsync(
-      db.query(
-        `INSERT INTO conversation_history (user_id, conversation_type, user_message, emma_response, context)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [
-          req.userId,
-          req.sessionType,
-          req.message,
-          response,
-          JSON.stringify({
-            sessionId: req.sessionId,
-            timeOfDay,
-          }),
-        ]
-      )
-    );
+    await db.exec`INSERT INTO conversation_history (user_id, conversation_type, user_message, emma_response, context)
+       VALUES (${req.userId}, ${req.sessionType}, ${req.message}, ${response}, ${JSON.stringify({
+        sessionId: req.sessionId,
+        timeOfDay,
+      })})`;
 
-    await Array.fromAsync(
-      db.query(
-        `UPDATE conversation_sessions
-         SET last_activity_at = NOW()
-         WHERE id = $1`,
-        [req.sessionId]
-      )
-    );
+    await db.exec`UPDATE conversation_sessions
+       SET last_activity_at = NOW()
+       WHERE id = ${req.sessionId}`;
 
     return {
       response,

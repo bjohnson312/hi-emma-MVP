@@ -6,16 +6,11 @@ import { determineTimeOfDay, generateGreeting } from "../../api_v2/business/rout
 export const greeting = api(
   { method: "GET", path: "/api/v2/user/greeting", expose: true },
   async (req: GreetingRequest): Promise<GreetingResponse> => {
-    const profileResult = await Array.fromAsync(
-      db.query<{
-        user_id: string;
-        name: string;
-        timezone: string | null;
-      }>(
-        `SELECT user_id, name, timezone FROM user_profiles WHERE user_id = $1`,
-        [req.userId]
-      )
-    );
+    const profileResult = await db.queryAll<{
+      user_id: string;
+      name: string;
+      timezone: string | null;
+    }>`SELECT user_id, name, timezone FROM user_profiles WHERE user_id = ${req.userId}`;
 
     let userName = "User";
     let timezone = "America/New_York";
@@ -24,13 +19,8 @@ export const greeting = api(
       userName = profileResult[0].name;
       timezone = profileResult[0].timezone || "America/New_York";
     } else {
-      await Array.fromAsync(
-        db.query(
-          `INSERT INTO user_profiles (user_id, name, timezone) VALUES ($1, $2, $3)
-           ON CONFLICT (user_id) DO NOTHING`,
-          [req.userId, userName, timezone]
-        )
-      );
+      await db.exec`INSERT INTO user_profiles (user_id, name, timezone) VALUES (${req.userId}, ${userName}, ${timezone})
+         ON CONFLICT (user_id) DO NOTHING`;
     }
 
     const currentTime = new Date();

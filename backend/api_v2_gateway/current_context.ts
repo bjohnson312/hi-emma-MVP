@@ -10,17 +10,12 @@ import {
 export const currentContext = api(
   { method: "GET", path: "/api/v2/user/current-context", expose: true },
   async (req: CurrentContextRequest): Promise<CurrentContextResponse> => {
-    const profileResult = await Array.fromAsync(
-      db.query<{
-        user_id: string;
-        name: string;
-        timezone: string | null;
-        wake_time: string | null;
-      }>(
-        `SELECT user_id, name, timezone, wake_time FROM user_profiles WHERE user_id = $1`,
-        [req.userId]
-      )
-    );
+    const profileResult = await db.queryAll<{
+      user_id: string;
+      name: string;
+      timezone: string | null;
+      wake_time: string | null;
+    }>`SELECT user_id, name, timezone, wake_time FROM user_profiles WHERE user_id = ${req.userId}`;
 
     let userName = "User";
     let timezone = "America/New_York";
@@ -31,25 +26,15 @@ export const currentContext = api(
       timezone = profileResult[0].timezone || "America/New_York";
       wakeTime = profileResult[0].wake_time || "07:00";
     } else {
-      await Array.fromAsync(
-        db.query(
-          `INSERT INTO user_profiles (user_id, name, timezone) VALUES ($1, $2, $3)
-           ON CONFLICT (user_id) DO NOTHING`,
-          [req.userId, userName, timezone]
-        )
-      );
+      await db.exec`INSERT INTO user_profiles (user_id, name, timezone) VALUES (${req.userId}, ${userName}, ${timezone})
+         ON CONFLICT (user_id) DO NOTHING`;
     }
 
-    const streakResult = await Array.fromAsync(
-      db.query<{ count: number }>(
-        `SELECT COUNT(DISTINCT DATE(completed_at)) as count
-         FROM morning_routine_completions
-         WHERE user_id = $1
-         ORDER BY completed_at DESC
-         LIMIT 365`,
-        [req.userId]
-      )
-    );
+    const streakResult = await db.queryAll<{ count: number }>`SELECT COUNT(DISTINCT DATE(completed_at)) as count
+       FROM morning_routine_completions
+       WHERE user_id = ${req.userId}
+       ORDER BY completed_at DESC
+       LIMIT 365`;
     const currentStreak = streakResult[0]?.count || 0;
 
     const currentTime = new Date();
@@ -67,13 +52,8 @@ export const currentContext = api(
 
     const suggestions: CurrentContextResponse["suggestions"] = [];
 
-    const completedTodayResult = await Array.fromAsync(
-      db.query<{ count: number }>(
-        `SELECT COUNT(*) as count FROM morning_routine_completions
-         WHERE user_id = $1 AND DATE(completed_at) = CURRENT_DATE`,
-        [req.userId]
-      )
-    );
+    const completedTodayResult = await db.queryAll<{ count: number }>`SELECT COUNT(*) as count FROM morning_routine_completions
+       WHERE user_id = ${req.userId} AND DATE(completed_at) = CURRENT_DATE`;
     const completedToday = (completedTodayResult[0]?.count || 0) > 0;
 
     const morningCheck = shouldSuggestRoutine({
@@ -99,25 +79,20 @@ export const currentContext = api(
       });
     }
 
-    const activeSessionResult = await Array.fromAsync(
-      db.query<{
-        id: string;
-        session_type: string;
-        last_activity_at: Date;
-        message_count: number;
-      }>(
-        `SELECT cs.id, cs.session_type, cs.last_activity_at,
-                (SELECT COUNT(*) FROM conversation_history ch 
-                 WHERE ch.context->>'sessionId' = cs.id::text) as message_count
-         FROM conversation_sessions cs
-         WHERE cs.user_id = $1
-           AND cs.completed = false
-           AND cs.last_activity_at > NOW() - INTERVAL '6 hours'
-         ORDER BY cs.last_activity_at DESC
-         LIMIT 1`,
-        [req.userId]
-      )
-    );
+    const activeSessionResult = await db.queryAll<{
+      id: string;
+      session_type: string;
+      last_activity_at: Date;
+      message_count: number;
+    }>`SELECT cs.id, cs.session_type, cs.last_activity_at,
+              (SELECT COUNT(*) FROM conversation_history ch 
+               WHERE ch.context->>'sessionId' = cs.id::text) as message_count
+       FROM conversation_sessions cs
+       WHERE cs.user_id = ${req.userId}
+         AND cs.completed = false
+         AND cs.last_activity_at > NOW() - INTERVAL '6 hours'
+       ORDER BY cs.last_activity_at DESC
+       LIMIT 1`;
 
     let activeSession = null;
     if (activeSessionResult.length > 0) {
