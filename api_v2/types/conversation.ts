@@ -4,6 +4,7 @@ export interface SendMessageRequest {
   message: string;
   sessionId?: string;
   type?: ConversationType;
+  sessionType?: string;
 }
 
 export interface SendMessageResponse {
@@ -13,6 +14,8 @@ export interface SendMessageResponse {
   suggestedActions?: SuggestedAction[];
   emotionalTone?: string;
   context?: ConversationContext;
+  intent?: string;
+  confidence?: number;
 }
 
 export interface SuggestedAction {
@@ -27,6 +30,11 @@ export interface ConversationContext {
   topics?: string[];
   intents?: string[];
   sentiment?: 'positive' | 'negative' | 'neutral';
+  timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
+  routineState?: 'none' | 'suggest' | 'active' | 'completed';
+  streak?: number;
+  entities?: Record<string, any>;
+  isGreeting?: boolean;
 }
 
 export interface ConversationSession {

@@ -43,6 +43,15 @@ export interface ConversationStartResponse {
   sessionId: string;
   greeting: string;
   timeOfDay: string;
+  context?: {
+    routineState?: "none" | "suggest" | "active" | "completed";
+    streak?: number;
+    suggestedRoutine?: {
+      type: string;
+      estimatedDuration: string;
+      activities: string[];
+    };
+  };
 }
 
 export interface ConversationSendRequest {
@@ -54,6 +63,10 @@ export interface ConversationSendRequest {
 
 export interface ConversationSendResponse {
   response: string;
+  sessionId: string;
+  timestamp?: string;
+  intent?: string;
+  confidence?: number;
   suggestedActions?: Array<{
     id: string;
     label: string;
@@ -61,6 +74,11 @@ export interface ConversationSendResponse {
     params?: Record<string, any>;
   }>;
   emotionalTone?: string;
-  context?: Record<string, any>;
-  sessionId: string;
+  context?: {
+    timeOfDay?: "morning" | "afternoon" | "evening" | "night";
+    routineState?: "none" | "suggest" | "active" | "completed";
+    streak?: number;
+    entities?: Record<string, any>;
+    isGreeting?: boolean;
+  };
 }

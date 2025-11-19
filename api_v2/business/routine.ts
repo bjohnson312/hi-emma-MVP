@@ -403,3 +403,65 @@ export function formatTimeOfDay(timeOfDay: TimeOfDay): string {
   };
   return formats[timeOfDay];
 }
+
+export interface RoutineSuggestion {
+  state: 'none' | 'suggest' | 'active' | 'completed';
+  suggestion: {
+    type: string;
+    estimatedDuration: string;
+    activities: string[];
+  } | null;
+}
+
+export interface UserContext {
+  userId: string;
+  name: string;
+  timezone: string;
+  timeOfDay: TimeOfDay;
+  preferences?: Record<string, any>;
+  streak?: number;
+  lastCheckInDate?: string;
+  recentMood?: number;
+}
+
+/**
+ * Generates context-aware greeting using user data and routine state.
+ * Integrates with routine suggestion system for Phase 2D.
+ */
+export async function generateContextualGreeting(
+  userContext: UserContext,
+  sessionType: SessionType,
+  isFirstCheckIn: boolean,
+  routineState?: RoutineSuggestion
+): Promise<string> {
+  const { name, timeOfDay, streak } = userContext;
+  
+  const timeGreetings: Record<TimeOfDay, string> = {
+    morning: 'Good morning',
+    afternoon: 'Good afternoon',
+    evening: 'Good evening',
+    night: 'Hello'
+  };
+  
+  const greeting = timeGreetings[timeOfDay] || 'Hello';
+  
+  const streakText = streak && streak > 0 ? ` You're on a ${streak}-day streak! 🔥` : '';
+  
+  if (routineState?.state === 'suggest' && routineState.suggestion) {
+    return `${greeting}, ${name}!${streakText} Ready to start your ${routineState.suggestion.type} routine?`;
+  } else if (routineState?.state === 'completed') {
+    return `${greeting}, ${name}! You've already completed your ${sessionType} routine today.${streakText} How can I help?`;
+  }
+  
+  return generateGreeting({
+    userName: name,
+    timeOfDay,
+    sessionType,
+    isFirstCheckIn,
+    userContext: {
+      currentStreak: streak,
+      lastCheckInDate: userContext.lastCheckInDate,
+      recentMood: userContext.recentMood
+    }
+  });
+}
