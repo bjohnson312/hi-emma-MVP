@@ -34,7 +34,7 @@ export const complete = api(
 
     const firstName = prefs.first_name || "there";
     
-    const welcomeMessage = `Hi ${firstName}, I'm Emma. As your wellness companion, I'm here to help you feel better each day. How did you sleep?`;
+    const welcomeMessage = `Hi ${firstName}, Emma here. As your wellness companion, I'm here to help you feel better each day. How did you sleep?`;
 
     return {
       success: true,
