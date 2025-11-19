@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Send, X, RefreshCw, Sparkles, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import AutoExpandTextarea from "@/components/AutoExpandTextarea";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -154,13 +154,6 @@ export default function NutritionChatWithEmma({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
   const resetConversation = () => {
     stopSpeaking();
     setMessages([
@@ -310,13 +303,13 @@ export default function NutritionChatWithEmma({
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </Button>
               )}
-              <Input
+              <AutoExpandTextarea
                 value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onChange={setCurrentInput}
+                onSend={sendMessage}
                 placeholder={isListening ? "Listening..." : "Type your message to Emma..."}
                 disabled={loading}
-                className="flex-1 bg-white/90"
+                className="flex-1"
               />
               <Button
                 onClick={sendMessage}

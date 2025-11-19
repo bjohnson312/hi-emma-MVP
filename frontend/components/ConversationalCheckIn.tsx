@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock, Settings } from "lucide-react";
+import AutoExpandTextarea from "@/components/AutoExpandTextarea";
 import backend from "~backend/client";
 import type { SessionType } from "~backend/conversation/types";
 import { useConversationSession } from "@/hooks/useConversationSession";
@@ -33,7 +33,7 @@ export default function ConversationalCheckIn({
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [showSuggestionPanel, setShowSuggestionPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastMessageCountRef = useRef(0);
   const {
     transcript,
@@ -131,7 +131,7 @@ export default function ConversationalCheckIn({
     setCurrentInput("");
     resetTranscript();
     await sendMessage(userMessage);
-    inputRef.current?.focus();
+    textareaRef.current?.focus();
   };
 
   const toggleListening = () => {
@@ -418,15 +418,14 @@ export default function ConversationalCheckIn({
               </div>
             )}
             <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                type="text"
+              <AutoExpandTextarea
+                ref={textareaRef}
                 value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
+                onChange={setCurrentInput}
+                onSend={handleSendMessage}
                 placeholder={isListening ? "Listening..." : "Type or speak your message..."}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                 disabled={loading || isListening}
-                className="flex-1 border-white/40 focus:border-[#4e8f71] focus:ring-[#4e8f71]/20 rounded-2xl px-4 py-6 bg-white/90 backdrop-blur-sm shadow-lg"
+                className="flex-1"
               />
               {isSupported && (
                 <Tooltip content={isListening ? "Stop listening" : "Speak your message"} side="top">
