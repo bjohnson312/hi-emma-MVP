@@ -1,6 +1,9 @@
+import { useEffect, useState } from "react";
 import { Home, Users, BarChart3, MessageSquare, Settings, LogOut, UserPlus, HelpCircle, FileText, Shield, MessageCircle, Calendar } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Tooltip from "@/components/Tooltip";
+import backend from "~backend/client";
+import { USE_NEW_GREETING_FLOW } from "@/config";
 
 export type ProviderView = 
   | "chat"
@@ -18,6 +21,7 @@ interface ProviderSidebarProps {
   currentView: ProviderView;
   onNavigate: (view: ProviderView) => void;
   providerName: string;
+  providerId?: string;
   onLogout: () => void;
 }
 
@@ -46,14 +50,34 @@ export default function ProviderSidebar({
   currentView, 
   onNavigate, 
   providerName,
+  providerId,
   onLogout 
 }: ProviderSidebarProps) {
+  const [greeting, setGreeting] = useState("Good day");
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
+
+  useEffect(() => {
+    const fetchGreeting = async () => {
+      if (USE_NEW_GREETING_FLOW && providerId) {
+        try {
+          const response = await backend.api_v2_gateway.currentContext({ userId: providerId });
+          setGreeting(response.greeting);
+        } catch (error) {
+          console.error("Failed to fetch greeting:", error);
+          setGreeting("Good day");
+        }
+      } else {
+        setGreeting(getGreeting());
+      }
+    };
+    fetchGreeting();
+  }, [providerId]);
 
   return (
     <aside
@@ -82,7 +106,7 @@ export default function ProviderSidebar({
           
           <div className="text-center bg-white/15 backdrop-blur-sm rounded-2xl p-4">
             <p className="text-lg font-medium text-white">
-              {getGreeting()}, {providerName ? `Dr. ${providerName}` : "Doctor"} 👨‍⚕️
+              {greeting}, {providerName ? `Dr. ${providerName}` : "Doctor"} 👨‍⚕️
             </p>
           </div>
         </div>

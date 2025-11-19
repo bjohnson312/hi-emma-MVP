@@ -374,6 +374,7 @@ export default function App() {
           currentView={currentView} 
           onNavigate={setCurrentView}
           userName={userName}
+          userId={userId}
           onLogout={handleLogout}
         />
         

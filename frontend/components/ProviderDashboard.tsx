@@ -107,6 +107,7 @@ export function ProviderDashboard({ token, providerData, onLogout }: ProviderDas
               setShowMobileMenu(false);
             }}
             providerName={providerData?.fullName?.split(' ')[1] || "Provider"}
+            providerId={providerData?.id}
             onLogout={onLogout}
           />
         </div>

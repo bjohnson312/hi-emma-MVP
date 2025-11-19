@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { SessionType } from "~backend/conversation/types";
+import { USE_NEW_GREETING_FLOW } from "@/config";
 
 interface Message {
   sender: "emma" | "user";
@@ -68,7 +69,18 @@ export function useConversationSession(
         userName = onboardingStatus.preferences?.first_name || "";
       }
       
-      const timeGreeting = getTimeBasedGreeting();
+      let timeGreeting = "Hi";
+      if (USE_NEW_GREETING_FLOW) {
+        try {
+          const ctx = await backend.api_v2_gateway.currentContext({ userId });
+          timeGreeting = ctx.greeting;
+        } catch (error) {
+          console.error("Failed to fetch context greeting:", error);
+          timeGreeting = getTimeBasedGreeting();
+        }
+      } else {
+        timeGreeting = getTimeBasedGreeting();
+      }
 
       const firstCheckInGreetings: Record<SessionType, string> = {
         morning: `${timeGreeting}, ${userName}! How did you sleep?`,

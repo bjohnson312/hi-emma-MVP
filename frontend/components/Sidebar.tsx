@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MessageCircle,
   Sun,
@@ -24,6 +24,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Tooltip from "@/components/Tooltip";
+import backend from "~backend/client";
+import { USE_NEW_GREETING_FLOW } from "@/config";
 
 export type NavigationView = 
   | "home"
@@ -48,6 +50,7 @@ interface SidebarProps {
   currentView: NavigationView;
   onNavigate: (view: NavigationView) => void;
   userName?: string;
+  userId?: string;
   onLogout?: () => void;
 }
 
@@ -82,8 +85,9 @@ const bottomNavItems: NavItem[] = [
   { id: "help", label: "Help / About Emma", icon: HelpCircle, tooltip: "Learn more about Emma and get support" }
 ];
 
-export default function Sidebar({ currentView, onNavigate, userName, onLogout }: SidebarProps) {
+export default function Sidebar({ currentView, onNavigate, userName, userId, onLogout }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [greeting, setGreeting] = useState("Hi");
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -91,6 +95,23 @@ export default function Sidebar({ currentView, onNavigate, userName, onLogout }:
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
+
+  useEffect(() => {
+    const fetchGreeting = async () => {
+      if (USE_NEW_GREETING_FLOW && userId) {
+        try {
+          const response = await backend.api_v2_gateway.currentContext({ userId });
+          setGreeting(response.greeting);
+        } catch (error) {
+          console.error("Failed to fetch greeting:", error);
+          setGreeting("Hi");
+        }
+      } else {
+        setGreeting(getGreeting());
+      }
+    };
+    fetchGreeting();
+  }, [userId]);
 
   const handleNavigate = (view: NavigationView) => {
     onNavigate(view);
@@ -122,7 +143,7 @@ export default function Sidebar({ currentView, onNavigate, userName, onLogout }:
             
             <div className="text-center bg-white/15 backdrop-blur-sm rounded-2xl p-4">
               <p className="text-lg font-medium text-white">
-                {getGreeting()}{userName ? `, ${userName}` : ""} ☀️
+                {greeting}{userName ? `, ${userName}` : ""} ☀️
               </p>
             </div>
           </div>
