@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { HabitAction, RoutinePreference } from "~backend/morning/types";
 import Tooltip from "@/components/Tooltip";
+import { USE_NEW_CONVERSATION_FLOW } from "@/config";
 
 interface MorningCheckInProps {
   userId: string;
@@ -91,20 +92,34 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
   const handleInitialGreeting = async () => {
     setLoading(true);
     try {
-      const response = await backend.morning.checkIn({
-        user_id: userId,
-        step: "greeting"
-      });
+      if (USE_NEW_CONVERSATION_FLOW) {
+        const response = await backend.api_v2_gateway.conversationStart({
+          userId,
+          sessionType: "morning",
+          isFirstCheckIn: true
+        });
 
-      setTimeout(() => {
-        addMessage("emma", response.emma_reply);
-        if (response.next_step === "sleep_question") {
+        setTimeout(() => {
+          addMessage("emma", response.greeting);
           setConversationStep("sleep");
-        } else {
-          setConversationStep("name");
-        }
-        setLoading(false);
-      }, 800);
+          setLoading(false);
+        }, 800);
+      } else {
+        const response = await backend.morning.checkIn({
+          user_id: userId,
+          step: "greeting"
+        });
+
+        setTimeout(() => {
+          addMessage("emma", response.emma_reply);
+          if (response.next_step === "sleep_question") {
+            setConversationStep("sleep");
+          } else {
+            setConversationStep("name");
+          }
+          setLoading(false);
+        }, 800);
+      }
     } catch (error) {
       console.error("Failed to start check-in:", error);
       toast({

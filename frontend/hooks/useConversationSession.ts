@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { SessionType } from "~backend/conversation/types";
-import { USE_NEW_GREETING_FLOW } from "@/config";
+import { USE_NEW_GREETING_FLOW, USE_NEW_CONVERSATION_FLOW } from "@/config";
 
 interface Message {
   sender: "emma" | "user";
@@ -61,55 +61,70 @@ export function useConversationSession(
   const startConversation = async (isFirstCheckIn: boolean = true) => {
     setLoading(true);
     try {
-      const profile = await backend.profile.get({ user_id: userId });
-      let userName = profile.profile?.name || "";
-      
-      if (!userName) {
-        const onboardingStatus = await backend.onboarding.getStatus({ user_id: userId });
-        userName = onboardingStatus.preferences?.first_name || "";
-      }
-      
-      let timeGreeting = "Hi";
-      if (USE_NEW_GREETING_FLOW) {
-        try {
-          const ctx = await backend.api_v2_gateway.currentContext({ userId });
-          timeGreeting = ctx.greeting;
-        } catch (error) {
-          console.error("Failed to fetch context greeting:", error);
+      if (USE_NEW_CONVERSATION_FLOW) {
+        const validSessionType = sessionType === "diet" || sessionType === "doctors_orders" ? "general" : sessionType;
+        const response = await backend.api_v2_gateway.conversationStart({
+          userId,
+          sessionType: validSessionType as "general" | "morning" | "evening" | "nutrition" | "mood",
+          isFirstCheckIn
+        });
+        
+        setSessionId(Number(response.sessionId));
+        
+        setTimeout(() => {
+          addMessage("emma", response.greeting);
+          setLoading(false);
+        }, 800);
+      } else {
+        const profile = await backend.profile.get({ user_id: userId });
+        let userName = profile.profile?.name || "";
+        
+        if (!userName) {
+          const onboardingStatus = await backend.onboarding.getStatus({ user_id: userId });
+          userName = onboardingStatus.preferences?.first_name || "";
+        }
+        
+        let timeGreeting = "Hi";
+        if (USE_NEW_GREETING_FLOW) {
+          try {
+            const ctx = await backend.api_v2_gateway.currentContext({ userId });
+            timeGreeting = ctx.greeting;
+          } catch (error) {
+            console.error("Failed to fetch context greeting:", error);
+            timeGreeting = getTimeBasedGreeting();
+          }
+        } else {
           timeGreeting = getTimeBasedGreeting();
         }
-      } else {
-        timeGreeting = getTimeBasedGreeting();
+
+        const firstCheckInGreetings: Record<SessionType, string> = {
+          morning: `${timeGreeting}, ${userName}! How did you sleep?`,
+          evening: `${timeGreeting} ${userName}! How was your day?`,
+          mood: `${timeGreeting} ${userName}, how are you feeling right now?`,
+          diet: `${timeGreeting} ${userName}! What have you eaten today?`,
+          doctors_orders: `${timeGreeting} ${userName}! How are you feeling today?`,
+          nutrition: `${timeGreeting} ${userName}! I'm here to help with your nutrition. What's on your mind?`,
+          general: `${timeGreeting} ${userName}! What's on your mind?`
+        };
+
+        const resumeGreetings: Record<SessionType, string> = {
+          morning: `Welcome back, ${userName}! How are you feeling?`,
+          evening: `Welcome back, ${userName}! What can I help you with?`,
+          mood: `Hi again ${userName}, how are you feeling now?`,
+          diet: `Welcome back ${userName}! What can I help you with?`,
+          doctors_orders: `Hi again ${userName}! What can I help you with?`,
+          nutrition: `Welcome back ${userName}! Let's talk about your nutrition.`,
+          general: `Welcome back ${userName}! What can I help you with?`
+        };
+
+        const greetings = isFirstCheckIn ? firstCheckInGreetings : resumeGreetings;
+        const greeting = greetings[sessionType] || greetings.general;
+        
+        setTimeout(() => {
+          addMessage("emma", greeting);
+          setLoading(false);
+        }, 800);
       }
-
-      const firstCheckInGreetings: Record<SessionType, string> = {
-        morning: `${timeGreeting}, ${userName}! How did you sleep?`,
-        evening: `${timeGreeting} ${userName}! How was your day?`,
-        mood: `${timeGreeting} ${userName}, how are you feeling right now?`,
-        diet: `${timeGreeting} ${userName}! What have you eaten today?`,
-        doctors_orders: `${timeGreeting} ${userName}! How are you feeling today?`,
-        nutrition: `${timeGreeting} ${userName}! I'm here to help with your nutrition. What's on your mind?`,
-        general: `${timeGreeting} ${userName}! What's on your mind?`
-      };
-
-      const resumeGreetings: Record<SessionType, string> = {
-        morning: `Welcome back, ${userName}! How are you feeling?`,
-        evening: `Welcome back, ${userName}! What can I help you with?`,
-        mood: `Hi again ${userName}, how are you feeling now?`,
-        diet: `Welcome back ${userName}! What can I help you with?`,
-        doctors_orders: `Hi again ${userName}! What can I help you with?`,
-        nutrition: `Welcome back ${userName}! Let's talk about your nutrition.`,
-        general: `Welcome back ${userName}! What can I help you with?`
-      };
-
-      const greetings = isFirstCheckIn ? firstCheckInGreetings : resumeGreetings;
-      const greeting = greetings[sessionType] || greetings.general;
-      
-      setTimeout(() => {
-        addMessage("emma", greeting);
-        setLoading(false);
-      }, 800);
-
     } catch (error) {
       console.error("Failed to start conversation:", error);
       toast({
@@ -177,62 +192,79 @@ export function useConversationSession(
     setLoading(true);
 
     try {
-      const response = await backend.conversation.chat({
-        user_id: userId,
-        session_type: sessionType,
-        user_message: userMessage,
-        session_id: sessionId || undefined
-      });
-
-      if (!sessionId) {
-        setSessionId(response.session_id);
-      }
-
-      if (response.journal_entry_created) {
-        toast({
-          title: "✨ Added to Journal",
-          description: "This moment has been saved to your wellness journal.",
+      if (USE_NEW_CONVERSATION_FLOW) {
+        const response = await backend.api_v2_gateway.conversationSend({
+          userId,
+          sessionType: sessionType,
+          message: userMessage,
+          sessionId: sessionId?.toString() || ""
         });
-      }
 
-      if (response.routine_activity_added) {
-        toast({
-          title: "✨ Added to Morning Routine",
-          description: "I've added this activity to your morning routine!",
+        if (!sessionId) {
+          setSessionId(Number(response.sessionId));
+        }
+
+        setTimeout(() => {
+          addMessage("emma", response.response);
+          setLoading(false);
+        }, 800);
+      } else {
+        const response = await backend.conversation.chat({
+          user_id: userId,
+          session_type: sessionType,
+          user_message: userMessage,
+          session_id: sessionId || undefined
         });
-      }
 
-      if (response.auto_applied_insights && response.auto_applied_insights.length > 0) {
-        const intentLabels: Record<string, string> = {
-          morning_routine: "Morning Routine",
-          evening_routine: "Evening Routine",
-          diet_nutrition: "Diet & Nutrition",
-          doctors_orders: "Doctor's Orders",
-          mood: "Mood Log",
-          symptoms: "Symptoms",
-          wellness_general: "Wellness Journal"
-        };
-        
-        response.auto_applied_insights.forEach((insight: any) => {
-          const label = intentLabels[insight.intentType] || "Wellness";
-          
+        if (!sessionId) {
+          setSessionId(response.session_id);
+        }
+
+        if (response.journal_entry_created) {
           toast({
-            title: `✨ Added to ${label}`,
-            description: insight.emmaSuggestionText || "I've saved that for you!",
+            title: "✨ Added to Journal",
+            description: "This moment has been saved to your wellness journal.",
           });
-        });
+        }
+
+        if (response.routine_activity_added) {
+          toast({
+            title: "✨ Added to Morning Routine",
+            description: "I've added this activity to your morning routine!",
+          });
+        }
+
+        if (response.auto_applied_insights && response.auto_applied_insights.length > 0) {
+          const intentLabels: Record<string, string> = {
+            morning_routine: "Morning Routine",
+            evening_routine: "Evening Routine",
+            diet_nutrition: "Diet & Nutrition",
+            doctors_orders: "Doctor's Orders",
+            mood: "Mood Log",
+            symptoms: "Symptoms",
+            wellness_general: "Wellness Journal"
+          };
+          
+          response.auto_applied_insights.forEach((insight: any) => {
+            const label = intentLabels[insight.intentType] || "Wellness";
+            
+            toast({
+              title: `✨ Added to ${label}`,
+              description: insight.emmaSuggestionText || "I've saved that for you!",
+            });
+          });
+        }
+
+        if (response.detected_insights && Array.isArray(response.detected_insights) && response.detected_insights.length > 0) {
+          setPendingSuggestions(prev => [...prev, ...(response.detected_insights || [])]);
+        }
+
+        setTimeout(() => {
+          addMessage("emma", response.emma_reply);
+          setConversationComplete(response.conversation_complete || false);
+          setLoading(false);
+        }, 800);
       }
-
-      if (response.detected_insights && Array.isArray(response.detected_insights) && response.detected_insights.length > 0) {
-        setPendingSuggestions(prev => [...prev, ...(response.detected_insights || [])]);
-      }
-
-      setTimeout(() => {
-        addMessage("emma", response.emma_reply);
-        setConversationComplete(response.conversation_complete || false);
-        setLoading(false);
-      }, 800);
-
     } catch (error) {
       console.error("Failed to send message:", error);
       toast({

@@ -7,6 +7,7 @@ import backend from "~backend/client";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import Tooltip from "@/components/Tooltip";
+import { USE_NEW_CONVERSATION_FLOW } from "@/config";
 
 interface NutritionChatWithEmmaProps {
   userId: string;
@@ -27,13 +28,7 @@ export default function NutritionChatWithEmma({
   onMealLogged,
   onGoalsUpdated 
 }: NutritionChatWithEmmaProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      sender: "emma",
-      text: "Hi! I'm Emma, your nutrition coach. I'm here to help you with your nutrition journey. How can I assist you today?",
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
@@ -62,6 +57,41 @@ export default function NutritionChatWithEmma({
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const initializeConversation = async () => {
+      if (USE_NEW_CONVERSATION_FLOW) {
+        try {
+          const response = await backend.api_v2_gateway.conversationStart({
+            userId,
+            sessionType: "nutrition",
+            isFirstCheckIn: true
+          });
+          setSessionId(Number(response.sessionId));
+          setMessages([{
+            sender: "emma",
+            text: response.greeting,
+            timestamp: new Date()
+          }]);
+          setHasSpokenInitial(false);
+        } catch (error) {
+          console.error("Failed to start conversation:", error);
+          setMessages([{
+            sender: "emma",
+            text: "Hi! I'm Emma, your nutrition coach. I'm here to help you with your nutrition journey. How can I assist you today?",
+            timestamp: new Date()
+          }]);
+        }
+      } else {
+        setMessages([{
+          sender: "emma",
+          text: "Hi! I'm Emma, your nutrition coach. I'm here to help you with your nutrition journey. How can I assist you today?",
+          timestamp: new Date()
+        }]);
+      }
+    };
+    initializeConversation();
+  }, [userId]);
 
   useEffect(() => {
     if (voiceEnabled && messages.length > 0 && !hasSpokenInitial) {
@@ -105,42 +135,63 @@ export default function NutritionChatWithEmma({
     setLoading(true);
 
     try {
-      const response = await backend.wellness.nutritionChat({
-        user_id: userId,
-        session_type: "nutrition",
-        user_message: userMessage.text,
-        session_id: sessionId || undefined
-      });
-
-      if (!sessionId) {
-        setSessionId(response.session_id);
-      }
-
-      const emmaMessage: Message = {
-        sender: "emma",
-        text: response.emma_reply,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, emmaMessage]);
-      setConversationComplete(response.conversation_complete || false);
-
-      if (response.meal_logged) {
-        toast({
-          title: "Meal Logged!",
-          description: "I've added that to your nutrition tracker",
-          duration: 3000
+      if (USE_NEW_CONVERSATION_FLOW) {
+        const response = await backend.api_v2_gateway.conversationSend({
+          userId,
+          sessionType: "nutrition",
+          message: userMessage.text,
+          sessionId: sessionId?.toString() || ""
         });
-        onMealLogged?.();
-      }
 
-      if (response.goals_updated) {
-        toast({
-          title: "Goals Updated!",
-          description: "I've updated your nutrition targets",
-          duration: 3000
+        if (!sessionId) {
+          setSessionId(Number(response.sessionId));
+        }
+
+        const emmaMessage: Message = {
+          sender: "emma",
+          text: response.response,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, emmaMessage]);
+      } else {
+        const response = await backend.wellness.nutritionChat({
+          user_id: userId,
+          session_type: "nutrition",
+          user_message: userMessage.text,
+          session_id: sessionId || undefined
         });
-        onGoalsUpdated?.();
+
+        if (!sessionId) {
+          setSessionId(response.session_id);
+        }
+
+        const emmaMessage: Message = {
+          sender: "emma",
+          text: response.emma_reply,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, emmaMessage]);
+        setConversationComplete(response.conversation_complete || false);
+
+        if (response.meal_logged) {
+          toast({
+            title: "Meal Logged!",
+            description: "I've added that to your nutrition tracker",
+            duration: 3000
+          });
+          onMealLogged?.();
+        }
+
+        if (response.goals_updated) {
+          toast({
+            title: "Goals Updated!",
+            description: "I've updated your nutrition targets",
+            duration: 3000
+          });
+          onGoalsUpdated?.();
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -154,18 +205,40 @@ export default function NutritionChatWithEmma({
     }
   };
 
-  const resetConversation = () => {
+  const resetConversation = async () => {
     stopSpeaking();
-    setMessages([
-      {
-        sender: "emma",
-        text: "Hi! I'm Emma, your nutrition coach. How can I help you today?",
-        timestamp: new Date()
-      }
-    ]);
     setSessionId(null);
     setConversationComplete(false);
     setHasSpokenInitial(false);
+    
+    if (USE_NEW_CONVERSATION_FLOW) {
+      try {
+        const response = await backend.api_v2_gateway.conversationStart({
+          userId,
+          sessionType: "nutrition",
+          isFirstCheckIn: false
+        });
+        setSessionId(Number(response.sessionId));
+        setMessages([{
+          sender: "emma",
+          text: response.greeting,
+          timestamp: new Date()
+        }]);
+      } catch (error) {
+        console.error("Failed to reset conversation:", error);
+        setMessages([{
+          sender: "emma",
+          text: "Hi! I'm Emma, your nutrition coach. How can I help you today?",
+          timestamp: new Date()
+        }]);
+      }
+    } else {
+      setMessages([{
+        sender: "emma",
+        text: "Hi! I'm Emma, your nutrition coach. How can I help you today?",
+        timestamp: new Date()
+      }]);
+    }
   };
 
   const toggleVoiceInput = () => {
