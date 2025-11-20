@@ -7,12 +7,18 @@ interface ClerkUser {
   last_name?: string;
 }
 
+interface StoredUser {
+  userId: string;
+  email: string;
+}
+
 class ClerkClient {
   private publishableKey: string;
   private user: ClerkUser | null = null;
 
   constructor(publishableKey: string) {
     this.publishableKey = publishableKey;
+    this.migrateExistingUser();
     this.loadUser();
   }
 
@@ -49,10 +55,38 @@ class ClerkClient {
     }
   }
 
+  private migrateExistingUser() {
+    if (typeof window !== 'undefined') {
+      const existingUserId = localStorage.getItem('emma_user_id');
+      const existingEmail = localStorage.getItem('emma_user_email');
+      
+      if (existingUserId && existingEmail) {
+        const usersJson = localStorage.getItem('emma_users');
+        const users: StoredUser[] = usersJson ? JSON.parse(usersJson) : [];
+        
+        const alreadyMigrated = users.some(u => u.userId === existingUserId);
+        
+        if (!alreadyMigrated) {
+          users.push({ userId: existingUserId, email: existingEmail });
+          localStorage.setItem('emma_users', JSON.stringify(users));
+        }
+      }
+    }
+  }
+
   async signUp(emailAddress: string, password: string): Promise<ClerkUser> {
-    // Mock Clerk signup - just store user locally
-    // In production, this would call Clerk's API
+    const usersJson = localStorage.getItem('emma_users');
+    const users: StoredUser[] = usersJson ? JSON.parse(usersJson) : [];
+    
+    const existingUser = users.find(u => u.email === emailAddress);
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+    
     const userId = `user_${Date.now()}`;
+    users.push({ userId, email: emailAddress });
+    localStorage.setItem('emma_users', JSON.stringify(users));
+    
     this.saveUser(userId, emailAddress);
 
     return {
@@ -62,17 +96,17 @@ class ClerkClient {
   }
 
   async signIn(emailAddress: string, password: string): Promise<ClerkUser> {
-    // Mock Clerk signin - just load from localStorage
-    // In production, this would validate with Clerk's API
-    const storedUserId = localStorage.getItem('emma_user_id');
-    const storedEmail = localStorage.getItem('emma_user_email');
+    const usersJson = localStorage.getItem('emma_users');
+    const users: StoredUser[] = usersJson ? JSON.parse(usersJson) : [];
     
-    if (storedEmail === emailAddress && storedUserId) {
-      this.user = {
-        id: storedUserId,
-        email_addresses: [{ email_address: storedEmail }],
+    const user = users.find(u => u.email === emailAddress);
+    
+    if (user) {
+      this.saveUser(user.userId, user.email);
+      return {
+        id: user.userId,
+        email_addresses: [{ email_address: user.email }],
       };
-      return this.user;
     }
     
     throw new Error('Invalid email or password');
