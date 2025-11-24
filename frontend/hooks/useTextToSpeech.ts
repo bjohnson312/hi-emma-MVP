@@ -21,43 +21,66 @@ export function useTextToSpeech(): UseTextToSpeechResult {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [elevenLabsVoices, setElevenLabsVoices] = useState<VoiceOption[]>([]);
-  const [selectedElevenLabsVoice, setSelectedElevenLabsVoice] = useState<VoiceOption | null>(null);
+  const [selectedElevenLabsVoice, setSelectedElevenLabsVoice] = useState<VoiceOption | null>(() => {
+    // Initialize from localStorage for immediate voice availability on mount
+    if (typeof window === 'undefined') return null;
+    
+    const voiceType = localStorage.getItem('emma-voice-type');
+    if (voiceType === 'elevenlabs') {
+      const name = localStorage.getItem('emma-voice-preference');
+      const id = localStorage.getItem('emma-voice-id');
+      if (name && id) {
+        return {
+          id,
+          name,
+          type: 'elevenlabs' as const,
+        };
+      }
+    }
+    return null;
+  });
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { savedVoicePreference, saveVoicePreference } = useVoicePreference();
 
   const isSupported = 'speechSynthesis' in window;
 
+  // Fetch ElevenLabs voices on mount
   useEffect(() => {
     const fetchElevenLabsVoices = async () => {
       try {
         const { voices: elVoices } = await backend.voice.listVoices();
         setElevenLabsVoices(elVoices);
-        
-        if (savedVoicePreference?.type === 'elevenlabs') {
-          const savedVoice = elVoices.find(v => v.name === savedVoicePreference.name);
-          if (savedVoice) {
-            console.log('Setting saved ElevenLabs voice:', savedVoice.name);
-            setSelectedElevenLabsVoice(savedVoice);
-            setSelectedVoice(null);
-          }
-        } else if (!savedVoicePreference && elVoices.length > 0) {
-          const trinityVoice = elVoices.find(v => v.name.toLowerCase().includes('trinity'));
-          if (trinityVoice) {
-            console.log('No saved preference, auto-selecting Trinity:', trinityVoice.name);
-            setSelectedElevenLabsVoice(trinityVoice);
-            setSelectedVoice(null);
-            saveVoicePreference(trinityVoice.name, 'elevenlabs', trinityVoice.id);
-          } else {
-            console.warn('Trinity voice not found in list. Available voices:', elVoices.map(v => v.name));
-          }
-        }
       } catch (error) {
         console.error('Failed to fetch ElevenLabs voices:', error);
       }
     };
     fetchElevenLabsVoices();
-  }, [savedVoicePreference]);
+  }, []); // Empty dependency = runs once on mount
+
+  // Apply voice preference when voices load or preference changes
+  useEffect(() => {
+    if (elevenLabsVoices.length === 0) return; // Wait for voices to load
+    
+    if (savedVoicePreference?.type === 'elevenlabs') {
+      const savedVoice = elevenLabsVoices.find(v => v.name === savedVoicePreference.name);
+      if (savedVoice) {
+        console.log('Updating saved ElevenLabs voice with full data:', savedVoice.name);
+        setSelectedElevenLabsVoice(savedVoice);
+        setSelectedVoice(null);
+      }
+    } else if (!savedVoicePreference && elevenLabsVoices.length > 0) {
+      const trinityVoice = elevenLabsVoices.find(v => v.name.toLowerCase().includes('trinity'));
+      if (trinityVoice) {
+        console.log('No saved preference, auto-selecting Trinity:', trinityVoice.name);
+        setSelectedElevenLabsVoice(trinityVoice);
+        setSelectedVoice(null);
+        saveVoicePreference(trinityVoice.name, 'elevenlabs', trinityVoice.id);
+      } else {
+        console.warn('Trinity voice not found in list. Available voices:', elevenLabsVoices.map(v => v.name));
+      }
+    }
+  }, [elevenLabsVoices, savedVoicePreference, saveVoicePreference]);
 
   useEffect(() => {
     if (!isSupported) return;
