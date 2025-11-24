@@ -160,11 +160,15 @@ export namespace admin_auth {
 import { deactivateUser as api_admin_portal_deactivate_user_deactivateUser } from "~backend/admin_portal/deactivate_user";
 import { exportUsers as api_admin_portal_export_users_exportUsers } from "~backend/admin_portal/export_users";
 import { getAccessStats as api_admin_portal_get_access_stats_getAccessStats } from "~backend/admin_portal/get_access_stats";
+import { getDailyAccesses as api_admin_portal_get_daily_accesses_getDailyAccesses } from "~backend/admin_portal/get_daily_accesses";
 import { getSystemInfo as api_admin_portal_get_system_info_getSystemInfo } from "~backend/admin_portal/get_system_info";
 import { getUsageStats as api_admin_portal_get_usage_stats_getUsageStats } from "~backend/admin_portal/get_usage_stats";
+import { getWeeklyAccesses as api_admin_portal_get_weekly_accesses_getWeeklyAccesses } from "~backend/admin_portal/get_weekly_accesses";
 import { listUsers as api_admin_portal_list_users_listUsers } from "~backend/admin_portal/list_users";
 import { logAccess as api_admin_portal_log_access_logAccess } from "~backend/admin_portal/log_access";
+import { reactivateUser as api_admin_portal_reactivate_user_reactivateUser } from "~backend/admin_portal/reactivate_user";
 import { resetPassword as api_admin_portal_reset_password_resetPassword } from "~backend/admin_portal/reset_password";
+import { syncClerkUsers as api_admin_portal_sync_clerk_users_syncClerkUsers } from "~backend/admin_portal/sync_clerk_users";
 
 export namespace admin_portal {
 
@@ -176,11 +180,15 @@ export namespace admin_portal {
             this.deactivateUser = this.deactivateUser.bind(this)
             this.exportUsers = this.exportUsers.bind(this)
             this.getAccessStats = this.getAccessStats.bind(this)
+            this.getDailyAccesses = this.getDailyAccesses.bind(this)
             this.getSystemInfo = this.getSystemInfo.bind(this)
             this.getUsageStats = this.getUsageStats.bind(this)
+            this.getWeeklyAccesses = this.getWeeklyAccesses.bind(this)
             this.listUsers = this.listUsers.bind(this)
             this.logAccess = this.logAccess.bind(this)
+            this.reactivateUser = this.reactivateUser.bind(this)
             this.resetPassword = this.resetPassword.bind(this)
+            this.syncClerkUsers = this.syncClerkUsers.bind(this)
         }
 
         public async deactivateUser(params: RequestType<typeof api_admin_portal_deactivate_user_deactivateUser>): Promise<ResponseType<typeof api_admin_portal_deactivate_user_deactivateUser>> {
@@ -201,6 +209,12 @@ export namespace admin_portal {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_get_access_stats_getAccessStats>
         }
 
+        public async getDailyAccesses(): Promise<ResponseType<typeof api_admin_portal_get_daily_accesses_getDailyAccesses>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/daily-accesses`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_get_daily_accesses_getDailyAccesses>
+        }
+
         public async getSystemInfo(): Promise<ResponseType<typeof api_admin_portal_get_system_info_getSystemInfo>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/system-info`, {method: "GET", body: undefined})
@@ -211,6 +225,12 @@ export namespace admin_portal {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/usage-stats`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_get_usage_stats_getUsageStats>
+        }
+
+        public async getWeeklyAccesses(): Promise<ResponseType<typeof api_admin_portal_get_weekly_accesses_getWeeklyAccesses>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/weekly-accesses`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_get_weekly_accesses_getWeeklyAccesses>
         }
 
         public async listUsers(): Promise<ResponseType<typeof api_admin_portal_list_users_listUsers>> {
@@ -225,10 +245,22 @@ export namespace admin_portal {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_log_access_logAccess>
         }
 
+        public async reactivateUser(params: RequestType<typeof api_admin_portal_reactivate_user_reactivateUser>): Promise<ResponseType<typeof api_admin_portal_reactivate_user_reactivateUser>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/users/reactivate`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_reactivate_user_reactivateUser>
+        }
+
         public async resetPassword(params: RequestType<typeof api_admin_portal_reset_password_resetPassword>): Promise<ResponseType<typeof api_admin_portal_reset_password_resetPassword>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/users/reset-password`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_reset_password_resetPassword>
+        }
+
+        public async syncClerkUsers(): Promise<ResponseType<typeof api_admin_portal_sync_clerk_users_syncClerkUsers>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/sync-clerk-users`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_sync_clerk_users_syncClerkUsers>
         }
     }
 }
