@@ -239,7 +239,6 @@ export namespace admin_portal {
 import { conversationSend as api_api_v2_gateway_conversation_send_conversationSend } from "~backend/api_v2_gateway/conversation_send";
 import { conversationStart as api_api_v2_gateway_conversation_start_conversationStart } from "~backend/api_v2_gateway/conversation_start";
 import { currentContext as api_api_v2_gateway_current_context_currentContext } from "~backend/api_v2_gateway/current_context";
-import { devLogs as api_api_v2_gateway_dev_logs_devLogs } from "~backend/api_v2_gateway/dev_logs";
 import { greeting as api_api_v2_gateway_greeting_greeting } from "~backend/api_v2_gateway/greeting";
 
 export namespace api_v2_gateway {
@@ -252,7 +251,6 @@ export namespace api_v2_gateway {
             this.conversationSend = this.conversationSend.bind(this)
             this.conversationStart = this.conversationStart.bind(this)
             this.currentContext = this.currentContext.bind(this)
-            this.devLogs = this.devLogs.bind(this)
             this.greeting = this.greeting.bind(this)
         }
 
@@ -277,25 +275,6 @@ export namespace api_v2_gateway {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/api/v2/user/current-context`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_current_context_currentContext>
-        }
-
-        /**
-         * ⚠️ WARNING: DEBUG ENDPOINT - REMOVE BEFORE PRODUCTION DEPLOYMENT ⚠️
-         * 
-         * This endpoint exposes internal application logs and state.
-         * It is intentionally left without authentication for debugging purposes.
-         * 
-         * TODO: Before production:
-         * 1. Delete this entire file, OR
-         * 2. Add environment check to disable in production, OR
-         * 3. Add strong authentication and restrict to admin users only
-         * 
-         * Security Impact: HIGH - Exposes sensitive application internals
-         */
-        public async devLogs(): Promise<ResponseType<typeof api_api_v2_gateway_dev_logs_devLogs>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/api/v2/dev/logs`, {method: "GET", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_api_v2_gateway_dev_logs_devLogs>
         }
 
         public async greeting(params: RequestType<typeof api_api_v2_gateway_greeting_greeting>): Promise<ResponseType<typeof api_api_v2_gateway_greeting_greeting>> {
