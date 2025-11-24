@@ -6,6 +6,9 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
 import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX, Heart, UserPlus, Utensils } from "lucide-react";
+import { SimpleLineChart } from "./admin/SimpleLineChart";
+import { SimpleBarChart } from "./admin/SimpleBarChart";
+import { UserTable } from "./admin/UserTable";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -19,8 +22,8 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [accessStats, setAccessStats] = useState<AccessStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [resetPasswordUserId, setResetPasswordUserId] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [dailyData, setDailyData] = useState<{ date: string; count: number }[]>([]);
+  const [weeklyData, setWeeklyData] = useState<{ week: string; count: number }[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,7 +31,27 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
     loadAccessStats();
     loadUsers();
     loadUsageStats();
+    loadDailyData();
+    loadWeeklyData();
   }, []);
+
+  const loadDailyData = async () => {
+    try {
+      const response = await backend.admin_portal.getDailyAccesses();
+      setDailyData(response.data);
+    } catch (error) {
+      console.error("Failed to load daily data:", error);
+    }
+  };
+
+  const loadWeeklyData = async () => {
+    try {
+      const response = await backend.admin_portal.getWeeklyAccesses();
+      setWeeklyData(response.data);
+    } catch (error) {
+      console.error("Failed to load weekly data:", error);
+    }
+  };
 
   const loadSystemInfo = async () => {
     try {
@@ -74,25 +97,22 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
     }
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await backend.admin_portal.resetPassword({
-        userId: resetPasswordUserId,
-        newPassword,
-      });
+  const handleResetPassword = async (userId: string) => {
+    if (!confirm("Are you sure you want to reset this user's password?")) return;
 
-      if (response.success) {
+    try {
+      const response = await backend.admin_portal.resetPassword({ userId });
+
+      if (response.success && response.temporaryPassword) {
+        alert(`Temporary password: ${response.temporaryPassword}\n\nPlease save this password and share it securely with the user.`);
         toast({
           title: "Success",
           description: response.message,
         });
-        setResetPasswordUserId("");
-        setNewPassword("");
       } else {
         toast({
           title: "Error",
-          description: response.message,
+          description: response.message || "Failed to reset password",
           variant: "destructive",
         });
       }
@@ -101,6 +121,35 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
       toast({
         title: "Error",
         description: "Failed to reset password",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReactivateUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to reactivate this user?")) return;
+
+    try {
+      const response = await backend.admin_portal.reactivateUser({ userId });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: response.message,
+        });
+        loadUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Reactivate user error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reactivate user",
         variant: "destructive",
       });
     }
@@ -223,6 +272,63 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
 
         {activeTab === "overview" && (
           <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-4">Key Metrics</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {usageStats && (
+                  <>
+                    <StatCard
+                      icon={<Users className="w-8 h-8" />}
+                      title="Total Users"
+                      value={usageStats.stats.totalUsers}
+                      color="purple"
+                    />
+                    <StatCard
+                      icon={<Activity className="w-8 h-8" />}
+                      title="Total Accesses"
+                      value={usageStats.stats.totalAccesses}
+                      color="blue"
+                    />
+                    <StatCard
+                      icon={<TrendingUp className="w-8 h-8" />}
+                      title="Today's Accesses"
+                      value={usageStats.stats.todayAccesses}
+                      color="green"
+                    />
+                    <StatCard
+                      icon={<Calendar className="w-8 h-8" />}
+                      title="Last 7 Days"
+                      value={usageStats.stats.last7Days}
+                      color="orange"
+                    />
+                    <StatCard
+                      icon={<Calendar className="w-8 h-8" />}
+                      title="Last 30 Days"
+                      value={usageStats.stats.last30Days}
+                      color="pink"
+                    />
+                    <StatCard
+                      icon={<Activity className="w-8 h-8" />}
+                      title="Avg Per User (30d)"
+                      value={usageStats.stats.avgPerUser}
+                      color="teal"
+                      decimal
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Daily Active Users (Last 30 Days)</h2>
+              <SimpleLineChart data={dailyData} />
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Weekly Access Totals (Last 12 Weeks)</h2>
+              <SimpleBarChart data={weeklyData} />
+            </div>
+
             {systemInfo && (
               <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
                 <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
@@ -307,40 +413,6 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
         {activeTab === "users" && (
           <div className="space-y-8">
             <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Reset Password</h2>
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">
-                    User ID
-                  </label>
-                  <Input
-                    value={resetPasswordUserId}
-                    onChange={(e) => setResetPasswordUserId(e.target.value)}
-                    placeholder="Enter user ID"
-                    className="bg-white/10 border-white/20 text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">
-                    New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="bg-white/10 border-white/20 text-white"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
-                  Reset Password
-                </Button>
-              </form>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-white">
                   Users ({users?.total || 0})
@@ -363,62 +435,14 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                 </div>
               </div>
               
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">ID</th>
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">Email</th>
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">Created</th>
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">Last Login</th>
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">Logins</th>
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">Status</th>
-                      <th className="text-left text-purple-200 font-medium py-3 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users?.users.map((user) => (
-                      <tr key={user.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-3 px-4 text-white/80 text-sm font-mono">
-                          {user.id.substring(0, 8)}...
-                        </td>
-                        <td className="py-3 px-4 text-white">{user.email}</td>
-                        <td className="py-3 px-4 text-white/80">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 text-white/80">
-                          {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                        </td>
-                        <td className="py-3 px-4 text-white/80">
-                          {user.login_count || 0}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            user.is_active 
-                              ? "bg-green-500/20 text-green-300"
-                              : "bg-red-500/20 text-red-300"
-                          }`}>
-                            {user.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          {user.is_active && (
-                            <Button
-                              onClick={() => handleDeactivateUser(user.id)}
-                              size="sm"
-                              variant="outline"
-                              className="border-red-500/50 text-red-300 hover:bg-red-500/20"
-                            >
-                              <UserX className="w-4 h-4 mr-1" />
-                              Deactivate
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {users && (
+                <UserTable
+                  users={users.users}
+                  onDeactivate={handleDeactivateUser}
+                  onReactivate={handleReactivateUser}
+                  onResetPassword={handleResetPassword}
+                />
+              )}
             </div>
           </div>
         )}

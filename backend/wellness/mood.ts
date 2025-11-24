@@ -8,6 +8,11 @@ export const logMood = api<LogMoodRequest, MoodLog>(
   async (req) => {
     const { user_id, mood_rating, mood_tags, energy_level, stress_level, notes, triggers } = req;
 
+    await db.exec`
+      INSERT INTO app_events (user_id, event_type)
+      VALUES (${user_id}, 'feeling_check_start')
+    `;
+
     const result = await db.queryRow<MoodLog>`
       INSERT INTO mood_logs 
         (user_id, mood_rating, mood_tags, energy_level, stress_level, notes, triggers)

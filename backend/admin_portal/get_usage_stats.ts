@@ -10,10 +10,41 @@ export const getUsageStats = api(
       totalUsers = row.count as number;
     }
 
+    let totalAccesses = 0;
+    for await (const row of db.query`SELECT COUNT(*)::int as count FROM app_events`) {
+      totalAccesses = row.count as number;
+    }
+
+    let todayAccesses = 0;
+    for await (const row of db.query`
+      SELECT COUNT(*)::int as count FROM app_events 
+      WHERE created_at >= CURRENT_DATE
+    `) {
+      todayAccesses = row.count as number;
+    }
+
+    let last7Days = 0;
+    for await (const row of db.query`
+      SELECT COUNT(*)::int as count FROM app_events 
+      WHERE created_at > NOW() - INTERVAL '7 days'
+    `) {
+      last7Days = row.count as number;
+    }
+
+    let last30Days = 0;
+    for await (const row of db.query`
+      SELECT COUNT(*)::int as count FROM app_events 
+      WHERE created_at > NOW() - INTERVAL '30 days'
+    `) {
+      last30Days = row.count as number;
+    }
+
+    const avgPerUser = totalUsers > 0 ? Math.round(last30Days / totalUsers * 10) / 10 : 0;
+
     let activeUsers = 0;
     for await (const row of db.query`
       SELECT COUNT(DISTINCT user_id)::int as count 
-      FROM conversation_sessions 
+      FROM app_events 
       WHERE created_at > NOW() - INTERVAL '30 days'
     `) {
       activeUsers = row.count as number;
@@ -91,6 +122,11 @@ export const getUsageStats = api(
     return {
       stats: {
         totalUsers,
+        totalAccesses,
+        todayAccesses,
+        last7Days,
+        last30Days,
+        avgPerUser,
         activeUsers,
         totalConversations,
         totalMorningRoutines,

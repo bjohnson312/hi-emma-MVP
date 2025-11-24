@@ -39,6 +39,11 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
       await trackInteraction(user_id);
       await checkAndAwardMilestones(user_id);
 
+      await db.exec`
+        INSERT INTO app_events (user_id, event_type)
+        VALUES (${user_id}, 'morning_routine_start')
+      `;
+
       const existingProfile = await db.queryRow<UserProfile>`
         SELECT id, user_id, name, created_at, updated_at, interaction_count, morning_routine_preferences
         FROM user_profiles

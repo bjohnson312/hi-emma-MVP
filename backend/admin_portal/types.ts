@@ -1,6 +1,7 @@
 export interface User {
   id: string;
   email: string;
+  name: string;
   created_at: Date;
   last_login?: Date;
   is_active: boolean;
@@ -14,16 +15,21 @@ export interface UserListResponse {
 
 export interface ResetPasswordRequest {
   userId: string;
-  newPassword: string;
 }
 
 export interface ResetPasswordResponse {
   success: boolean;
   message: string;
+  temporaryPassword?: string;
 }
 
 export interface UsageStats {
   totalUsers: number;
+  totalAccesses: number;
+  todayAccesses: number;
+  last7Days: number;
+  last30Days: number;
+  avgPerUser: number;
   activeUsers: number;
   totalConversations: number;
   totalMorningRoutines: number;

@@ -52,6 +52,21 @@ export const clerkAuth = authHandler<AuthParams, AuthData>(
       console.log('[Auth Handler] ✅ User ID extracted from token:', userId);
       console.log('[Auth Handler] 🎉 Authentication successful!');
 
+      try {
+        const db = (await import("../db")).default;
+        await db.exec`
+          INSERT INTO app_events (user_id, event_type)
+          VALUES (${userId}::uuid, 'login')
+        `;
+        await db.exec`
+          UPDATE users 
+          SET last_login_at = NOW(), total_logins = COALESCE(total_logins, 0) + 1
+          WHERE id = ${userId}::uuid
+        `;
+      } catch (err) {
+        console.log('[Auth Handler] ⚠️ Failed to log event:', err);
+      }
+
       return {
         userID: userId
       };

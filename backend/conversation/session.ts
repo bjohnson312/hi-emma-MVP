@@ -33,6 +33,11 @@ export const getOrCreateSession = api<GetOrCreateSessionRequest, ConversationSes
       RETURNING id, user_id, session_type, current_step, context, started_at, last_activity_at, completed
     `;
 
+    await db.exec`
+      INSERT INTO app_events (user_id, event_type)
+      VALUES (${user_id}, 'conversation_start')
+    `;
+
     return newSession!;
   }
 );
