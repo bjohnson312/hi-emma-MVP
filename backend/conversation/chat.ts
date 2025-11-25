@@ -69,12 +69,23 @@ async function processMorningRoutineActivity(
   activity: MorningRoutineActivity,
   context: { userMessage: string; emmaReply: string }
 ): Promise<void> {
+  console.log(`\n🔧 processMorningRoutineActivity START`);
+  console.log(`   User ID: ${userId}`);
+  console.log(`   Activity: ${activity.name} (${activity.duration_minutes} min, ${activity.icon})`);
+  
   try {
     // Check if user has an active morning routine
+    console.log(`   📊 Checking for existing routine...`);
     const existingRoutine = await db.queryRow<MorningRoutinePreference>`
       SELECT * FROM morning_routine_preferences
       WHERE user_id = ${userId} AND is_active = true
     `;
+    
+    if (existingRoutine) {
+      console.log(`   ✅ Found existing routine:`, existingRoutine.routine_name);
+    } else {
+      console.log(`   ℹ️  No existing routine found - will create new one`);
+    }
 
     if (!existingRoutine) {
       // FIX 1: Auto-create routine if missing (never fail with "No active morning routine")
@@ -96,7 +107,10 @@ async function processMorningRoutineActivity(
         )
       `;
 
+      console.log(`   ✅ Routine created in DB`);
+
       // FIX 3: Log to morning routine journal
+      console.log(`   📝 Logging to journal...`);
       await logJournalEntry(
         userId,
         "routine_created",
@@ -104,15 +118,18 @@ async function processMorningRoutineActivity(
         activity.name,
         { duration_minutes: activity.duration_minutes, icon: activity.icon, source: "conversation" }
       );
+      console.log(`   ✅ Journal entry created`);
 
       // FIX 4: Update Emma Memory
+      console.log(`   🧠 Updating Emma Memory...`);
       await extractAndStoreMemories(
         userId, 
         context.userMessage,
         `I've created your morning routine with ${activity.name}. This will help you start your day with intention.`
       );
+      console.log(`   ✅ Memory updated`);
 
-      console.log(`✅ Morning routine created successfully`);
+      console.log(`✅ Morning routine created successfully\n`);
       return;
     }
 
@@ -139,6 +156,7 @@ async function processMorningRoutineActivity(
     const newActivities = [...activitiesArray, activity];
     const newDuration = (existingRoutine.duration_minutes || 0) + (activity.duration_minutes || 0);
 
+    console.log(`   💾 Updating routine in DB...`);
     await db.exec`
       UPDATE morning_routine_preferences
       SET activities = ${JSON.stringify(newActivities)}::jsonb,
@@ -146,8 +164,10 @@ async function processMorningRoutineActivity(
           updated_at = NOW()
       WHERE user_id = ${userId} AND is_active = true
     `;
+    console.log(`   ✅ Routine updated in DB`);
 
     // FIX 3: Log to morning routine journal
+    console.log(`   📝 Logging to journal...`);
     await logJournalEntry(
       userId,
       "activity_added",
@@ -155,18 +175,24 @@ async function processMorningRoutineActivity(
       activity.name,
       { duration_minutes: activity.duration_minutes, icon: activity.icon, source: "conversation" }
     );
+    console.log(`   ✅ Journal entry created`);
 
     // FIX 4: Update Emma Memory
+    console.log(`   🧠 Updating Emma Memory...`);
     await extractAndStoreMemories(
       userId,
       context.userMessage,
       `I've added ${activity.name} to your morning routine.`
     );
+    console.log(`   ✅ Memory updated`);
 
-    console.log(`✅ Activity "${activity.name}" added to existing routine`);
+    console.log(`✅ Activity "${activity.name}" added to existing routine\n`);
 
   } catch (error) {
-    console.error("❌ Failed to process morning routine activity:", error);
+    console.error("\n❌ FAILED to process morning routine activity");
+    console.error("   Error details:", error);
+    console.error("   User ID:", userId);
+    console.error("   Activity:", activity);
     throw error;
   }
 }
@@ -350,6 +376,12 @@ export const chat = api<ChatRequest, ChatResponse>(
 
     const emmaReply = await callAI(conversationHistory);
 
+    // DEBUG: Log Emma's raw reply to check for ADD_ROUTINE_ACTIVITY commands
+    if (session_type === "morning") {
+      console.log("\n🔍 DEBUG - Emma's raw reply:", emmaReply);
+      console.log("📋 DEBUG - Checking for ADD_ROUTINE_ACTIVITY pattern...\n");
+    }
+
     const journalEntryMatch = emmaReply.match(/JOURNAL_ENTRY:\s*(.+?)(?:\n|$)/s);
     let journalEntryId: number | undefined;
     let cleanedReply = emmaReply;
@@ -375,8 +407,13 @@ export const chat = api<ChatRequest, ChatResponse>(
 
     // UNIFIED WORKFLOW: Process morning routine activities from conversation
     const routineActivityMatches = emmaReply.matchAll(/ADD_ROUTINE_ACTIVITY:\s*\{([^}]+)\}/gs);
+    const matchesArray = Array.from(routineActivityMatches);
     
-    for (const routineActivityMatch of routineActivityMatches) {
+    if (session_type === "morning") {
+      console.log(`✅ DEBUG - Found ${matchesArray.length} ADD_ROUTINE_ACTIVITY command(s)`);
+    }
+    
+    for (const routineActivityMatch of matchesArray) {
       if (session_type === "morning") {
         try {
           const activityData = routineActivityMatch[1].trim();
@@ -393,12 +430,16 @@ export const chat = api<ChatRequest, ChatResponse>(
               description: ""
             };
 
+            console.log(`✅ DEBUG - Parsed activity:`, activity);
+            console.log(`🚀 DEBUG - Calling processMorningRoutineActivity for user: ${user_id}`);
+
             // Use unified workflow: auto-create routine if needed + journal logging + memory updates
             await processMorningRoutineActivity(user_id, activity, {
               userMessage: user_message,
               emmaReply: cleanedReply
             });
             
+            console.log(`✅ DEBUG - processMorningRoutineActivity completed successfully`);
             activityAdded = true;
           }
         } catch (error) {
@@ -596,22 +637,41 @@ Wellness Journal Feature:
 - Don't suggest journaling too frequently - only for special moments
 
 Morning Routine Activity Detection (ONLY for morning session_type):
-UNIFIED WORKFLOW - When you detect a morning activity, the system will:
-1. Check if they have a routine (if not, create one automatically)
-2. Add the activity to their routine
-3. Log it to their morning routine journal
-4. Update Emma's memory about their preferences
+CRITICAL: When ${userName} mentions a morning activity, you MUST include a special command in your response.
 
-How to detect and add activities:
-- Listen for phrases like: "I did [activity]", "I like to [activity]", "I want to start [activity]", "I usually [activity]", "I've been doing [activity]"
-- Common morning activities: yoga, meditation, journaling, reading, exercise, stretching, coffee/tea ritual, breakfast, prayer, gratitude practice, walking, breathing exercises
-- When you detect a clear morning activity, respond with: "ADD_ROUTINE_ACTIVITY: {name: "[activity name]", duration: [minutes], icon: "[emoji icon]"}"
-- Then confirm it in your normal reply: "I've added [activity] to your morning routine! ✨"
-- Common emoji icons: "☕" (coffee), "📖" (reading), "💪" (exercise), "🧘" (yoga/meditation), "🎵" (music), "🌅" (morning), "✨" (general), "🙏" (prayer/gratitude), "🚶" (walking), "🫖" (tea)
-- Only add activities that are clearly part of their morning routine, not just mentioned in passing
-- The system handles duplicates automatically - don't worry about checking
-- Be proactive: if someone mentions they "love yoga" or "always start with coffee", add it!
-- IMPORTANT: You don't need to ask permission first - just add it and confirm
+DETECTION RULES:
+- Listen for: "I did [activity]", "I like to [activity]", "I want to add [activity]", "I usually [activity]", "I've been doing [activity]", "Add [activity] to my routine"
+- Common activities: yoga, meditation, journaling, reading, exercise, stretching, coffee/tea ritual, breakfast, prayer, gratitude, walking, breathing exercises
+
+COMMAND FORMAT (EXACT SYNTAX REQUIRED):
+ADD_ROUTINE_ACTIVITY: {name: "[activity name]", duration: [number], icon: "[emoji]"}
+
+EXAMPLES - You MUST use this exact format:
+
+User: "I want to add yoga to my morning routine"
+You: "ADD_ROUTINE_ACTIVITY: {name: "yoga", duration: 15, icon: "🧘"}
+That's wonderful! I've added yoga to your morning routine. ✨"
+
+User: "I like to start my day with coffee"
+You: "ADD_ROUTINE_ACTIVITY: {name: "morning coffee", duration: 10, icon: "☕"}
+Perfect! I've added your morning coffee ritual to your routine. ☕"
+
+User: "I've been meditating for 10 minutes"
+You: "ADD_ROUTINE_ACTIVITY: {name: "meditation", duration: 10, icon: "🧘"}
+That's great! I've added meditation to your routine. 🙏"
+
+User: "Add prayer to my routine"
+You: "ADD_ROUTINE_ACTIVITY: {name: "prayer", duration: 10, icon: "🙏"}
+I've added prayer to your morning routine! ✨"
+
+EMOJI ICONS: ☕ (coffee), 📖 (reading), 💪 (exercise), 🧘 (yoga/meditation), 🎵 (music), 🌅 (sunrise), ✨ (sparkles), 🙏 (prayer/gratitude), 🚶 (walking), 🫖 (tea), 🍳 (breakfast)
+
+IMPORTANT:
+- The command MUST be on its own line
+- Use double quotes for strings
+- Duration is a number (no quotes)
+- Don't ask permission - just add it and confirm
+- The system prevents duplicates automatically
 `;
 
   let morningRoutineContext = "";
@@ -637,29 +697,37 @@ Your goals:
 5. Help them feel positive and supported
 6. If they share gratitude or meaningful insights, suggest adding to wellness journal
 
-AUTOMATIC ROUTINE BUILDING:
-- When they mention any morning activity, immediately add it using ADD_ROUTINE_ACTIVITY
-- The system handles everything: creates routine if needed, prevents duplicates, logs to journal, updates memory
-- Examples of what to listen for:
-  * "I like to start with coffee" → ADD coffee ritual
-  * "I've been doing yoga" → ADD yoga
-  * "I usually meditate for 10 minutes" → ADD meditation
-  * "I love reading in the morning" → ADD reading
-  * "I stretch when I wake up" → ADD stretching
+AUTOMATIC ROUTINE BUILDING - EXACT EXAMPLES TO FOLLOW:
 
-Example flow (returning user):
-- "Good morning! How did you sleep?"
-- Listen and empathize
-- "What did you do this morning?" or "How's your morning going?"
-- LISTEN for activities → ADD them automatically
-- "That's wonderful! I've added that to your routine ✨"
+User: "I want to add yoga to my morning routine"
+You: "ADD_ROUTINE_ACTIVITY: {name: \"yoga\", duration: 15, icon: \"🧘\"}
+That's wonderful! I've added yoga to your morning routine. ✨"
 
-Example flow (new user):
-- "Good morning! How did you sleep?"
-- Listen and empathize
-- "What do you usually like to do when you wake up?"
-- LISTEN for activities → ADD them automatically
-- Continue building their routine naturally through conversation`, 
+User: "I like to start with coffee"
+You: "ADD_ROUTINE_ACTIVITY: {name: \"morning coffee\", duration: 10, icon: \"☕\"}
+Perfect! I've added your morning coffee ritual. ☕"
+
+User: "Add meditation"
+You: "ADD_ROUTINE_ACTIVITY: {name: \"meditation\", duration: 10, icon: \"🧘\"}
+I've added meditation to your routine! 🙏"
+
+User: "I've been stretching for 5 minutes"
+You: "ADD_ROUTINE_ACTIVITY: {name: \"stretching\", duration: 5, icon: \"💪\"}
+Great! I've added stretching to your morning routine."
+
+User: "I usually read in the morning"
+You: "ADD_ROUTINE_ACTIVITY: {name: \"morning reading\", duration: 15, icon: \"📖\"}
+Wonderful! Reading is such a peaceful way to start the day. I've added it to your routine. ✨"
+
+CONVERSATION FLOW:
+1. Greet warmly based on time of day
+2. Ask about their sleep
+3. Listen for ANY activity mention
+4. IMMEDIATELY output ADD_ROUTINE_ACTIVITY command (on its own line)
+5. Then provide natural confirmation
+6. Continue conversation naturally
+
+Remember: The command goes FIRST (on its own line), then your natural response.`, 
 
     evening: `${basePrompt}
 
