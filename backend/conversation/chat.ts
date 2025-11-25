@@ -296,6 +296,12 @@ async function callAI(messages: AIMessage[]): Promise<string> {
 export const chat = api<ChatRequest, ChatResponse>(
   { expose: true, method: "POST", path: "/conversation/chat" },
   async (req) => {
+    console.log("\n🚀🚀🚀 CHAT ENDPOINT CALLED! 🚀🚀🚀");
+    console.log("   User ID:", req.user_id);
+    console.log("   Session Type:", req.session_type);
+    console.log("   Message:", req.user_message);
+    console.log("   Session ID:", req.session_id);
+    
     const { user_id, session_type, user_message, session_id } = req;
 
     await trackInteraction(user_id);
