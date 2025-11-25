@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Mic, MicOff, Volume2, Settings2, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Mic, MicOff, Volume2, VolumeX, Settings2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
@@ -9,6 +9,9 @@ interface MicrophoneSetupProps {
 }
 
 export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem("emma-voice-muted") === "true";
+  });
   const [step, setStep] = useState<'intro' | 'testing' | 'success'>('intro');
   const [testTranscript, setTestTranscript] = useState('');
   
@@ -25,15 +28,49 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
 
   const {
     speak,
+    stop,
+    isSpeaking,
     isSupported: isTTSSupported
   } = useTextToSpeech();
 
+  const welcomeMessage = "Great! Let's set up your microphone so I can hear you clearly. When you're ready, click Test Microphone and say Hello Emma.";
+
+  useEffect(() => {
+    if (!isMuted && step === 'intro') {
+      const timer = setTimeout(() => {
+        speak(welcomeMessage);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isMuted, step]);
+
+  const toggleMute = () => {
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    localStorage.setItem("emma-voice-muted", newMutedState.toString());
+    if (newMutedState) {
+      stop();
+    } else {
+      if (step === 'intro') {
+        speak(welcomeMessage);
+      } else if (step === 'success') {
+        speak("Great! Your microphone is working perfectly. You're all set to chat with me.");
+      }
+    }
+  };
+
   const handleStartTest = useCallback(async () => {
+    stop();
     setStep('testing');
     setTestTranscript('');
     resetTranscript();
     await restartListening();
-  }, [restartListening, resetTranscript]);
+    if (!isMuted) {
+      setTimeout(() => {
+        speak("I'm listening. Say Hello Emma.");
+      }, 500);
+    }
+  }, [restartListening, resetTranscript, stop, isMuted, speak]);
 
   const handleStopTest = useCallback(() => {
     stopListening();
@@ -41,11 +78,13 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
       setTestTranscript(transcript);
       setStep('success');
       
-      if (isTTSSupported) {
-        speak("Great! Your microphone is working perfectly. You're all set to chat with me.");
+      if (isTTSSupported && !isMuted) {
+        setTimeout(() => {
+          speak("Perfect! I heard you loud and clear. You're all set to chat with me.");
+        }, 300);
       }
     }
-  }, [stopListening, transcript, speak, isTTSSupported]);
+  }, [stopListening, transcript, speak, isTTSSupported, isMuted]);
 
   const handleTryAgain = useCallback(() => {
     setStep('intro');
@@ -54,8 +93,9 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
   }, [resetTranscript]);
 
   const handleComplete = useCallback(() => {
+    stop();
     onComplete?.();
-  }, [onComplete]);
+  }, [onComplete, stop]);
 
   if (!isSpeechSupported) {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -90,7 +130,22 @@ export default function MicrophoneSetup({ onComplete }: MicrophoneSetupProps) {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#4e8f71]/20 to-[#364d89]/20 flex items-center justify-center">
               <Mic className="w-10 h-10 text-[#4e8f71]" />
             </div>
-            <h2 className="text-3xl font-bold text-[#323e48] mb-2">Set Up Your Microphone</h2>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <h2 className="text-3xl font-bold text-[#323e48]">Set Up Your Microphone</h2>
+              <button
+                onClick={toggleMute}
+                className="w-10 h-10 rounded-full bg-[#4e8f71]/10 hover:bg-[#4e8f71]/20 flex items-center justify-center transition-all"
+                aria-label={isMuted ? "Unmute Emma" : "Mute Emma"}
+              >
+                {isMuted ? (
+                  <VolumeX className="w-5 h-5 text-[#364d89]" />
+                ) : isSpeaking ? (
+                  <Volume2 className="w-5 h-5 text-[#364d89] animate-pulse" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-[#364d89]" />
+                )}
+              </button>
+            </div>
             <p className="text-[#323e48]/70 text-lg">
               Let's make sure Emma can hear you clearly
             </p>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
-import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2 } from "lucide-react";
+import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX } from "lucide-react";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 
 interface OnboardingFlowProps {
   userId: string;
@@ -17,6 +18,10 @@ interface Question {
 }
 
 export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
+  const { speak, stop, isSpeaking } = useTextToSpeech();
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem("emma-voice-muted") === "true";
+  });
   const [currentStep, setCurrentStep] = useState(0);
   const [firstName, setFirstName] = useState("");
   const [reasonForJoining, setReasonForJoining] = useState("");
@@ -30,6 +35,26 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   useEffect(() => {
     loadOnboardingStatus();
   }, [userId]);
+
+  useEffect(() => {
+    if (!isMuted && emmaMessage) {
+      const timer = setTimeout(() => {
+        speak(emmaMessage);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [emmaMessage, isMuted, speak]);
+
+  const toggleMute = () => {
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    localStorage.setItem("emma-voice-muted", newMutedState.toString());
+    if (newMutedState) {
+      stop();
+    } else {
+      speak(emmaMessage);
+    }
+  };
 
   const loadOnboardingStatus = async () => {
     try {
@@ -105,6 +130,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   ];
 
   const handleAnswer = async (answer: string) => {
+    stop();
     setIsLoading(true);
     
     try {
@@ -192,6 +218,19 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
                 <h2 className="font-medium text-xl tracking-wide">Welcome to Hi, Emma</h2>
                 <p className="text-xs text-white/90">Let's get to know each other</p>
               </div>
+              <button
+                onClick={toggleMute}
+                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center transition-all"
+                aria-label={isMuted ? "Unmute Emma" : "Mute Emma"}
+              >
+                {isMuted ? (
+                  <VolumeX className="w-5 h-5 text-white" />
+                ) : isSpeaking ? (
+                  <Volume2 className="w-5 h-5 text-white animate-pulse" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-white" />
+                )}
+              </button>
             </div>
           </div>
 
