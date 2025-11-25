@@ -130,6 +130,11 @@ export default function ConversationalCheckIn({
     const userMessage = currentInput.trim();
     setCurrentInput("");
     resetTranscript();
+    
+    if (isListening) {
+      stopListening();
+    }
+    
     await sendMessage(userMessage);
     textareaRef.current?.focus();
   };

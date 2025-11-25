@@ -1,19 +1,54 @@
-import { useState, ReactNode } from "react";
+import { useState, ReactNode, useEffect, useRef } from "react";
 
 export interface TooltipProps {
   children: ReactNode;
   content: string;
   side?: "top" | "bottom" | "left" | "right";
+  autoHideDelay?: number;
 }
 
-export default function Tooltip({ children, content, side = "top" }: TooltipProps) {
+export default function Tooltip({ children, content, side = "top", autoHideDelay = 3000 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showTooltip = () => {
+    setIsVisible(true);
+  };
+
+  const showTooltipWithTimer = () => {
+    setIsVisible(true);
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(false);
+    }, autoHideDelay);
+  };
+
+  const hideTooltip = () => {
+    setIsVisible(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div 
       className="relative inline-block"
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
+      onMouseEnter={showTooltip}
+      onMouseLeave={hideTooltip}
+      onTouchStart={showTooltipWithTimer}
     >
       {children}
       {isVisible && (
