@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS app_events (
   id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
+  user_id TEXT NOT NULL,
   event_type VARCHAR(50) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

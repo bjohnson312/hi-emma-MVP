@@ -56,12 +56,12 @@ export const clerkAuth = authHandler<AuthParams, AuthData>(
         const db = (await import("../db")).default;
         await db.exec`
           INSERT INTO app_events (user_id, event_type)
-          VALUES (${userId}::uuid, 'login')
+          VALUES (${userId}, 'login')
         `;
         await db.exec`
           UPDATE users 
           SET last_login_at = NOW(), total_logins = COALESCE(total_logins, 0) + 1
-          WHERE id = ${userId}::uuid
+          WHERE id = ${userId}
         `;
       } catch (err) {
         console.log('[Auth Handler] ⚠️ Failed to log event:', err);
