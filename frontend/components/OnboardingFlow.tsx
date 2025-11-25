@@ -183,10 +183,13 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
         }
       } else {
         setIsLoading(false);
-        if (response.next_question) {
-          setEmmaMessage(response.next_question);
-        }
         setCurrentStep(response.current_step);
+        
+        const nextQuestion = questions[response.current_step];
+        if (nextQuestion) {
+          setEmmaMessage(nextQuestion.question);
+        }
+        
         setTextInput("");
       }
     } catch (error) {
