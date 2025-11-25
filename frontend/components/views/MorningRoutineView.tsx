@@ -556,12 +556,12 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
           <>
             {routine && routine.activities && Array.isArray(routine.activities) && routine.activities.length > 0 ? (
               <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-[#323e48] flex items-center gap-2">
+                <div className="mb-4">
+                  <h3 className="font-bold text-[#323e48] flex items-center gap-2 mb-3">
                     <CheckCircle2 className="w-5 h-5 text-[#4e8f71]" />
                     Today's Routine
                   </h3>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={startEdit}
                       className="bg-gradient-to-r from-[#4e8f71] to-[#364d89] hover:from-[#3d7259] hover:to-[#2a3d6f] text-white shadow-lg"
