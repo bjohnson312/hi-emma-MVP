@@ -83,6 +83,13 @@ async function processMorningRoutineActivity(
     
     if (existingRoutine) {
       console.log(`   ✅ Found existing routine:`, existingRoutine.routine_name);
+      
+      // DIAGNOSTIC LOGGING - Database Response
+      console.log(`\n📦 DIAGNOSTIC - RAW DATABASE RESPONSE:`);
+      console.log(`   typeof activities:`, typeof existingRoutine.activities);
+      console.log(`   Array.isArray(activities):`, Array.isArray(existingRoutine.activities));
+      console.log(`   Raw activities:`, JSON.stringify(existingRoutine.activities, null, 2));
+      console.log(`   Activities length:`, existingRoutine.activities?.length);
     } else {
       console.log(`   ℹ️  No existing routine found - will create new one`);
     }
@@ -142,10 +149,23 @@ async function processMorningRoutineActivity(
       ? currentActivities 
       : [];
 
+    // DIAGNOSTIC LOGGING - After Parsing
+    console.log(`\n🔄 DIAGNOSTIC - AFTER PARSING:`);
+    console.log(`   typeof currentActivities:`, typeof currentActivities);
+    console.log(`   Parsed currentActivities:`, JSON.stringify(currentActivities, null, 2));
+    console.log(`   activitiesArray:`, JSON.stringify(activitiesArray, null, 2));
+    console.log(`   activitiesArray.length:`, activitiesArray.length);
+
     // Check for duplicates
     const isDuplicate = activitiesArray.some(
       a => a.name.toLowerCase() === activity.name.toLowerCase()
     );
+
+    // DIAGNOSTIC LOGGING - Duplicate Check
+    console.log(`\n🔍 DIAGNOSTIC - DUPLICATE CHECK:`);
+    console.log(`   New activity name (lowercased):`, activity.name.toLowerCase());
+    console.log(`   Existing activity names:`, activitiesArray.map(a => `"${a.name.toLowerCase()}"`));
+    console.log(`   Is duplicate?:`, isDuplicate);
 
     if (isDuplicate) {
       console.log(`ℹ️  Activity "${activity.name}" already exists in routine, skipping`);
@@ -155,6 +175,12 @@ async function processMorningRoutineActivity(
     // Add new activity
     const newActivities = [...activitiesArray, activity];
     const newDuration = (existingRoutine.duration_minutes || 0) + (activity.duration_minutes || 0);
+
+    // DIAGNOSTIC LOGGING - Before Update
+    console.log(`\n💾 DIAGNOSTIC - BEFORE UPDATE:`);
+    console.log(`   Old activities count:`, activitiesArray.length);
+    console.log(`   New activities count:`, newActivities.length);
+    console.log(`   Full new activities:`, JSON.stringify(newActivities, null, 2));
 
     console.log(`   💾 Updating routine in DB...`);
     await db.exec`
