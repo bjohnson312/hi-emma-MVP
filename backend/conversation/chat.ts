@@ -278,7 +278,7 @@ async function callAI(messages: AIMessage[]): Promise<string> {
       "Authorization": `Bearer ${openAIKey()}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages,
       temperature: 0.7,
       max_tokens: 300,
