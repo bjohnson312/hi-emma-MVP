@@ -50,3 +50,10 @@ export interface UsageStatsResponse {
     totalSessions: number;
   }[];
 }
+
+export interface SyncClerkUsersResponse {
+  success: boolean;
+  synced: number;
+  errors: number;
+  message: string;
+}

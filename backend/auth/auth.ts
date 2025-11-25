@@ -54,15 +54,38 @@ export const clerkAuth = authHandler<AuthParams, AuthData>(
 
       try {
         const db = (await import("../db")).default;
+        
+        const email = payload.email || payload.email_addresses?.[0] || `${userId}@clerk-user.local`;
+        const firstName = payload.first_name || payload.given_name || '';
+        const lastName = payload.last_name || payload.family_name || '';
+        const name = `${firstName} ${lastName}`.trim() || email.split('@')[0];
+        
+        await db.exec`
+          INSERT INTO users (id, email, name, password_hash, created_at, is_active, login_count, last_login)
+          VALUES (
+            ${userId},
+            ${email},
+            ${name},
+            'clerk-managed',
+            NOW(),
+            true,
+            1,
+            NOW()
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            name = EXCLUDED.name,
+            last_login = NOW(),
+            login_count = users.login_count + 1,
+            is_active = true
+        `;
+        
         await db.exec`
           INSERT INTO app_events (user_id, event_type)
           VALUES (${userId}, 'login')
         `;
-        await db.exec`
-          UPDATE users 
-          SET last_login = NOW(), login_count = COALESCE(login_count, 0) + 1
-          WHERE id = ${userId}
-        `;
+        
+        console.log('[Auth Handler] ✅ User synced to database');
       } catch (err) {
         console.log('[Auth Handler] ⚠️ Failed to log event:', err);
       }

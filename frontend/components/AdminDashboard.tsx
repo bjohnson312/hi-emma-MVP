@@ -22,6 +22,7 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [accessStats, setAccessStats] = useState<AccessStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [dailyData, setDailyData] = useState<{ date: string; count: number }[]>([]);
   const [weeklyData, setWeeklyData] = useState<{ week: string; count: number }[]>([]);
   const { toast } = useToast();
@@ -209,6 +210,40 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
         description: "Failed to export users",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSyncClerkUsers = async () => {
+    if (!confirm("This will sync all users from Clerk event history. Users will be updated with real data on next login. Continue?")) {
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      const response = await backend.admin_portal.syncClerkUsers();
+      
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: response.message,
+        });
+        loadUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to sync Clerk users",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -418,6 +453,14 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                   Users ({users?.total || 0})
                 </h2>
                 <div className="flex gap-2">
+                  <Button
+                    onClick={handleSyncClerkUsers}
+                    disabled={isSyncing}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    {isSyncing ? "Syncing..." : "Sync Clerk Users"}
+                  </Button>
                   <Button
                     onClick={handleExportUsers}
                     className="bg-green-600 hover:bg-green-700"
