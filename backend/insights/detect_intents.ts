@@ -12,15 +12,29 @@ import type {
 const openAIKey = secret("OpenAIKey");
 
 async function getRoutineCompletion(userId: string): Promise<RoutineCompletion> {
-  const morningPref = await db.queryRow<{ activity_count: number }>`
-    SELECT 
-      CASE 
-        WHEN COUNT(*) = 0 THEN 0
-        ELSE COALESCE(jsonb_array_length(activities), 0)
-      END as activity_count
+  // Fixed: Removed COUNT(*) aggregate and CASE statement
+  // Simple SELECT to get the routine and extract activity count
+  const morningPref = await db.queryRow<{ activities: any }>`
+    SELECT activities
     FROM morning_routine_preferences
     WHERE user_id = ${userId} AND is_active = true
+    LIMIT 1
   `;
+
+  // Calculate activity count from the result
+  let activityCount = 0;
+  if (morningPref && morningPref.activities) {
+    if (Array.isArray(morningPref.activities)) {
+      activityCount = morningPref.activities.length;
+    } else if (typeof morningPref.activities === 'string') {
+      try {
+        const parsed = JSON.parse(morningPref.activities);
+        activityCount = Array.isArray(parsed) ? parsed.length : 0;
+      } catch {
+        activityCount = 0;
+      }
+    }
+  }
 
   const eveningCheckin = await db.queryRow<{ entry_count: number }>`
     SELECT COUNT(*) as entry_count
@@ -43,7 +57,7 @@ async function getRoutineCompletion(userId: string): Promise<RoutineCompletion> 
   `;
 
   return {
-    morningCompleted: (morningPref?.activity_count || 0) >= 3,
+    morningCompleted: activityCount >= 3,
     eveningCompleted: (eveningCheckin?.entry_count || 0) >= 2,
     dietSetupComplete: dietSetup?.has_diet || false,
     doctorsOrdersCount: doctorsOrders?.count || 0
