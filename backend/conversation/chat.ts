@@ -326,6 +326,47 @@ function inferIcon(activityName: string): string {
 }
 
 /**
+ * Extract activities from user describing their existing routine
+ * Patterns: "my exercises are X and Y", "my routine includes X", etc.
+ * Returns array of activity names
+ */
+function extractActivitiesFromUserDescription(userMessage: string): string[] {
+  const activities: string[] = [];
+  
+  const patterns = [
+    // "my exercises are HIIT and 2 mile walk"
+    /my exercises?\s+(?:are|is|include|of)\s+([^.!?]+)/i,
+    // "my routine includes yoga and meditation"
+    /my routine\s+(?:includes?|is|consists? of)\s+([^.!?]+)/i,
+    // "I do yoga and meditation in the morning"
+    /I (?:do|practice)\s+([^.!?]+?)\s+(?:in the morning|every morning|each morning|daily)/i,
+    // "I usually do X and Y"
+    /I usually (?:do|practice)\s+([^.!?]+)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = userMessage.match(pattern);
+    if (match) {
+      const activityList = match[1];
+      
+      // Split by "and" or commas
+      const splitActivities = activityList.split(/\s+and\s+|,\s+/);
+      
+      splitActivities.forEach(rawActivity => {
+        const cleaned = cleanActivityName(rawActivity.trim());
+        if (cleaned && cleaned.length > 0) {
+          activities.push(cleaned);
+        }
+      });
+      
+      break; // Only process first match
+    }
+  }
+  
+  return activities;
+}
+
+/**
  * Update wake time from conversation
  * Workflow: extract time → update profile → log to journal → update memory
  */
@@ -541,10 +582,11 @@ export const chat = api<ChatRequest, ChatResponse>(
 
     // UNIFIED WORKFLOW: Extract and process morning routine activities from natural conversation
     if (session_type === "morning") {
+      // Strategy 1: Extract from Emma's confirmation (preferred)
       const activityName = extractActivityFromReply(emmaReply);
       
       if (activityName) {
-        console.log(`\n🔍 EXTRACTOR: Detected activity addition: "${activityName}"`);
+        console.log(`\n🔍 EXTRACTOR (Emma): Detected activity addition: "${activityName}"`);
         
         const activity: MorningRoutineActivity = {
           id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
@@ -554,7 +596,7 @@ export const chat = api<ChatRequest, ChatResponse>(
           description: ""
         };
         
-        console.log(`🔍 EXTRACTOR: Inferred duration=${activity.duration_minutes}min, icon=${activity.icon}`);
+        console.log(`🔍 EXTRACTOR (Emma): Inferred duration=${activity.duration_minutes}min, icon=${activity.icon}`);
         
         try {
           // Use unified workflow: auto-create routine if needed + journal logging + memory updates
@@ -564,12 +606,48 @@ export const chat = api<ChatRequest, ChatResponse>(
           });
           
           activityAdded = true;
-          console.log(`✅ EXTRACTOR: Activity "${activityName}" processed successfully\n`);
+          console.log(`✅ EXTRACTOR (Emma): Activity "${activityName}" processed successfully\n`);
         } catch (error) {
-          console.error("❌ EXTRACTOR: Failed to add routine activity:", error);
+          console.error("❌ EXTRACTOR (Emma): Failed to add routine activity:", error);
         }
       } else {
-        console.log(`🔍 EXTRACTOR: No activity addition detected in Emma's reply`);
+        console.log(`🔍 EXTRACTOR (Emma): No activity addition detected in Emma's reply`);
+        
+        // Strategy 2: Extract from user's description of existing routine (fallback)
+        const userActivities = extractActivitiesFromUserDescription(user_message);
+        
+        if (userActivities.length > 0) {
+          console.log(`\n🔍 EXTRACTOR (User): Detected ${userActivities.length} activity(ies) from user's message`);
+          
+          for (const userActivityName of userActivities) {
+            console.log(`🔍 EXTRACTOR (User): Processing "${userActivityName}"`);
+            
+            const activity: MorningRoutineActivity = {
+              id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+              name: userActivityName,
+              duration_minutes: inferDuration(userActivityName),
+              icon: inferIcon(userActivityName),
+              description: ""
+            };
+            
+            console.log(`🔍 EXTRACTOR (User): Inferred duration=${activity.duration_minutes}min, icon=${activity.icon}`);
+            
+            try {
+              // Use unified workflow: auto-create routine if needed + journal logging + memory updates
+              await processMorningRoutineActivity(user_id, activity, {
+                userMessage: user_message,
+                emmaReply: cleanedReply
+              });
+              
+              activityAdded = true;
+              console.log(`✅ EXTRACTOR (User): Activity "${userActivityName}" added from user description\n`);
+            } catch (error) {
+              console.error(`❌ EXTRACTOR (User): Failed to add "${userActivityName}":`, error);
+            }
+          }
+        } else {
+          console.log(`🔍 EXTRACTOR (User): No routine description detected in user's message`);
+        }
       }
     }
 
@@ -825,23 +903,14 @@ You: "I've added meditation to your routine! 🙏 Are you new to meditation or h
 
 REMEMBER: Always confirm with "I've added [activity] to your routine" - this exact phrasing is essential!
 
-User: "I've been stretching for 5 minutes"
-You: "ADD_ROUTINE_ACTIVITY: {name: \"stretching\", duration: 5, icon: \"💪\"}
-Great! I've added stretching to your morning routine."
-
-User: "I usually read in the morning"
-You: "ADD_ROUTINE_ACTIVITY: {name: \"morning reading\", duration: 15, icon: \"📖\"}
-Wonderful! Reading is such a peaceful way to start the day. I've added it to your routine. ✨"
-
 CONVERSATION FLOW:
 1. Greet warmly based on time of day
 2. Ask about their sleep
-3. Listen for ANY activity mention
-4. IMMEDIATELY output ADD_ROUTINE_ACTIVITY command (on its own line)
-5. Then provide natural confirmation
-6. Continue conversation naturally
+3. Listen for ANY activity mention and add it naturally
+4. Use phrases like "I've added [activity] to your routine!" to confirm
+5. Continue conversation naturally with follow-up questions
 
-Remember: The command goes FIRST (on its own line), then your natural response.`, 
+Important: Always say "I've added [activity] to your routine" when they mention activities - this is essential for the system to save them!`, 
 
     evening: `${basePrompt}
 
