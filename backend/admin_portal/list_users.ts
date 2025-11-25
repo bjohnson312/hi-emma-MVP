@@ -13,9 +13,9 @@ export const listUsers = api(
         email,
         name,
         created_at,
-        last_login_at,
+        last_login,
         COALESCE(is_active, true) as is_active,
-        COALESCE(total_logins, 0) as total_logins
+        COALESCE(login_count, 0) as login_count
       FROM users
       ORDER BY created_at DESC
     `) {
@@ -24,9 +24,9 @@ export const listUsers = api(
         email: (row.email as string) || 'N/A',
         name: (row.name as string) || 'N/A',
         created_at: row.created_at as Date,
-        last_login: row.last_login_at as Date | undefined,
+        last_login: row.last_login as Date | undefined,
         is_active: row.is_active as boolean,
-        login_count: row.total_logins as number,
+        login_count: row.login_count as number,
       });
     }
 

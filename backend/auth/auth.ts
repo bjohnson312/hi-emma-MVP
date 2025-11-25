@@ -60,7 +60,7 @@ export const clerkAuth = authHandler<AuthParams, AuthData>(
         `;
         await db.exec`
           UPDATE users 
-          SET last_login_at = NOW(), total_logins = COALESCE(total_logins, 0) + 1
+          SET last_login = NOW(), login_count = COALESCE(login_count, 0) + 1
           WHERE id = ${userId}
         `;
       } catch (err) {
