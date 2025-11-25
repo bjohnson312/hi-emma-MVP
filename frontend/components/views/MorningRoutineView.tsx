@@ -622,7 +622,15 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-2xl font-bold text-[#323e48] mb-1">{routine.routine_name}</h3>
-                <p className="text-[#323e48]/70">{routine.duration_minutes} minutes total</p>
+                <div className="flex items-center gap-4 text-[#323e48]/70">
+                  <p>{routine.duration_minutes} minutes total</p>
+                  {routine.wake_time && (
+                    <p className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      Wake-up: {routine.wake_time}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-[#4e8f71] mb-1">

@@ -1,6 +1,7 @@
 import { api } from "encore.dev/api";
 import db from "../db";
 import type { MorningRoutineActivity, MorningRoutinePreference } from "./routine_types";
+import { calculateTotalDuration } from "./routine_types";
 import { logJournalEntry } from "./add_journal_entry";
 
 interface AddActivityRequest {
@@ -39,7 +40,7 @@ export const addActivity = api<AddActivityRequest, MorningRoutinePreference>(
     }
 
     const newActivities = [...activitiesArray, activity];
-    const newDuration = (existing.duration_minutes || 0) + (activity.duration_minutes || 0);
+    const newDuration = calculateTotalDuration(newActivities);
 
     const updated = await db.queryRow<MorningRoutinePreference>`
       UPDATE morning_routine_preferences
@@ -55,7 +56,11 @@ export const addActivity = api<AddActivityRequest, MorningRoutinePreference>(
       "activity_added",
       `Added new activity: ${activity.name}`,
       activity.name,
-      { duration_minutes: activity.duration_minutes, icon: activity.icon }
+      { 
+        duration_minutes: activity.duration_minutes, 
+        icon: activity.icon,
+        created_at: new Date().toISOString()
+      }
     );
 
     return updated!;

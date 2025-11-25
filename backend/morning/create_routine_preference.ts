@@ -1,6 +1,7 @@
 import { api } from "encore.dev/api";
 import db from "../db";
 import type { CreateRoutinePreferenceRequest, MorningRoutinePreference } from "./routine_types";
+import { calculateTotalDuration } from "./routine_types";
 import { updateJourneyProgress } from "../journey/update_progress";
 import { logJournalEntry } from "./add_journal_entry";
 
@@ -8,6 +9,9 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
   { expose: true, method: "POST", path: "/morning_routine/preference/create" },
   async (req) => {
     const { user_id, routine_name, activities, wake_time, duration_minutes } = req;
+    
+    const calculatedDuration = calculateTotalDuration(activities);
+    const finalDuration = duration_minutes !== undefined ? duration_minutes : calculatedDuration;
 
     const existing = await db.queryRow<{ id: number }>`
       SELECT id FROM morning_routine_preferences
@@ -20,7 +24,7 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
         SET routine_name = ${routine_name},
             activities = ${JSON.stringify(activities)},
             wake_time = ${wake_time},
-            duration_minutes = ${duration_minutes},
+            duration_minutes = ${finalDuration},
             updated_at = NOW()
         WHERE user_id = ${user_id}
         RETURNING *
@@ -33,7 +37,7 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
         undefined,
         { 
           activities_count: activities.length,
-          duration_minutes 
+          duration_minutes: finalDuration 
         }
       );
 
@@ -44,7 +48,7 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
       INSERT INTO morning_routine_preferences (
         user_id, routine_name, activities, wake_time, duration_minutes
       ) VALUES (
-        ${user_id}, ${routine_name}, ${JSON.stringify(activities)}, ${wake_time}, ${duration_minutes}
+        ${user_id}, ${routine_name}, ${JSON.stringify(activities)}, ${wake_time}, ${finalDuration}
       )
       RETURNING *
     `;
@@ -58,7 +62,7 @@ export const createRoutinePreference = api<CreateRoutinePreferenceRequest, Morni
       undefined,
       { 
         activities_count: activities.length,
-        duration_minutes 
+        duration_minutes: finalDuration 
       }
     );
 

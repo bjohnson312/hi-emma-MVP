@@ -14,7 +14,8 @@ interface MorningCheckInProps {
 }
 
 type MessageSender = "emma" | "user";
-type ConversationStep = "initial" | "name" | "sleep" | "stretch_offer" | "stretch_guide" | "routine_pref" | "music_input" | "wake_time" | "complete";
+type ConversationStep = "initial" | "name" | "sleep" | "sleep_quality" | "sleep_duration" | "stretch_offer" | "stretch_guide" | "routine_pref" | "music_input" | "wake_time" | "complete";
+type SleepQualityLabel = 'poor' | 'fair' | 'good' | 'great' | 'excellent';
 
 interface Message {
   sender: MessageSender;
@@ -28,6 +29,7 @@ interface Message {
   stretchSuggestions?: string[];
   showYesNo?: boolean;
   showRoutineOptions?: boolean;
+  showSleepQualityOptions?: boolean;
 }
 
 export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInProps) {
@@ -37,6 +39,8 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
   const [conversationStep, setConversationStep] = useState<ConversationStep>("initial");
   const [selectedRoutine, setSelectedRoutine] = useState<RoutinePreference | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sleepQualityLabel, setSleepQualityLabel] = useState<SleepQualityLabel | null>(null);
+  const [sleepDurationHours, setSleepDurationHours] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -79,6 +83,7 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
       stretchSuggestions?: string[];
       showYesNo?: boolean;
       showRoutineOptions?: boolean;
+      showSleepQualityOptions?: boolean;
     }
   ) => {
     setMessages(prev => [...prev, { 
@@ -111,8 +116,12 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
         });
 
         setTimeout(() => {
-          addMessage("emma", response.emma_reply);
-          if (response.next_step === "sleep_question") {
+          addMessage("emma", response.emma_reply, {
+            showSleepQualityOptions: response.show_sleep_quality_options
+          });
+          if (response.next_step === "sleep_quality_input") {
+            setConversationStep("sleep_quality");
+          } else if (response.next_step === "sleep_question") {
             setConversationStep("sleep");
           } else {
             setConversationStep("name");
@@ -163,6 +172,83 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
       }, 800);
     } catch (error) {
       console.error("Failed to process name:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process your response. Please try again.",
+        variant: "destructive"
+      });
+      setLoading(false);
+    }
+  };
+
+  const handleSleepQualitySelect = async (quality: SleepQualityLabel) => {
+    setSleepQualityLabel(quality);
+    addMessage("user", quality.charAt(0).toUpperCase() + quality.slice(1));
+    setLoading(true);
+
+    try {
+      const response = await backend.morning.checkIn({
+        user_id: userId,
+        user_name: userName,
+        step: "sleep_quality_input",
+        sleep_quality_label: quality
+      });
+
+      setTimeout(() => {
+        addMessage("emma", response.emma_reply);
+        setConversationStep("sleep_duration");
+        setLoading(false);
+      }, 800);
+    } catch (error) {
+      console.error("Failed to process sleep quality:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process your response. Please try again.",
+        variant: "destructive"
+      });
+      setLoading(false);
+    }
+  };
+
+  const handleSleepDurationSubmit = async () => {
+    const hours = parseFloat(currentInput.trim());
+    if (!currentInput.trim() || isNaN(hours) || hours < 0 || hours > 24) {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter a valid number of hours (0-24).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSleepDurationHours(hours);
+    addMessage("user", `${hours} hours`);
+    setCurrentInput("");
+    setLoading(true);
+
+    try {
+      const response = await backend.morning.checkIn({
+        user_id: userId,
+        user_name: userName,
+        step: "sleep_duration_input",
+        sleep_quality_label: sleepQualityLabel || undefined,
+        sleep_duration_hours: hours
+      });
+
+      setTimeout(() => {
+        addMessage("emma", response.emma_reply, {
+          showYesNo: response.show_yes_no
+        });
+        
+        if (response.next_step === "offer_stretch") {
+          setConversationStep("stretch_offer");
+        } else {
+          setConversationStep("complete");
+        }
+        setLoading(false);
+      }, 800);
+    } catch (error) {
+      console.error("Failed to process sleep duration:", error);
       toast({
         title: "Error",
         description: "Failed to process your response. Please try again.",
@@ -375,6 +461,8 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
       handleNameSubmit();
     } else if (conversationStep === "sleep") {
       handleSleepSubmit();
+    } else if (conversationStep === "sleep_duration") {
+      handleSleepDurationSubmit();
     } else if (conversationStep === "music_input") {
       handleMusicGenreSubmit();
     } else if (conversationStep === "wake_time") {
@@ -393,12 +481,13 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
   const getPlaceholder = () => {
     if (conversationStep === "name") return "Type your name...";
     if (conversationStep === "sleep") return "Tell me how you slept...";
+    if (conversationStep === "sleep_duration") return "Enter hours (e.g., 7.5)";
     if (conversationStep === "music_input") return "What type of music? (e.g., jazz, classical, pop)";
     if (conversationStep === "wake_time") return "What time? (e.g., 7:00 AM, 6:30 AM)";
     return "";
   };
 
-  const showInput = ["name", "sleep", "music_input", "wake_time"].includes(conversationStep);
+  const showInput = ["name", "sleep", "sleep_duration", "music_input", "wake_time"].includes(conversationStep);
 
   return (
     <div className="max-w-3xl mx-auto h-[600px] bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/40">
@@ -505,6 +594,59 @@ export default function MorningCheckIn({ userId, onNameUpdate }: MorningCheckInP
                     <Music className="w-4 h-4 mr-2" />
                     Music
                   </Button>
+                </div>
+              )}
+
+              {message.showSleepQualityOptions && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-[#323e48]/60 mb-2">Select how you slept:</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    <Button
+                      onClick={() => handleSleepQualitySelect('poor')}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700 shadow-lg text-xs py-2 px-2"
+                    >
+                      Poor
+                    </Button>
+                    <Button
+                      onClick={() => handleSleepQualitySelect('fair')}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700 shadow-lg text-xs py-2 px-2"
+                    >
+                      Fair
+                    </Button>
+                    <Button
+                      onClick={() => handleSleepQualitySelect('good')}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700 shadow-lg text-xs py-2 px-2"
+                    >
+                      Good
+                    </Button>
+                    <Button
+                      onClick={() => handleSleepQualitySelect('great')}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700 shadow-lg text-xs py-2 px-2"
+                    >
+                      Great
+                    </Button>
+                    <Button
+                      onClick={() => handleSleepQualitySelect('excellent')}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700 shadow-lg text-xs py-2 px-2"
+                    >
+                      Excellent
+                    </Button>
+                  </div>
                 </div>
               )}
 

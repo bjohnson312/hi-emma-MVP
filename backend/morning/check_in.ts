@@ -28,6 +28,8 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
       user_response, 
       step = "greeting", 
       sleep_quality,
+      sleep_quality_label,
+      sleep_duration_hours,
       wants_stretch,
       routine_preference,
       music_genre,
@@ -74,14 +76,14 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
           if (daysSinceLastChat === 0) {
             greeting += "How are you feeling now?";
           } else if (daysSinceLastChat === 1) {
-            greeting += "It's great to see you again! How did you sleep last night?";
+            greeting += "It's great to see you again! How would you rate your sleep last night?";
           } else if (daysSinceLastChat > 7) {
-            greeting += `I've missed our chats! It's been ${daysSinceLastChat} days. How have you been? How did you sleep?`;
+            greeting += `I've missed our chats! It's been ${daysSinceLastChat} days. How have you been? How would you rate your sleep?`;
           } else {
-            greeting += `It's been ${daysSinceLastChat} days! How have you been? How did you sleep last night?`;
+            greeting += `It's been ${daysSinceLastChat} days! How have you been? How would you rate your sleep last night?`;
           }
         } else {
-          greeting += "How did you sleep last night?";
+          greeting += "How would you rate your sleep last night?";
         }
 
         await db.exec`
@@ -93,7 +95,8 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
 
         return {
           emma_reply: greeting,
-          next_step: "sleep_question"
+          next_step: "sleep_quality_input",
+          show_sleep_quality_options: true
         };
       }
 
@@ -107,7 +110,8 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
 
       return {
         emma_reply: greeting,
-        next_step: user_name ? "sleep_question" : "process_name"
+        next_step: user_name ? "sleep_quality_input" : "process_name",
+        show_sleep_quality_options: user_name ? true : undefined
       };
     }
 
@@ -129,11 +133,75 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
 
       return {
         emma_reply: greeting,
-        next_step: "sleep_question"
+        next_step: "sleep_quality_input",
+        show_sleep_quality_options: true
       };
     }
 
-    // Step 3: Process sleep response (from text input)
+    // Step 3a: NEW - Process sleep quality label (pill button selection)
+    if (step === "sleep_quality_input" && sleep_quality_label) {
+      const durationQuestion = "How many hours did you sleep last night?";
+      
+      await db.exec`
+        INSERT INTO conversation_history 
+          (user_id, conversation_type, user_message, emma_response, context)
+        VALUES 
+          (${user_id}, 'morning', ${sleep_quality_label}, ${durationQuestion}, ${JSON.stringify({ sleep_quality_label })})
+      `;
+
+      return {
+        emma_reply: durationQuestion,
+        next_step: "sleep_duration_input"
+      };
+    }
+
+    // Step 3b: NEW - Process sleep duration
+    if (step === "sleep_duration_input" && sleep_duration_hours !== undefined) {
+      const categorizedQuality = sleep_quality_label || 'good';
+      const sleepResponse = getSleepResponse(categorizedQuality as any);
+      const habitAction = getHabitSuggestion(categorizedQuality as any);
+      const habitInvitation = getHabitInvitation(habitAction);
+
+      await updateBehaviorPattern(user_id, "sleep_quality", {
+        typical_quality: categorizedQuality,
+        last_quality: categorizedQuality,
+        last_duration_hours: sleep_duration_hours
+      });
+
+      const emmaReply = `${sleepResponse} ${habitInvitation}`;
+      await db.exec`
+        INSERT INTO conversation_history 
+          (user_id, conversation_type, user_message, emma_response, context)
+        VALUES 
+          (${user_id}, 'morning', ${sleep_duration_hours.toString()}, ${emmaReply}, ${JSON.stringify({ sleep_quality_label, sleep_duration_hours, habit_action: habitAction })})
+      `;
+
+      if (habitAction === "stretch") {
+        return {
+          emma_reply: emmaReply,
+          habit_suggestion: habitAction,
+          next_step: "offer_stretch",
+          show_yes_no: true
+        };
+      }
+
+      await db.exec`
+        INSERT INTO morning_routine_logs 
+          (user_id, sleep_quality, selected_action, notes, sleep_quality_label, sleep_duration_hours)
+        VALUES 
+          (${user_id}, ${categorizedQuality}, ${habitAction}, ${JSON.stringify({ sleep_quality_label, sleep_duration_hours })}, ${sleep_quality_label}, ${sleep_duration_hours})
+      `;
+
+      await autoCreateMorningEntry(user_id, categorizedQuality as any, habitAction, `Sleep: ${sleep_duration_hours} hours (${sleep_quality_label})`);
+
+      return {
+        emma_reply: emmaReply,
+        habit_suggestion: habitAction,
+        next_step: "complete"
+      };
+    }
+
+    // Step 3c: LEGACY - Process sleep response (from text input) - GRACEFUL DEGRADATION
     if (step === "process_response" && user_response) {
       const categorizedQuality = categorizeSleep(user_response);
       const sleepResponse = getSleepResponse(categorizedQuality);
@@ -154,7 +222,6 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
           (${user_id}, 'morning', ${user_response}, ${emmaReply}, ${JSON.stringify({ sleep_quality: categorizedQuality, habit_action: habitAction })})
       `;
 
-      // For now, only handle stretch action with the new flow
       if (habitAction === "stretch") {
         return {
           emma_reply: emmaReply,
@@ -164,7 +231,6 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
         };
       }
 
-      // Fallback for other actions (deep_breath, gratitude_moment)
       await db.exec`
         INSERT INTO morning_routine_logs 
           (user_id, sleep_quality, selected_action, notes)
@@ -284,22 +350,28 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
       
       const result = await db.queryRow<{ id: number }>`
         INSERT INTO morning_routine_logs 
-          (user_id, sleep_quality, selected_action, notes)
+          (user_id, sleep_quality, selected_action, notes, sleep_quality_label, sleep_duration_hours)
         VALUES 
           (${user_id}, 'good', 'stretch', ${JSON.stringify({
             routine_preference,
             music_genre,
             wake_up_time,
-            user_name
-          })})
+            user_name,
+            sleep_quality_label,
+            sleep_duration_hours
+          })}, ${sleep_quality_label}, ${sleep_duration_hours})
         RETURNING id
       `;
+
+      const sleepSummary = sleep_quality_label && sleep_duration_hours 
+        ? `Sleep: ${sleep_duration_hours} hours (${sleep_quality_label}), `
+        : '';
 
       await autoCreateMorningEntry(
         user_id, 
         'good', 
         routine_preference || 'stretch', 
-        `Morning preferences: ${routine_preference || 'stretching'}${music_genre ? `, ${music_genre} music` : ''}, wake time: ${wake_up_time}`,
+        `${sleepSummary}Morning preferences: ${routine_preference || 'stretching'}${music_genre ? `, ${music_genre} music` : ''}, wake time: ${wake_up_time}`,
         result?.id
       );
 
@@ -307,7 +379,7 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
         INSERT INTO conversation_history 
           (user_id, conversation_type, user_message, emma_response, context)
         VALUES 
-          (${user_id}, 'morning', ${wake_up_time}, ${confirmation}, ${JSON.stringify({ wake_up_time })})
+          (${user_id}, 'morning', ${wake_up_time}, ${confirmation}, ${JSON.stringify({ wake_up_time, sleep_quality_label, sleep_duration_hours })})
       `;
 
       await db.exec`

@@ -18,6 +18,8 @@ export interface MorningRoutinePreference {
   updated_at: Date;
 }
 
+export type SleepQualityLabel = 'poor' | 'fair' | 'good' | 'great' | 'excellent';
+
 export interface MorningRoutineCompletion {
   id: number;
   user_id: string;
@@ -27,6 +29,8 @@ export interface MorningRoutineCompletion {
   notes?: string;
   mood_rating?: number;
   energy_level?: number;
+  sleep_quality_label?: SleepQualityLabel;
+  sleep_duration_hours?: number;
   created_at: Date;
 }
 
@@ -54,6 +58,8 @@ export interface LogRoutineCompletionRequest {
   notes?: string;
   mood_rating?: number;
   energy_level?: number;
+  sleep_quality_label?: SleepQualityLabel;
+  sleep_duration_hours?: number;
 }
 
 export interface GetRoutineStatsRequest {
@@ -85,4 +91,8 @@ export interface RoutineTemplate {
   activities: MorningRoutineActivity[];
   duration_minutes: number;
   color: string;
+}
+
+export function calculateTotalDuration(activities: MorningRoutineActivity[]): number {
+  return activities.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
 }

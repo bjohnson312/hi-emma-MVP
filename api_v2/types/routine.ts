@@ -72,6 +72,8 @@ export interface NextStepResponse {
   progress: number;
 }
 
+export type SleepQualityLabel = 'poor' | 'fair' | 'good' | 'great' | 'excellent';
+
 export interface RoutineSummary {
   sessionId: string;
   type: RoutineType;
@@ -79,6 +81,8 @@ export interface RoutineSummary {
   totalDuration: number;
   activities: string[];
   mood?: number;
+  sleep_quality_label?: SleepQualityLabel;
+  sleep_duration_hours?: number;
   insights?: string[];
   score?: number;
 }
@@ -109,6 +113,8 @@ export interface RoutineStats {
   averageDuration: number;
   completionRate: number;
   recentMoodAverage?: number;
+  averageSleepDuration?: number;
+  averageSleepQuality?: number;
   topActivities?: string[];
 }
 

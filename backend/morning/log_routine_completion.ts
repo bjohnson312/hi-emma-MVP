@@ -8,7 +8,7 @@ import { logJournalEntry } from "./add_journal_entry";
 export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRoutineCompletion>(
   { expose: true, method: "POST", path: "/morning_routine/completion/log" },
   async (req) => {
-    const { user_id, activities_completed, all_completed, notes, mood_rating, energy_level } = req;
+    const { user_id, activities_completed, all_completed, notes, mood_rating, energy_level, sleep_quality_label, sleep_duration_hours } = req;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -27,16 +27,18 @@ export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRout
             all_completed = ${all_completed},
             notes = ${notes},
             mood_rating = ${mood_rating},
-            energy_level = ${energy_level}
+            energy_level = ${energy_level},
+            sleep_quality_label = ${sleep_quality_label},
+            sleep_duration_hours = ${sleep_duration_hours}
         WHERE id = ${existing.id}
         RETURNING *
       `;
     } else {
       completion = await db.queryRow<MorningRoutineCompletion>`
         INSERT INTO morning_routine_completions (
-          user_id, completion_date, activities_completed, all_completed, notes, mood_rating, energy_level
+          user_id, completion_date, activities_completed, all_completed, notes, mood_rating, energy_level, sleep_quality_label, sleep_duration_hours
         ) VALUES (
-          ${user_id}, ${today}, ${JSON.stringify(activities_completed)}, ${all_completed}, ${notes}, ${mood_rating}, ${energy_level}
+          ${user_id}, ${today}, ${JSON.stringify(activities_completed)}, ${all_completed}, ${notes}, ${mood_rating}, ${energy_level}, ${sleep_quality_label}, ${sleep_duration_hours}
         )
         RETURNING *
       `;
@@ -70,12 +72,22 @@ export const logRoutineCompletion = api<LogRoutineCompletionRequest, MorningRout
         (activity) => !existing || !(existing as any).activities_completed?.includes(activity)
       );
       
-      for (const activity of newlyCompleted) {
+      const routine = await db.queryRow<{ activities: string }>`
+        SELECT activities FROM morning_routine_preferences
+        WHERE user_id = ${user_id} AND is_active = true
+      `;
+      
+      const activities = routine ? JSON.parse(routine.activities) : [];
+      
+      for (const activityId of newlyCompleted) {
+        const activityObj = activities.find((a: any) => a.id === activityId);
+        const activityName = activityObj?.name || activityId;
+        
         await logJournalEntry(
           user_id,
           "activity_completed",
-          `Completed: ${activity}`,
-          activity
+          `Completed: ${activityName}`,
+          activityName
         );
       }
     }
