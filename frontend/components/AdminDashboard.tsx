@@ -9,6 +9,7 @@ import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Cod
 import { SimpleLineChart } from "./admin/SimpleLineChart";
 import { SimpleBarChart } from "./admin/SimpleBarChart";
 import { UserTable } from "./admin/UserTable";
+import { AccessStatsSection } from "./admin/AccessStatsSection";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -356,6 +357,8 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                 )}
               </div>
             </div>
+
+            {usageStats && <AccessStatsSection usageStats={usageStats} />}
 
             <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Daily Active Users (Last 30 Days)</h2>
