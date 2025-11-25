@@ -77,25 +77,13 @@ export const getUsageStats = api(
 
     let totalWellnessEntries = 0;
     for await (const row of db.query`
-      SELECT COUNT(*)::int as count FROM (
-        SELECT user_id FROM mood_logs
-        UNION ALL
-        SELECT user_id FROM wellness_activities
-      ) as all_wellness
+      SELECT COUNT(*)::int as count FROM mood_logs
     `) {
       totalWellnessEntries = row.count as number;
     }
 
     const avgSessionsPerUser = totalUsers > 0 ? Math.round(totalConversations / totalUsers * 10) / 10 : 0;
-
-    let avgTimePerSession = 0;
-    for await (const row of db.query`
-      SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)))::int as avg_seconds
-      FROM conversation_sessions
-      WHERE updated_at > created_at
-    `) {
-      avgTimePerSession = (row.avg_seconds as number) || 0;
-    }
+    const avgTimePerSession = 0;
 
     const topUsers = [];
     for await (const row of db.query`
