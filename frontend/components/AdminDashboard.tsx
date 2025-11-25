@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import backend from "@/lib/backend-client";
 import type { UserListResponse, UsageStatsResponse } from "~backend/admin_portal/types";
-import type { SystemInfoResponse, AccessStatsResponse } from "~backend/admin_portal/admin_types";
+import type { SystemInfoResponse } from "~backend/admin_portal/admin_types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
@@ -20,16 +20,15 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
   const [users, setUsers] = useState<UserListResponse | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStatsResponse | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
-  const [accessStats, setAccessStats] = useState<AccessStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [dailyData, setDailyData] = useState<{ date: string; count: number }[]>([]);
   const [weeklyData, setWeeklyData] = useState<{ week: string; count: number }[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     loadSystemInfo();
-    loadAccessStats();
     loadUsers();
     loadUsageStats();
     loadDailyData();
@@ -60,15 +59,6 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
       setSystemInfo(data);
     } catch (error) {
       console.error("Failed to load system info:", error);
-    }
-  };
-
-  const loadAccessStats = async () => {
-    try {
-      const data = await backend.admin_portal.getAccessStats();
-      setAccessStats(data);
-    } catch (error) {
-      console.error("Failed to load access stats:", error);
     }
   };
 
@@ -105,11 +95,11 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
       const response = await backend.admin_portal.resetPassword({ userId });
 
       if (response.success && response.temporaryPassword) {
-        alert(`Temporary password: ${response.temporaryPassword}\n\nPlease save this password and share it securely with the user.`);
         toast({
-          title: "Success",
-          description: response.message,
+          title: "Password Reset Successful",
+          description: `Temporary password: ${response.temporaryPassword}\n\nPlease save this password and share it securely with the user.`,
         });
+        setSelectedUserId("");
       } else {
         toast({
           title: "Error",
@@ -125,6 +115,19 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
         variant: "destructive",
       });
     }
+  };
+
+  const handleResetPasswordFromDropdown = async () => {
+    if (!selectedUserId) {
+      toast({
+        title: "Error",
+        description: "Please select a user first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    await handleResetPassword(selectedUserId);
   };
 
   const handleReactivateUser = async (userId: string) => {
@@ -398,55 +401,41 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                 </div>
               </div>
             )}
-
-            {accessStats && (
-              <div>
-                <h2 className="text-xl font-semibold text-white mb-4">Access Statistics</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <StatCard
-                    icon={<Activity className="w-8 h-8" />}
-                    title="Total Accesses"
-                    value={accessStats.stats.totalAccess}
-                    color="purple"
-                  />
-                  <StatCard
-                    icon={<Users className="w-8 h-8" />}
-                    title="Unique Users"
-                    value={accessStats.stats.uniqueUsers}
-                    color="blue"
-                  />
-                  <StatCard
-                    icon={<TrendingUp className="w-8 h-8" />}
-                    title="Today's Accesses"
-                    value={accessStats.stats.todayAccess}
-                    color="green"
-                  />
-                  <StatCard
-                    icon={<Calendar className="w-8 h-8" />}
-                    title="Weekly Accesses"
-                    value={accessStats.stats.weeklyAccess}
-                    color="orange"
-                  />
-                  <StatCard
-                    icon={<Calendar className="w-8 h-8" />}
-                    title="Monthly Accesses"
-                    value={accessStats.stats.monthlyAccess}
-                    color="pink"
-                  />
-                  <StatCard
-                    icon={<Activity className="w-8 h-8" />}
-                    title="Avg Access/User"
-                    value={accessStats.stats.avgAccessPerUser}
-                    color="teal"
-                  />
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {activeTab === "users" && (
           <div className="space-y-8">
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Reset User Password</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Select User
+                  </label>
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="" className="bg-gray-800">Select a user to reset password...</option>
+                    {users?.users.map((user) => (
+                      <option key={user.id} value={user.id} className="bg-gray-800">
+                        {user.email} - {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button 
+                  onClick={handleResetPasswordFromDropdown}
+                  className="bg-purple-600 hover:bg-purple-700"
+                  disabled={!selectedUserId}
+                >
+                  Reset Password
+                </Button>
+              </div>
+            </div>
+
             <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-white">
