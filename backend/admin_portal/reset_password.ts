@@ -15,13 +15,22 @@ export const resetPassword = api(
   { method: "POST", path: "/admin/users/reset-password", expose: true, auth: false },
   async (req: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
     try {
-      const temporaryPassword = generateTemporaryPassword();
+      const { userId, customPassword } = req;
+
+      if (customPassword && customPassword.length < 8) {
+        return {
+          success: false,
+          message: "Password must be at least 8 characters",
+        };
+      }
+
+      const passwordToSet = customPassword || generateTemporaryPassword();
       
       let userEmail = '';
       for await (const row of db.query`
         SELECT email
         FROM users
-        WHERE id = ${req.userId}
+        WHERE id = ${userId}
       `) {
         userEmail = row.email as string;
       }
@@ -33,13 +42,17 @@ export const resetPassword = api(
         };
       }
 
-      console.log(`[Admin] Password reset requested for user ${req.userId} (${userEmail})`);
-      console.log(`[Admin] Temporary password generated: ${temporaryPassword}`);
+      console.log(`[Admin] Password ${customPassword ? 'set' : 'reset'} requested for user ${userId} (${userEmail})`);
+      if (!customPassword) {
+        console.log(`[Admin] Temporary password generated: ${passwordToSet}`);
+      }
       
       return {
         success: true,
-        message: `Password reset initiated for ${userEmail}`,
-        temporaryPassword,
+        message: customPassword 
+          ? `Custom password set for ${userEmail}`
+          : `Password reset initiated for ${userEmail}`,
+        temporaryPassword: customPassword ? undefined : passwordToSet,
       };
     } catch (error) {
       return {

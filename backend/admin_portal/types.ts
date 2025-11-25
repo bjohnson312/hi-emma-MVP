@@ -15,6 +15,7 @@ export interface UserListResponse {
 
 export interface ResetPasswordRequest {
   userId: string;
+  customPassword?: string;
 }
 
 export interface ResetPasswordResponse {

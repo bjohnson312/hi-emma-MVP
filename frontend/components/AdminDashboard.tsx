@@ -24,6 +24,9 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [passwordMode, setPasswordMode] = useState<'auto' | 'custom'>('auto');
+  const [customPassword, setCustomPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [dailyData, setDailyData] = useState<{ date: string; count: number }[]>([]);
   const [weeklyData, setWeeklyData] = useState<{ week: string; count: number }[]>([]);
   const { toast } = useToast();
@@ -89,18 +92,30 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
     }
   };
 
-  const handleResetPassword = async (userId: string) => {
+  const handleResetPassword = async (userId: string, customPwd?: string) => {
     if (!confirm("Are you sure you want to reset this user's password?")) return;
 
     try {
-      const response = await backend.admin_portal.resetPassword({ userId });
+      const response = await backend.admin_portal.resetPassword({ 
+        userId,
+        customPassword: customPwd 
+      });
 
-      if (response.success && response.temporaryPassword) {
-        toast({
-          title: "Password Reset Successful",
-          description: `Temporary password: ${response.temporaryPassword}\n\nPlease save this password and share it securely with the user.`,
-        });
+      if (response.success) {
+        if (customPwd) {
+          toast({
+            title: "Password Set Successfully",
+            description: `Custom password has been set for the user.`,
+          });
+        } else if (response.temporaryPassword) {
+          toast({
+            title: "Password Reset Successful",
+            description: `Temporary password: ${response.temporaryPassword}\n\nPlease save this password and share it securely with the user.`,
+          });
+        }
         setSelectedUserId("");
+        setCustomPassword("");
+        setPasswordMode('auto');
       } else {
         toast({
           title: "Error",
@@ -128,7 +143,16 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
       return;
     }
     
-    await handleResetPassword(selectedUserId);
+    if (passwordMode === 'custom' && customPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    await handleResetPassword(selectedUserId, passwordMode === 'custom' ? customPassword : undefined);
   };
 
   const handleReactivateUser = async (userId: string) => {
@@ -386,12 +410,70 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    Password Mode
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center text-white cursor-pointer">
+                      <input
+                        type="radio"
+                        value="auto"
+                        checked={passwordMode === 'auto'}
+                        onChange={() => {
+                          setPasswordMode('auto');
+                          setCustomPassword('');
+                        }}
+                        className="mr-2"
+                      />
+                      Auto-generate temporary password
+                    </label>
+                    <label className="flex items-center text-white cursor-pointer">
+                      <input
+                        type="radio"
+                        value="custom"
+                        checked={passwordMode === 'custom'}
+                        onChange={() => setPasswordMode('custom')}
+                        className="mr-2"
+                      />
+                      Set custom password
+                    </label>
+                  </div>
+                </div>
+
+                {passwordMode === 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-purple-200 mb-2">
+                      Custom Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={customPassword}
+                        onChange={(e) => setCustomPassword(e.target.value)}
+                        placeholder="Enter password (min 8 characters)"
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500 pr-10"
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-300 hover:text-white text-xl"
+                      >
+                        {showPassword ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    <p className="text-purple-300 text-xs mt-1">Minimum 8 characters</p>
+                  </div>
+                )}
+
                 <Button 
                   onClick={handleResetPasswordFromDropdown}
                   className="bg-purple-600 hover:bg-purple-700"
-                  disabled={!selectedUserId}
+                  disabled={!selectedUserId || (passwordMode === 'custom' && customPassword.length < 8)}
                 >
-                  Reset Password
+                  {passwordMode === 'auto' ? 'Generate & Reset Password' : 'Set Custom Password'}
                 </Button>
               </div>
             </div>
