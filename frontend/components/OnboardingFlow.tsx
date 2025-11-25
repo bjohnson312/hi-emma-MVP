@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
 import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX } from "lucide-react";
@@ -82,7 +82,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     }
   };
 
-  const questions: Question[] = [
+  const questions: Question[] = useMemo(() => [
     {
       id: 0,
       question: "What's your first name?",
@@ -133,7 +133,14 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       ],
       type: "choice"
     }
-  ];
+  ], [firstName]);
+
+  useEffect(() => {
+    const currentQuestion = questions[currentStep];
+    if (currentQuestion && currentStep > 0) {
+      setEmmaMessage(currentQuestion.question);
+    }
+  }, [questions, currentStep]);
 
   const handleAnswer = async (answer: string) => {
     stop();
