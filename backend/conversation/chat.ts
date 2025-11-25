@@ -1,3 +1,37 @@
+/**
+ * CONVERSATION CHAT ENDPOINT - UNIFIED PILLAR ARCHITECTURE
+ * 
+ * This file implements the clean, unified workflow for ALL wellness pillars:
+ * 
+ * WORKFLOW: User Message → Intent Detection → Action → Database Update → Journal Logging → Memory Update → Response
+ * 
+ * ✅ IMPLEMENTED PILLARS:
+ * - Morning Routine: Full unified workflow with auto-creation, journal logging, and memory updates
+ * 
+ * 🚧 TO BE IMPLEMENTED (using same pattern):
+ * - Doctor's Orders
+ * - Diet & Nutrition  
+ * - Mood/How Are You Feeling
+ * - Evening Routine
+ * 
+ * KEY ARCHITECTURAL PRINCIPLES:
+ * 1. Never fail due to missing data - auto-create if needed
+ * 2. All pillar data goes to dedicated tables (not JSONB fields in user_profiles)
+ * 3. Every action logs to the pillar's journal table
+ * 4. Significant changes update Emma's memory
+ * 5. System responds naturally in conversation
+ * 
+ * MORNING ROUTINE WORKFLOW (Template for all pillars):
+ * - User mentions activity → processMorningRoutineActivity() 
+ * - Check if routine exists → Create if missing
+ * - Add activity to morning_routine_preferences table
+ * - Log to morning_routine_journal table
+ * - Update Emma Memory via extractAndStoreMemories()
+ * - Return confirmation in chat
+ * 
+ * This pattern ensures clean separation, proper logging, and consistent UX across all pillars.
+ */
+
 import { api } from "encore.dev/api";
 import { secret } from "encore.dev/config";
 import db from "../db";
@@ -8,8 +42,8 @@ import { addFromConversation } from "../wellness_journal/add_manual";
 import { buildMemoryContext, extractAndStoreMemories } from "./memory";
 import { trackInteraction, getBehaviorPatterns } from "../profile/personalization";
 import { updateJourneyProgress } from "../journey/update_progress";
-import { addActivity } from "../morning/add_activity";
-import type { MorningRoutineActivity } from "../morning/routine_types";
+import type { MorningRoutineActivity, MorningRoutinePreference } from "../morning/routine_types";
+import { logJournalEntry } from "../morning/add_journal_entry";
 import { detectIntents } from "../insights/detect_intents";
 import { applySuggestion } from "../insights/apply_suggestion";
 
@@ -20,56 +54,167 @@ interface AIMessage {
   content: string;
 }
 
-async function updateMorningPreferences(userId: string, userMessage: string, emmaReply: string): Promise<void> {
-  const combined = `${userMessage} ${emmaReply}`.toLowerCase();
-  const updates: Record<string, any> = {};
+/**
+ * UNIFIED MORNING ROUTINE WORKFLOW
+ * This implements the clean architecture for conversation → action → database → journal → memory
+ * This pattern will be replicated for all other pillars (Diet, Doctor's Orders, Mood, Evening Routine)
+ */
 
-  if (combined.includes("stretch") && (combined.includes("yes") || combined.includes("love to") || combined.includes("sounds good"))) {
-    updates.stretching = true;
-  }
+/**
+ * Process morning routine activity mentioned in conversation
+ * Workflow: detect activity → check if routine exists → create routine if needed → add activity → log to journal → update memory
+ */
+async function processMorningRoutineActivity(
+  userId: string, 
+  activity: MorningRoutineActivity,
+  context: { userMessage: string; emmaReply: string }
+): Promise<void> {
+  try {
+    // Check if user has an active morning routine
+    const existingRoutine = await db.queryRow<MorningRoutinePreference>`
+      SELECT * FROM morning_routine_preferences
+      WHERE user_id = ${userId} AND is_active = true
+    `;
 
-  if (combined.includes("gratitude") || combined.includes("grateful")) {
-    updates.gratitude = true;
-  }
+    if (!existingRoutine) {
+      // FIX 1: Auto-create routine if missing (never fail with "No active morning routine")
+      console.log(`✨ Creating new morning routine for user ${userId} with first activity: ${activity.name}`);
+      
+      await db.exec`
+        INSERT INTO morning_routine_preferences (
+          user_id, 
+          routine_name, 
+          activities, 
+          duration_minutes,
+          is_active
+        ) VALUES (
+          ${userId}, 
+          'My Morning Routine',
+          ${JSON.stringify([activity])}::jsonb,
+          ${activity.duration_minutes || 5},
+          true
+        )
+      `;
 
-  if (combined.includes("meditat") || combined.includes("prayer") || combined.includes("pray")) {
-    updates.meditation = true;
-  }
+      // FIX 3: Log to morning routine journal
+      await logJournalEntry(
+        userId,
+        "routine_created",
+        `Created morning routine with first activity: ${activity.name}`,
+        activity.name,
+        { duration_minutes: activity.duration_minutes, icon: activity.icon, source: "conversation" }
+      );
 
-  const musicGenres = ["classical", "jazz", "pop", "rock", "indie", "lo-fi", "lofi", "ambient", "folk", "country", "r&b", "soul", "electronic"];
-  for (const genre of musicGenres) {
-    if (combined.includes(genre)) {
-      updates.music_genre = genre;
-      break;
+      // FIX 4: Update Emma Memory
+      await extractAndStoreMemories(
+        userId, 
+        context.userMessage,
+        `I've created your morning routine with ${activity.name}. This will help you start your day with intention.`
+      );
+
+      console.log(`✅ Morning routine created successfully`);
+      return;
     }
-  }
 
-  const wakeTimeMatch = userMessage.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
-  if (wakeTimeMatch && emmaReply.toLowerCase().includes("wake")) {
-    const hour = parseInt(wakeTimeMatch[1]);
-    const minute = wakeTimeMatch[2] || "00";
-    const period = wakeTimeMatch[3]?.toLowerCase();
-    
-    let formattedHour = hour;
-    if (period === "pm" && hour !== 12) formattedHour += 12;
-    if (period === "am" && hour === 12) formattedHour = 0;
-    
-    const wakeTime = `${String(formattedHour).padStart(2, "0")}:${minute}`;
-    
+    // Routine exists - add activity to it
+    const currentActivities = typeof existingRoutine.activities === 'string' 
+      ? JSON.parse(existingRoutine.activities)
+      : existingRoutine.activities;
+
+    const activitiesArray: MorningRoutineActivity[] = Array.isArray(currentActivities) 
+      ? currentActivities 
+      : [];
+
+    // Check for duplicates
+    const isDuplicate = activitiesArray.some(
+      a => a.name.toLowerCase() === activity.name.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      console.log(`ℹ️  Activity "${activity.name}" already exists in routine, skipping`);
+      return;
+    }
+
+    // Add new activity
+    const newActivities = [...activitiesArray, activity];
+    const newDuration = (existingRoutine.duration_minutes || 0) + (activity.duration_minutes || 0);
+
+    await db.exec`
+      UPDATE morning_routine_preferences
+      SET activities = ${JSON.stringify(newActivities)}::jsonb,
+          duration_minutes = ${newDuration},
+          updated_at = NOW()
+      WHERE user_id = ${userId} AND is_active = true
+    `;
+
+    // FIX 3: Log to morning routine journal
+    await logJournalEntry(
+      userId,
+      "activity_added",
+      `Added new activity: ${activity.name}`,
+      activity.name,
+      { duration_minutes: activity.duration_minutes, icon: activity.icon, source: "conversation" }
+    );
+
+    // FIX 4: Update Emma Memory
+    await extractAndStoreMemories(
+      userId,
+      context.userMessage,
+      `I've added ${activity.name} to your morning routine.`
+    );
+
+    console.log(`✅ Activity "${activity.name}" added to existing routine`);
+
+  } catch (error) {
+    console.error("❌ Failed to process morning routine activity:", error);
+    throw error;
+  }
+}
+
+/**
+ * Update wake time from conversation
+ * Workflow: extract time → update profile → log to journal → update memory
+ */
+async function updateWakeTime(
+  userId: string, 
+  wakeTime: string,
+  context: { userMessage: string; emmaReply: string }
+): Promise<void> {
+  try {
+    // Update in user profile
     await db.exec`
       UPDATE user_profiles
       SET wake_time = ${wakeTime}, updated_at = NOW()
       WHERE user_id = ${userId}
     `;
-  }
 
-  if (Object.keys(updates).length > 0) {
+    // Also update in morning routine preferences if exists
     await db.exec`
-      UPDATE user_profiles
-      SET morning_routine_preferences = COALESCE(morning_routine_preferences, '{}'::jsonb) || ${JSON.stringify(updates)}::jsonb,
-          updated_at = NOW()
-      WHERE user_id = ${userId}
+      UPDATE morning_routine_preferences
+      SET wake_time = ${wakeTime}, updated_at = NOW()
+      WHERE user_id = ${userId} AND is_active = true
     `;
+
+    // Log to journal
+    await logJournalEntry(
+      userId,
+      "routine_edited",
+      `Updated wake time to ${wakeTime}`,
+      undefined,
+      { wake_time: wakeTime, source: "conversation" }
+    );
+
+    // Update Emma Memory
+    await extractAndStoreMemories(
+      userId,
+      context.userMessage,
+      `I've noted that you wake up at ${wakeTime}.`
+    );
+
+    console.log(`✅ Wake time updated to ${wakeTime}`);
+  } catch (error) {
+    console.error("❌ Failed to update wake time:", error);
+    throw error;
   }
 }
 
@@ -228,6 +373,7 @@ export const chat = api<ChatRequest, ChatResponse>(
       }
     }
 
+    // UNIFIED WORKFLOW: Process morning routine activities from conversation
     const routineActivityMatches = emmaReply.matchAll(/ADD_ROUTINE_ACTIVITY:\s*\{([^}]+)\}/gs);
     
     for (const routineActivityMatch of routineActivityMatches) {
@@ -243,14 +389,20 @@ export const chat = api<ChatRequest, ChatResponse>(
               id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
               name: nameMatch[1],
               duration_minutes: durationMatch ? parseInt(durationMatch[1]) : 5,
-              icon: iconMatch ? iconMatch[1] : "Circle"
+              icon: iconMatch ? iconMatch[1] : "⭐",
+              description: ""
             };
 
-            await addActivity({ user_id, activity });
+            // Use unified workflow: auto-create routine if needed + journal logging + memory updates
+            await processMorningRoutineActivity(user_id, activity, {
+              userMessage: user_message,
+              emmaReply: cleanedReply
+            });
+            
             activityAdded = true;
           }
         } catch (error) {
-          console.error("Failed to add routine activity:", error);
+          console.error("❌ Failed to add routine activity:", error);
         }
       }
     }
@@ -264,10 +416,31 @@ export const chat = api<ChatRequest, ChatResponse>(
         (${user_id}, ${session_type}, ${user_message}, ${cleanedReply}, ${JSON.stringify(sessionContext)})
     `;
 
+    // FIX 2: Removed old updateMorningPreferences function that used user_profiles.morning_routine_preferences
+    // All morning routine data now flows through the unified workflow via processMorningRoutineActivity
+
+    // Process wake time if mentioned (only for morning session)
     if (session_type === "morning") {
-      await updateMorningPreferences(user_id, user_message, emmaReply);
+      const wakeTimeMatch = user_message.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+      if (wakeTimeMatch && emmaReply.toLowerCase().includes("wake")) {
+        const hour = parseInt(wakeTimeMatch[1]);
+        const minute = wakeTimeMatch[2] || "00";
+        const period = wakeTimeMatch[3]?.toLowerCase();
+        
+        let formattedHour = hour;
+        if (period === "pm" && hour !== 12) formattedHour += 12;
+        if (period === "am" && hour === 12) formattedHour = 0;
+        
+        const wakeTime = `${String(formattedHour).padStart(2, "0")}:${minute}`;
+        
+        await updateWakeTime(user_id, wakeTime, {
+          userMessage: user_message,
+          emmaReply: cleanedReply
+        });
+      }
     }
 
+    // Update Emma Memory (for general conversation insights)
     await extractAndStoreMemories(user_id, user_message, cleanedReply);
 
     await db.exec`
@@ -423,13 +596,22 @@ Wellness Journal Feature:
 - Don't suggest journaling too frequently - only for special moments
 
 Morning Routine Activity Detection (ONLY for morning session_type):
-- When ${userName} mentions doing or wanting to do a specific morning activity (yoga, meditation, journaling, reading, exercise, coffee ritual, etc.), you can add it to their routine
-- Listen for phrases like: "I did [activity]", "I like to [activity]", "I want to start [activity]", "I usually [activity]"
-- When you detect a clear morning activity they did or want to do, respond with: "ADD_ROUTINE_ACTIVITY: {name: "[activity name]", duration: [minutes], icon: "[icon]"}"
+UNIFIED WORKFLOW - When you detect a morning activity, the system will:
+1. Check if they have a routine (if not, create one automatically)
+2. Add the activity to their routine
+3. Log it to their morning routine journal
+4. Update Emma's memory about their preferences
+
+How to detect and add activities:
+- Listen for phrases like: "I did [activity]", "I like to [activity]", "I want to start [activity]", "I usually [activity]", "I've been doing [activity]"
+- Common morning activities: yoga, meditation, journaling, reading, exercise, stretching, coffee/tea ritual, breakfast, prayer, gratitude practice, walking, breathing exercises
+- When you detect a clear morning activity, respond with: "ADD_ROUTINE_ACTIVITY: {name: "[activity name]", duration: [minutes], icon: "[emoji icon]"}"
 - Then confirm it in your normal reply: "I've added [activity] to your morning routine! ✨"
-- Common icons: "Coffee", "Book", "Dumbbell", "Heart", "Music", "Sunrise", "Sparkles", "Circle"
-- Only add activities that are clearly part of their morning, not just mentioned in passing
-- Don't add duplicates - if they mention something already in their routine, just acknowledge it
+- Common emoji icons: "☕" (coffee), "📖" (reading), "💪" (exercise), "🧘" (yoga/meditation), "🎵" (music), "🌅" (morning), "✨" (general), "🙏" (prayer/gratitude), "🚶" (walking), "🫖" (tea)
+- Only add activities that are clearly part of their morning routine, not just mentioned in passing
+- The system handles duplicates automatically - don't worry about checking
+- Be proactive: if someone mentions they "love yoga" or "always start with coffee", add it!
+- IMPORTANT: You don't need to ask permission first - just add it and confirm
 `;
 
   let morningRoutineContext = "";
@@ -445,28 +627,39 @@ Morning Routine Activity Detection (ONLY for morning session_type):
   const sessionPrompts: Record<string, string> = {
     morning: `${basePrompt}${morningRoutineContext}
 
-This is a morning check-in conversation. Your goals:
+This is a morning check-in conversation using the UNIFIED WORKFLOW.
+
+Your goals:
 1. Ask about their sleep (naturally, not clinically)
-2. Continue with their morning routine if established, or help build one if it's their first time
-3. If they have preferences, ask how those activities went (stretching, gratitude, music, meditation)
-4. If no preferences exist, gently explore what they'd like: stretching, gratitude practice, music preferences, meditation/prayer
+2. Listen for morning activities they mention - automatically add them to their routine
+3. Help them discover and establish healthy morning habits
+4. Build their morning routine through natural conversation (no need to ask permission first)
 5. Help them feel positive and supported
-6. If they share gratitude or meaningful morning insights, consider suggesting they add it to their wellness journal
+6. If they share gratitude or meaningful insights, suggest adding to wellness journal
 
-Example flow (returning user with preferences):
+AUTOMATIC ROUTINE BUILDING:
+- When they mention any morning activity, immediately add it using ADD_ROUTINE_ACTIVITY
+- The system handles everything: creates routine if needed, prevents duplicates, logs to journal, updates memory
+- Examples of what to listen for:
+  * "I like to start with coffee" → ADD coffee ritual
+  * "I've been doing yoga" → ADD yoga
+  * "I usually meditate for 10 minutes" → ADD meditation
+  * "I love reading in the morning" → ADD reading
+  * "I stretch when I wake up" → ADD stretching
+
+Example flow (returning user):
 - "Good morning! How did you sleep?"
 - Listen and empathize
-- "Did you do your morning stretches?" or "What are you grateful for today?"
-- If they share something meaningful: "That's beautiful. Would you like me to add that to your wellness journal?"
-- Continue naturally based on their routine
+- "What did you do this morning?" or "How's your morning going?"
+- LISTEN for activities → ADD them automatically
+- "That's wonderful! I've added that to your routine ✨"
 
-Example flow (new user or building routine):
+Example flow (new user):
 - "Good morning! How did you sleep?"
 - Listen and empathize
-- "Would you like to try some gentle stretches?"
-- "Do you practice gratitude or meditation?"
-- "What kind of music helps you wake up?"
-- Help establish their preferences`, 
+- "What do you usually like to do when you wake up?"
+- LISTEN for activities → ADD them automatically
+- Continue building their routine naturally through conversation`, 
 
     evening: `${basePrompt}
 
