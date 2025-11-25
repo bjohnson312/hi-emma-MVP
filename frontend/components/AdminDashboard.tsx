@@ -313,49 +313,6 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-semibold text-white mb-4">Key Metrics</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {usageStats && (
-                  <>
-                    <StatCard
-                      icon={<Users className="w-8 h-8" />}
-                      title="Total Users"
-                      value={usageStats.stats.totalUsers}
-                      color="purple"
-                    />
-                    <StatCard
-                      icon={<Activity className="w-8 h-8" />}
-                      title="Total Accesses"
-                      value={usageStats.stats.totalAccesses}
-                      color="blue"
-                    />
-                    <StatCard
-                      icon={<TrendingUp className="w-8 h-8" />}
-                      title="Today's Accesses"
-                      value={usageStats.stats.todayAccesses}
-                      color="green"
-                    />
-                    <StatCard
-                      icon={<Calendar className="w-8 h-8" />}
-                      title="Last 7 Days"
-                      value={usageStats.stats.last7Days}
-                      color="orange"
-                    />
-                    <StatCard
-                      icon={<Calendar className="w-8 h-8" />}
-                      title="Last 30 Days"
-                      value={usageStats.stats.last30Days}
-                      color="pink"
-                    />
-                    <StatCard
-                      icon={<Activity className="w-8 h-8" />}
-                      title="Avg Per User (30d)"
-                      value={usageStats.stats.avgPerUser}
-                      color="teal"
-                      decimal
-                    />
-                  </>
-                )}
-              </div>
             </div>
 
             {usageStats && <AccessStatsSection usageStats={usageStats} />}
