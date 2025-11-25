@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
 import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX } from "lucide-react";
@@ -19,6 +19,7 @@ interface Question {
 
 export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
   const { speak, stop, isSpeaking } = useTextToSpeech();
+  const hasSpokenCurrentMessage = useRef(false);
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem("emma-voice-muted") === "true";
   });
@@ -37,13 +38,18 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   }, [userId]);
 
   useEffect(() => {
-    if (!isMuted && emmaMessage) {
+    if (!isMuted && emmaMessage && !hasSpokenCurrentMessage.current) {
+      hasSpokenCurrentMessage.current = true;
       const timer = setTimeout(() => {
         speak(emmaMessage);
       }, 300);
       return () => clearTimeout(timer);
     }
   }, [emmaMessage, isMuted, speak]);
+
+  useEffect(() => {
+    hasSpokenCurrentMessage.current = false;
+  }, [emmaMessage]);
 
   const toggleMute = () => {
     const newMutedState = !isMuted;
