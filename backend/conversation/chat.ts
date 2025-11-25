@@ -224,6 +224,108 @@ async function processMorningRoutineActivity(
 }
 
 /**
+ * Extract activity name from Emma's natural reply
+ * Returns null if no activity addition detected
+ */
+function extractActivityFromReply(reply: string): string | null {
+  const patterns = [
+    /I['']?ve added ([^.!]+) to your (?:morning )?routine/i,
+    /added ([^.!]+) to your (?:morning )?routine/i,
+    /([^.!]+) (?:is now|has been added) (?:to|part of) your routine/i,
+    /I added ([^.!]+) to your routine/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = reply.match(pattern);
+    if (match) {
+      return cleanActivityName(match[1]);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Clean up extracted activity name
+ */
+function cleanActivityName(raw: string): string {
+  return raw
+    .replace(/^(a|an|the)\s+/i, '')
+    .replace(/['"]\s*/g, '')
+    .trim();
+}
+
+/**
+ * Infer duration based on activity name
+ */
+function inferDuration(activityName: string): number {
+  const lowerName = activityName.toLowerCase();
+  
+  const durationMap: Record<string, number> = {
+    'meditation': 15,
+    'yoga': 20,
+    'stretching': 10,
+    'situps': 5,
+    'sit-ups': 5,
+    'sit ups': 5,
+    'pushups': 5,
+    'push-ups': 5,
+    'push ups': 5,
+    'shower': 10,
+    'breakfast': 15,
+    'exercise': 10,
+    'workout': 15,
+    'coffee': 5,
+    'tea': 5,
+    'reading': 15,
+    'journal': 10,
+  };
+  
+  // Check exact match
+  if (durationMap[lowerName]) return durationMap[lowerName];
+  
+  // Check partial match
+  for (const [key, duration] of Object.entries(durationMap)) {
+    if (lowerName.includes(key)) return duration;
+  }
+  
+  return 10; // Default
+}
+
+/**
+ * Infer icon based on activity name
+ */
+function inferIcon(activityName: string): string {
+  const lowerName = activityName.toLowerCase();
+  
+  const iconMap: Record<string, string> = {
+    'meditation': '🧘',
+    'yoga': '🧘',
+    'stretching': '🤸',
+    'situps': '💪',
+    'sit-ups': '💪',
+    'sit ups': '💪',
+    'pushups': '💪',
+    'push-ups': '💪',
+    'push ups': '💪',
+    'exercise': '💪',
+    'workout': '💪',
+    'shower': '🚿',
+    'breakfast': '🍳',
+    'coffee': '☕',
+    'tea': '🍵',
+    'reading': '📖',
+    'journal': '📝',
+  };
+  
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (lowerName.includes(key)) return icon;
+  }
+  
+  return '⭐'; // Default
+}
+
+/**
  * Update wake time from conversation
  * Workflow: extract time → update profile → log to journal → update memory
  */
@@ -437,56 +539,45 @@ export const chat = api<ChatRequest, ChatResponse>(
       }
     }
 
-    // UNIFIED WORKFLOW: Process morning routine activities from conversation
-    const routineActivityMatches = emmaReply.matchAll(/ADD_ROUTINE_ACTIVITY:\s*\{([^}]+)\}/gs);
-    const matchesArray = Array.from(routineActivityMatches);
-    
+    // UNIFIED WORKFLOW: Extract and process morning routine activities from natural conversation
     if (session_type === "morning") {
-      console.log(`✅ DEBUG - Found ${matchesArray.length} ADD_ROUTINE_ACTIVITY command(s)`);
-    }
-    
-    for (const routineActivityMatch of matchesArray) {
-      if (session_type === "morning") {
+      const activityName = extractActivityFromReply(emmaReply);
+      
+      if (activityName) {
+        console.log(`\n🔍 EXTRACTOR: Detected activity addition: "${activityName}"`);
+        
+        const activity: MorningRoutineActivity = {
+          id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          name: activityName,
+          duration_minutes: inferDuration(activityName),
+          icon: inferIcon(activityName),
+          description: ""
+        };
+        
+        console.log(`🔍 EXTRACTOR: Inferred duration=${activity.duration_minutes}min, icon=${activity.icon}`);
+        
         try {
-          const activityData = routineActivityMatch[1].trim();
-          const nameMatch = activityData.match(/name:\s*"([^"]+)"/);
-          const durationMatch = activityData.match(/duration:\s*(\d+)/);
-          const iconMatch = activityData.match(/icon:\s*"([^"]+)"/);
+          // Use unified workflow: auto-create routine if needed + journal logging + memory updates
+          await processMorningRoutineActivity(user_id, activity, {
+            userMessage: user_message,
+            emmaReply: cleanedReply
+          });
           
-          if (nameMatch) {
-            const activity: MorningRoutineActivity = {
-              id: `activity-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-              name: nameMatch[1],
-              duration_minutes: durationMatch ? parseInt(durationMatch[1]) : 5,
-              icon: iconMatch ? iconMatch[1] : "⭐",
-              description: ""
-            };
-
-            console.log(`✅ DEBUG - Parsed activity:`, activity);
-            console.log(`🚀 DEBUG - Calling processMorningRoutineActivity for user: ${user_id}`);
-
-            // Use unified workflow: auto-create routine if needed + journal logging + memory updates
-            await processMorningRoutineActivity(user_id, activity, {
-              userMessage: user_message,
-              emmaReply: cleanedReply
-            });
-            
-            console.log(`✅ DEBUG - processMorningRoutineActivity completed successfully`);
-            activityAdded = true;
-          }
+          activityAdded = true;
+          console.log(`✅ EXTRACTOR: Activity "${activityName}" processed successfully\n`);
         } catch (error) {
-          console.error("❌ Failed to add routine activity:", error);
+          console.error("❌ EXTRACTOR: Failed to add routine activity:", error);
         }
+      } else {
+        console.log(`🔍 EXTRACTOR: No activity addition detected in Emma's reply`);
       }
     }
-    
-    cleanedReply = cleanedReply.replace(/ADD_ROUTINE_ACTIVITY:\s*\{[^}]+\}/gs, '').trim();
 
     await db.exec`
       INSERT INTO conversation_history 
         (user_id, conversation_type, user_message, emma_response, context)
       VALUES 
-        (${user_id}, ${session_type}, ${user_message}, ${cleanedReply}, ${JSON.stringify(sessionContext)})
+        (${user_id}, ${session_type}, ${user_message}, ${emmaReply}, ${JSON.stringify(sessionContext)})
     `;
 
     // FIX 2: Removed old updateMorningPreferences function that used user_profiles.morning_routine_preferences
