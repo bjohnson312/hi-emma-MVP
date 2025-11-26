@@ -113,7 +113,7 @@ export default function NutritionChatWithEmma({
       }
     }
     lastMessageCountRef.current = messages.length;
-  }, [messages, voiceEnabled]);
+  }, [messages, voiceEnabled, speak]);
 
   useEffect(() => {
     if (transcript) {

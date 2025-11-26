@@ -18,6 +18,7 @@ interface UseTextToSpeechResult {
 
 export function useTextToSpeech(): UseTextToSpeechResult {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentlySpeakingText, setCurrentlySpeakingText] = useState<string | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [elevenLabsVoices, setElevenLabsVoices] = useState<VoiceOption[]>([]);
@@ -41,6 +42,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
   });
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioInstancesRef = useRef<Set<HTMLAudioElement>>(new Set());
   const { savedVoicePreference, saveVoicePreference } = useVoicePreference();
 
   const isSupported = 'speechSynthesis' in window;
@@ -170,12 +172,47 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     };
   }, [isSupported, savedVoicePreference]);
 
+  const stop = useCallback(() => {
+    audioInstancesRef.current.forEach(audio => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+      } catch (e) {
+      }
+    });
+    audioInstancesRef.current.clear();
+    
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.src = '';
+      } catch (e) {}
+      audioRef.current = null;
+    }
+    
+    if (isSupported) {
+      window.speechSynthesis.cancel();
+    }
+    
+    setIsSpeaking(false);
+    setCurrentlySpeakingText(null);
+  }, [isSupported]);
+
   const speak = useCallback(async (text: string) => {
     if (!text) return;
+    
+    if (currentlySpeakingText === text && isSpeaking) {
+      console.log('[TTS] Already speaking this message, ignoring duplicate call');
+      return;
+    }
 
     stop();
     
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    setCurrentlySpeakingText(text);
 
     if (selectedElevenLabsVoice) {
       try {
@@ -187,19 +224,25 @@ export function useTextToSpeech(): UseTextToSpeechResult {
         
         const audio = new Audio(audioUrl);
         audioRef.current = audio;
+        audioInstancesRef.current.add(audio);
         
         audio.onended = () => {
           setIsSpeaking(false);
+          setCurrentlySpeakingText(null);
+          audioInstancesRef.current.delete(audio);
         };
         
         audio.onerror = () => {
           setIsSpeaking(false);
+          setCurrentlySpeakingText(null);
+          audioInstancesRef.current.delete(audio);
         };
         
         await audio.play();
       } catch (error) {
         console.error('ElevenLabs speech error:', error);
         setIsSpeaking(false);
+        setCurrentlySpeakingText(null);
       }
     } else if (isSupported && selectedVoice) {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -215,28 +258,18 @@ export function useTextToSpeech(): UseTextToSpeechResult {
 
       utterance.onend = () => {
         setIsSpeaking(false);
+        setCurrentlySpeakingText(null);
       };
 
       utterance.onerror = () => {
         setIsSpeaking(false);
+        setCurrentlySpeakingText(null);
       };
 
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     }
-  }, [isSupported, selectedVoice, selectedElevenLabsVoice]);
-
-  const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
-    if (isSupported) {
-      window.speechSynthesis.cancel();
-    }
-    setIsSpeaking(false);
-  }, [isSupported]);
+  }, [isSupported, selectedVoice, selectedElevenLabsVoice, currentlySpeakingText, isSpeaking, stop]);
 
   useEffect(() => {
     return () => {

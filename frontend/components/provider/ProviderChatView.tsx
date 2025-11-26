@@ -64,7 +64,7 @@ export default function ProviderChatView() {
       }
     }
     lastMessageCountRef.current = messages.length;
-  }, [messages, voiceEnabled, isTTSSupported]);
+  }, [messages, voiceEnabled, isTTSSupported, speak]);
 
   useEffect(() => {
     if (transcript) {

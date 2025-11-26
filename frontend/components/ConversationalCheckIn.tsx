@@ -93,7 +93,7 @@ export default function ConversationalCheckIn({
       }
     }
     lastMessageCountRef.current = messages.length;
-  }, [messages, voiceEnabled, isTTSSupported]);
+  }, [messages, voiceEnabled, isTTSSupported, speak]);
 
   useEffect(() => {
     loadOrStartConversation();
@@ -370,7 +370,8 @@ export default function ConversationalCheckIn({
                       onClick={() => speak(message.text)}
                       size="sm"
                       variant="ghost"
-                      className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center"
+                      disabled={isSpeaking}
+                      className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center disabled:opacity-50"
                     >
                       <Volume2 className="w-4 h-4" />
                     </Button>
