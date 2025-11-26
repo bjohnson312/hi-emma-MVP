@@ -2,12 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useVoicePreference } from './useVoicePreference';
 import backend from '~backend/client';
 import type { VoiceOption } from '~backend/voice/types';
-
-const isIOSDevice = (): boolean => {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-};
+import { isIOSDevice } from '@/lib/device-detection';
 
 interface UseTextToSpeechResult {
   speak: (text: string) => void;
@@ -285,6 +280,17 @@ export function useTextToSpeech(): UseTextToSpeechResult {
       } catch (error: any) {
         if (isIOS && error?.name === 'NotAllowedError') {
           console.warn('[TTS] iOS blocked audio autoplay - user interaction required. Message will not be spoken automatically.');
+          
+          if (!sessionStorage.getItem('emma_ios_autoplay_warning_shown')) {
+            sessionStorage.setItem('emma_ios_autoplay_warning_shown', 'true');
+            
+            const { toast } = await import('@/components/ui/use-toast');
+            toast({
+              title: 'Safari blocked Emma\'s voice',
+              description: 'On iPhone, tap the "aA" icon in the address bar and choose "Request Desktop Website," then try sending another message.',
+              duration: 8000,
+            });
+          }
         } else {
           console.error('[TTS] ElevenLabs speech error:', error);
         }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock, Settings } from "lucide-react";
+import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock, Settings, X } from "lucide-react";
 import AutoExpandTextarea from "@/components/AutoExpandTextarea";
 import backend from "@/lib/backend-client";
 import type { SessionType } from "~backend/conversation/types";
@@ -12,6 +12,7 @@ import VoiceSelector from "@/components/VoiceSelector";
 import Tooltip from "@/components/Tooltip";
 import InsightsSuggestionPanel from "@/components/InsightsSuggestionPanel";
 import { VOICEFLOW_TEST_URL, ENABLE_VOICEFLOW_TEST } from "@/config";
+import { isIOSSafariMobile } from "@/lib/device-detection";
 
 interface ConversationalCheckInProps {
   userId: string;
@@ -33,6 +34,7 @@ export default function ConversationalCheckIn({
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [showSuggestionPanel, setShowSuggestionPanel] = useState(false);
+  const [showIOSSafariBanner, setShowIOSSafariBanner] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastMessageCountRef = useRef(0);
@@ -94,6 +96,14 @@ export default function ConversationalCheckIn({
       }
     }
     lastMessageCountRef.current = messages.length;
+    
+    const hasEmmaMessages = messages.some(m => m.sender === "emma");
+    if (isIOSSafariMobile() && voiceEnabled && hasEmmaMessages) {
+      const dismissed = localStorage.getItem('emma_ios_safari_tip_dismissed');
+      if (dismissed !== 'true') {
+        setShowIOSSafariBanner(true);
+      }
+    }
   }, [messages, voiceEnabled, isTTSSupported, speak]);
 
   useEffect(() => {
@@ -405,6 +415,29 @@ export default function ConversationalCheckIn({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {showIOSSafariBanner && (
+        <div className="px-4 pb-2 bg-white/95 backdrop-blur-md">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3 md:hidden">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#323e48] mb-1">📱 Tip for iPhone Safari</p>
+              <p className="text-xs text-[#323e48]/80 leading-relaxed">
+                If Emma isn't speaking out loud, tap the "aA" icon in the address bar and choose "Request Desktop Website," then send your next message.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem('emma_ios_safari_tip_dismissed', 'true');
+                setShowIOSSafariBanner(false);
+              }}
+              className="text-[#323e48]/60 hover:text-[#323e48] transition-colors"
+              aria-label="Dismiss tip"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 bg-white/95 backdrop-blur-md border-t border-white/40">
         {conversationComplete || selectedDate ? (
