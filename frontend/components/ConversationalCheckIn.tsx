@@ -35,9 +35,11 @@ export default function ConversationalCheckIn({
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [showSuggestionPanel, setShowSuggestionPanel] = useState(false);
   const [showIOSSafariBanner, setShowIOSSafariBanner] = useState(false);
+  const [autoSpeakFailedMessageId, setAutoSpeakFailedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastMessageCountRef = useRef(0);
+  const autoSpeakTimeoutRef = useRef<number | null>(null);
   const {
     transcript,
     isListening,
@@ -89,21 +91,54 @@ export default function ConversationalCheckIn({
   useEffect(() => {
     scrollToBottom();
 
-    if (voiceEnabled && isTTSSupported && messages.length > lastMessageCountRef.current) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage && lastMessage.sender === "emma") {
-        speak(lastMessage.text);
+    const runAutoSpeak = async () => {
+      if (voiceEnabled && isTTSSupported && messages.length > lastMessageCountRef.current) {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.sender === "emma") {
+          const result = await speak(lastMessage.text);
+          const messageId = `${lastMessage.sender}-${messages.length - 1}`;
+          
+          console.log(`[TTS] auto-speak status for message ${messageId}: ${result.status}`);
+          
+          if (result.status === "blocked" || result.status === "error") {
+            setAutoSpeakFailedMessageId(messageId);
+            
+            if (autoSpeakTimeoutRef.current) {
+              window.clearTimeout(autoSpeakTimeoutRef.current);
+            }
+            
+            autoSpeakTimeoutRef.current = window.setTimeout(() => {
+              setAutoSpeakFailedMessageId(prev => 
+                prev === messageId ? null : prev
+              );
+            }, 5000);
+          } else if (result.status === "success") {
+            setAutoSpeakFailedMessageId(null);
+            if (autoSpeakTimeoutRef.current) {
+              window.clearTimeout(autoSpeakTimeoutRef.current);
+            }
+          }
+        }
       }
-    }
-    lastMessageCountRef.current = messages.length;
+      
+      lastMessageCountRef.current = messages.length;
+      
+      const hasEmmaMessages = messages.some(m => m.sender === "emma");
+      if (isIOSSafariMobile() && voiceEnabled && hasEmmaMessages) {
+        const dismissed = localStorage.getItem('emma_ios_safari_tip_dismissed');
+        if (dismissed !== 'true') {
+          setShowIOSSafariBanner(true);
+        }
+      }
+    };
     
-    const hasEmmaMessages = messages.some(m => m.sender === "emma");
-    if (isIOSSafariMobile() && voiceEnabled && hasEmmaMessages) {
-      const dismissed = localStorage.getItem('emma_ios_safari_tip_dismissed');
-      if (dismissed !== 'true') {
-        setShowIOSSafariBanner(true);
+    runAutoSpeak();
+    
+    return () => {
+      if (autoSpeakTimeoutRef.current) {
+        window.clearTimeout(autoSpeakTimeoutRef.current);
       }
-    }
+    };
   }, [messages, voiceEnabled, isTTSSupported, speak]);
 
   useEffect(() => {
@@ -377,19 +412,42 @@ export default function ConversationalCheckIn({
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                 </div>
                 
-                {message.sender === "emma" && index === messages.length - 1 && !loading && isTTSSupported && (
-                  <Tooltip content="Replay message" side="right">
-                    <Button
-                      onClick={() => speak(message.text)}
-                      size="sm"
-                      variant="ghost"
-                      disabled={isSpeaking}
-                      className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center disabled:opacity-50"
-                    >
-                      <Volume2 className="w-4 h-4" />
-                    </Button>
-                  </Tooltip>
-                )}
+                {message.sender === "emma" && index === messages.length - 1 && !loading && isTTSSupported && (() => {
+                  const messageId = `${message.sender}-${index}`;
+                  const showHint = autoSpeakFailedMessageId === messageId;
+                  
+                  return (
+                    <div className="flex flex-col items-start gap-1">
+                      <Tooltip content="Replay message" side="right">
+                        <Button
+                          onClick={async () => {
+                            const result = await speak(message.text);
+                            if (result.status === "success") {
+                              setAutoSpeakFailedMessageId(prev => (prev === messageId ? null : prev));
+                              if (autoSpeakTimeoutRef.current) {
+                                window.clearTimeout(autoSpeakTimeoutRef.current);
+                              }
+                            }
+                          }}
+                          size="sm"
+                          variant="ghost"
+                          disabled={isSpeaking}
+                          className={`text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center disabled:opacity-50 ${
+                            showHint ? 'animate-pulse' : ''
+                          }`}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </Button>
+                      </Tooltip>
+                      
+                      {showHint && (
+                        <span className="text-[11px] text-[#4e8f71]/80 animate-in fade-in duration-300 whitespace-nowrap">
+                          Tap to hear Emma
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {message.sender === "user" && (

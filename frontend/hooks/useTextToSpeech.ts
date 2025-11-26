@@ -4,8 +4,10 @@ import backend from '~backend/client';
 import type { VoiceOption } from '~backend/voice/types';
 import { isIOSDevice } from '@/lib/device-detection';
 
+type SpeakResult = { status: 'success' | 'blocked' | 'error' };
+
 interface UseTextToSpeechResult {
-  speak: (text: string) => void;
+  speak: (text: string) => Promise<SpeakResult>;
   stop: () => void;
   isSpeaking: boolean;
   isSupported: boolean;
@@ -233,12 +235,12 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     }
   }, [isIOS]);
 
-  const speak = useCallback(async (text: string) => {
-    if (!text) return;
+  const speak = useCallback(async (text: string): Promise<SpeakResult> => {
+    if (!text) return { status: 'error' };
     
     if (currentlySpeakingText === text && isSpeaking) {
       console.log('[TTS] Already speaking this message, ignoring duplicate call');
-      return;
+      return { status: 'success' };
     }
 
     stop();
@@ -277,6 +279,8 @@ export function useTextToSpeech(): UseTextToSpeechResult {
         };
         
         await audio.play();
+        console.log('[TTS] ElevenLabs audio playback started successfully');
+        return { status: 'success' };
       } catch (error: any) {
         if (isIOS && error?.name === 'NotAllowedError') {
           console.warn('[TTS] iOS blocked audio autoplay - user interaction required. Message will not be spoken automatically.');
@@ -291,11 +295,15 @@ export function useTextToSpeech(): UseTextToSpeechResult {
               duration: 8000,
             });
           }
+          setIsSpeaking(false);
+          setCurrentlySpeakingText(null);
+          return { status: 'blocked' };
         } else {
           console.error('[TTS] ElevenLabs speech error:', error);
+          setIsSpeaking(false);
+          setCurrentlySpeakingText(null);
+          return { status: 'error' };
         }
-        setIsSpeaking(false);
-        setCurrentlySpeakingText(null);
       }
     } else if (isSupported && selectedVoice) {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -321,8 +329,12 @@ export function useTextToSpeech(): UseTextToSpeechResult {
 
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
+      console.log('[TTS] Browser TTS playback initiated');
+      return { status: 'success' };
     }
-  }, [isSupported, selectedVoice, selectedElevenLabsVoice, currentlySpeakingText, isSpeaking, stop]);
+    
+    return { status: 'error' };
+  }, [isSupported, selectedVoice, selectedElevenLabsVoice, currentlySpeakingText, isSpeaking, stop, isIOS]);
 
   useEffect(() => {
     return () => {
