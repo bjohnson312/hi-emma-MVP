@@ -433,7 +433,7 @@ export default function ConversationalCheckIn({
                 value={currentInput}
                 onChange={setCurrentInput}
                 onSend={handleSendMessage}
-                placeholder={isListening ? "Listening..." : "Type your message..."}
+                placeholder={isListening ? "Listening..." : "Type or speak your message..."}
                 disabled={loading || isListening}
                 className="flex-1"
               />
@@ -460,7 +460,7 @@ export default function ConversationalCheckIn({
                 </Button>
               </Tooltip>
             </div>
-            <div className="lg:hidden mt-2 text-xs text-[#4e8f71]/70 text-center px-2">
+            <div className="mt-2 text-xs text-[#4e8f71]/70 text-center px-2 lg:hidden">
               💡 Tip: On your phone, you can tap the microphone on your keyboard to speak your message.
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
