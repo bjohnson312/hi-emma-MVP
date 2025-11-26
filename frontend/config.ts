@@ -6,4 +6,4 @@ export const USE_NEW_CONVERSATION_FLOW = false;
 
 export const VOICEFLOW_TEST_URL = "https://creator.voiceflow.com/share/6925f54cc3b19bec6990a7e4/development";
 
-export const ENABLE_VOICEFLOW_TEST = true;
+export const ENABLE_VOICEFLOW_TEST = false;

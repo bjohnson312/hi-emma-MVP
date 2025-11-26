@@ -433,7 +433,7 @@ export default function ConversationalCheckIn({
                 value={currentInput}
                 onChange={setCurrentInput}
                 onSend={handleSendMessage}
-                placeholder={isListening ? "Listening..." : "Type or speak your message..."}
+                placeholder={isListening ? "Listening..." : "Type your message..."}
                 disabled={loading || isListening}
                 className="flex-1"
               />
@@ -443,7 +443,7 @@ export default function ConversationalCheckIn({
                     onClick={toggleListening}
                     disabled={loading}
                     size="icon"
-                    className={`${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
+                    className={`hidden lg:flex ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
                   >
                     {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </Button>
@@ -459,6 +459,9 @@ export default function ConversationalCheckIn({
                   <Send className="w-5 h-5" />
                 </Button>
               </Tooltip>
+            </div>
+            <div className="lg:hidden mt-2 text-xs text-[#4e8f71]/70 text-center px-2">
+              💡 Tip: On your phone, you can tap the microphone on your keyboard to speak your message.
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex gap-2">
