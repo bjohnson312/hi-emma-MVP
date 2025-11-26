@@ -437,18 +437,16 @@ export default function ConversationalCheckIn({
                 disabled={loading || isListening}
                 className="flex-1"
               />
-              {isSupported && (
-                <Tooltip content={isListening ? "Stop listening" : "Speak your message"} side="top">
-                  <Button 
-                    onClick={toggleListening}
-                    disabled={loading}
-                    size="icon"
-                    className={`hidden lg:flex ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
-                  >
-                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                  </Button>
-                </Tooltip>
-              )}
+              <Tooltip content={isListening ? "Stop listening" : "Speak your message"} side="top">
+                <Button 
+                  onClick={toggleListening}
+                  disabled={loading || !isSupported}
+                  size="icon"
+                  className={`hidden lg:flex ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-[#6656cb] to-[#364d89] hover:from-[#5545ba] hover:to-[#2a3d6f]'} text-white shadow-xl border-0 w-14 h-14 rounded-2xl transition-all`}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </Button>
+              </Tooltip>
               <Tooltip content="Send message to Emma" side="top">
                 <Button 
                   onClick={handleSendMessage}
