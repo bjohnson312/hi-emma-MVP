@@ -17,6 +17,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const resultIndexRef = useRef(0);
+  const finalTranscriptRef = useRef('');
 
   const isSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
 
@@ -31,23 +32,20 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: any) => {
-      let finalTranscript = '';
       let interimTranscript = '';
 
       for (let i = resultIndexRef.current; i < event.results.length; i++) {
         const transcriptPiece = event.results[i][0].transcript;
+        
         if (event.results[i].isFinal) {
-          finalTranscript += transcriptPiece + ' ';
+          finalTranscriptRef.current += transcriptPiece + ' ';
           resultIndexRef.current = i + 1;
         } else {
-          interimTranscript += transcriptPiece;
+          interimTranscript = transcriptPiece;
         }
       }
 
-      setTranscript(prev => {
-        const newTranscript = prev + finalTranscript;
-        return newTranscript + (interimTranscript && !finalTranscript ? interimTranscript : '');
-      });
+      setTranscript(finalTranscriptRef.current + interimTranscript);
     };
 
     recognition.onerror = (event: any) => {
@@ -109,6 +107,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     }
 
     resultIndexRef.current = 0;
+    finalTranscriptRef.current = '';
     setTranscript('');
     setError(null);
     
