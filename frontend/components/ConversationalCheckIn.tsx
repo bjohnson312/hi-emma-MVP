@@ -11,6 +11,7 @@ import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import VoiceSelector from "@/components/VoiceSelector";
 import Tooltip from "@/components/Tooltip";
 import InsightsSuggestionPanel from "@/components/InsightsSuggestionPanel";
+import { VOICEFLOW_TEST_URL, ENABLE_VOICEFLOW_TEST } from "@/config";
 
 interface ConversationalCheckInProps {
   userId: string;
@@ -215,6 +216,10 @@ export default function ConversationalCheckIn({
     if (!conversationComplete) {
       await sendMessage("I need to go now, let's talk later");
     }
+  };
+
+  const handleVoiceflowTest = () => {
+    window.open(VOICEFLOW_TEST_URL, '_blank', 'noopener,noreferrer');
   };
 
   const cancelReset = () => {
@@ -455,24 +460,35 @@ export default function ConversationalCheckIn({
                 </Button>
               </Tooltip>
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleEndConversation}
-                variant="outline"
-                disabled={loading}
-                className="flex-1 border-[#323e48]/30 hover:bg-[#323e48]/10 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm"
-              >
-                <Clock className="w-4 h-4" />
-                Talk Later
-              </Button>
-              <Button
-                onClick={() => setShowHistory(!showHistory)}
-                variant="outline"
-                className="flex-1 border-[#4e8f71]/30 hover:bg-[#4e8f71]/10 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm"
-              >
-                <History className="w-4 h-4" />
-                {showHistory ? "Hide" : "View"} History
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleEndConversation}
+                  variant="outline"
+                  disabled={loading}
+                  className="flex-1 border-[#323e48]/30 hover:bg-[#323e48]/10 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm"
+                >
+                  <Clock className="w-4 h-4" />
+                  Talk Later
+                </Button>
+                <Button
+                  onClick={() => setShowHistory(!showHistory)}
+                  variant="outline"
+                  className="flex-1 border-[#4e8f71]/30 hover:bg-[#4e8f71]/10 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm"
+                >
+                  <History className="w-4 h-4" />
+                  {showHistory ? "Hide" : "View"} History
+                </Button>
+              </div>
+              {ENABLE_VOICEFLOW_TEST && (
+                <Button
+                  onClick={handleVoiceflowTest}
+                  variant="outline"
+                  className="w-full sm:flex-1 border-purple-500/30 hover:bg-purple-500/10 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm text-purple-700 hover:text-purple-800"
+                >
+                  🎙️ Voiceflow Voice Test
+                </Button>
+              )}
             </div>
           </div>
         )}
