@@ -227,7 +227,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   const currentQuestion = questions[currentStep];
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-4 pt-8 md:pt-16">
+    <div className="w-full flex items-start justify-center p-4 pt-8 md:pt-16">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-6">
           <div className="inline-block bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-4">
