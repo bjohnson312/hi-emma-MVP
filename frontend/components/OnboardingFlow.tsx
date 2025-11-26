@@ -51,6 +51,18 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     hasSpokenCurrentMessage.current = false;
   }, [emmaMessage]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+  }, [currentStep]);
+
   const toggleMute = () => {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
