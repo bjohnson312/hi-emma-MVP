@@ -56,7 +56,8 @@ export default function ConversationalCheckIn({
     setSelectedVoice,
     elevenLabsVoices,
     selectedElevenLabsVoice,
-    setSelectedElevenLabsVoice
+    setSelectedElevenLabsVoice,
+    resumeAudioContext
   } = useTextToSpeech();
 
   const {
@@ -135,6 +136,8 @@ export default function ConversationalCheckIn({
     if (isListening) {
       stopListening();
     }
+
+    await resumeAudioContext();
     
     await sendMessage(userMessage);
     textareaRef.current?.focus();

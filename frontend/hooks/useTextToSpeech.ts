@@ -3,6 +3,12 @@ import { useVoicePreference } from './useVoicePreference';
 import backend from '~backend/client';
 import type { VoiceOption } from '~backend/voice/types';
 
+const isIOSDevice = (): boolean => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
 interface UseTextToSpeechResult {
   speak: (text: string) => void;
   stop: () => void;
@@ -14,6 +20,7 @@ interface UseTextToSpeechResult {
   elevenLabsVoices: VoiceOption[];
   selectedElevenLabsVoice: VoiceOption | null;
   setSelectedElevenLabsVoice: (voice: VoiceOption | null) => void;
+  resumeAudioContext: () => Promise<void>;
 }
 
 export function useTextToSpeech(): UseTextToSpeechResult {
@@ -43,9 +50,29 @@ export function useTextToSpeech(): UseTextToSpeechResult {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioInstancesRef = useRef<Set<HTMLAudioElement>>(new Set());
+  const audioContextRef = useRef<AudioContext | null>(null);
   const { savedVoicePreference, saveVoicePreference } = useVoicePreference();
+  const isIOS = isIOSDevice();
 
   const isSupported = 'speechSynthesis' in window;
+
+  useEffect(() => {
+    if (isIOS && typeof window !== 'undefined' && window.AudioContext) {
+      try {
+        audioContextRef.current = new AudioContext();
+        console.log('[TTS] AudioContext created for iOS audio management');
+      } catch (error) {
+        console.warn('[TTS] Failed to create AudioContext:', error);
+      }
+    }
+
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        console.log('[TTS] AudioContext closed');
+      }
+    };
+  }, [isIOS]);
 
   // Fetch ElevenLabs voices on mount
   useEffect(() => {
@@ -200,6 +227,17 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     setCurrentlySpeakingText(null);
   }, [isSupported]);
 
+  const resumeAudioContext = useCallback(async (): Promise<void> => {
+    if (isIOS && audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume();
+        console.log('[TTS] AudioContext resumed after user interaction');
+      } catch (error) {
+        console.warn('[TTS] Failed to resume AudioContext:', error);
+      }
+    }
+  }, [isIOS]);
+
   const speak = useCallback(async (text: string) => {
     if (!text) return;
     
@@ -217,6 +255,11 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     if (selectedElevenLabsVoice) {
       try {
         setIsSpeaking(true);
+
+        if (isIOS && audioContextRef.current && audioContextRef.current.state !== 'running') {
+          console.log('[TTS] iOS detected - AudioContext state:', audioContextRef.current.state);
+        }
+
         const { audioUrl } = await backend.voice.generateSpeech({
           text,
           voiceId: selectedElevenLabsVoice.id,
@@ -239,8 +282,12 @@ export function useTextToSpeech(): UseTextToSpeechResult {
         };
         
         await audio.play();
-      } catch (error) {
-        console.error('ElevenLabs speech error:', error);
+      } catch (error: any) {
+        if (isIOS && error?.name === 'NotAllowedError') {
+          console.warn('[TTS] iOS blocked audio autoplay - user interaction required. Message will not be spoken automatically.');
+        } else {
+          console.error('[TTS] ElevenLabs speech error:', error);
+        }
         setIsSpeaking(false);
         setCurrentlySpeakingText(null);
       }
@@ -306,5 +353,6 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     elevenLabsVoices,
     selectedElevenLabsVoice,
     setSelectedElevenLabsVoice: handleSetSelectedElevenLabsVoice,
+    resumeAudioContext,
   };
 }
