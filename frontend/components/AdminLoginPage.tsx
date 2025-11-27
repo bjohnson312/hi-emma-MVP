@@ -95,7 +95,8 @@ export default function AdminLoginPage({ onLoginSuccess, onBackToSignIn }: Admin
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+              variant="gradient"
+              className="w-full"
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>

@@ -99,14 +99,14 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <div className="flex gap-2 mb-6">
             <Button
               onClick={() => setIsSignup(false)}
-              variant={!isSignup ? "default" : "outline"}
+              variant={!isSignup ? "gradient" : "outline"}
               className="flex-1"
             >
               Sign In
             </Button>
             <Button
               onClick={() => setIsSignup(true)}
-              variant={isSignup ? "default" : "outline"}
+              variant={isSignup ? "gradient" : "outline"}
               className="flex-1"
             >
               Sign Up
@@ -160,6 +160,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             <Button
               type="submit"
               disabled={loading}
+              variant="gradient"
               className="w-full"
             >
               {loading ? "Loading..." : isSignup ? "Create Account" : "Sign In"}

@@ -138,7 +138,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
           <div className="flex gap-2 mb-6">
             <Button
               onClick={() => setIsSignup(false)}
-              variant={!isSignup ? "default" : "outline"}
+              variant={!isSignup ? "gradient" : "outline"}
               className="flex-1"
               type="button"
             >
@@ -146,7 +146,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
             </Button>
             <Button
               onClick={() => setIsSignup(true)}
-              variant={isSignup ? "default" : "outline"}
+              variant={isSignup ? "gradient" : "outline"}
               className="flex-1"
               type="button"
             >
@@ -207,6 +207,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
             <Button
               type="submit"
               disabled={loading}
+              variant="gradient"
               className="w-full"
             >
               {loading ? "Loading..." : isSignup ? "Create Account" : "Sign In"}
