@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff, Shield, ArrowLeft } from "lucide-react";
 import backend from "@/lib/backend-client";
+import { cn } from "@/lib/utils";
 
 const PROVIDER_QUOTES = [
   "Excellence in patient care starts here.",
@@ -139,16 +140,24 @@ export function ProviderLoginPage({ onLogin, onBackToSignIn }: ProviderLoginPage
           <div className="flex gap-2 mb-6">
             <Button
               onClick={() => setIsSignup(false)}
-              variant={!isSignup ? "gradient" : "outline"}
-              className="flex-1"
+              variant={!isSignup ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                !isSignup &&
+                  "bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
+              )}
               type="button"
             >
               Sign In
             </Button>
             <Button
               onClick={() => setIsSignup(true)}
-              variant={isSignup ? "gradient" : "outline"}
-              className="flex-1"
+              variant={isSignup ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                isSignup &&
+                  "bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
+              )}
               type="button"
             >
               Sign Up
@@ -254,8 +263,8 @@ export function ProviderLoginPage({ onLogin, onBackToSignIn }: ProviderLoginPage
             <Button
               type="submit"
               disabled={loading}
-              variant="gradient"
-              className="w-full"
+              variant="default"
+              className="w-full bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
             >
               {loading ? "Loading..." : isSignup ? "Create Provider Account" : "Sign In"}
             </Button>

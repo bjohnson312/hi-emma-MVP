@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { clerkClient } from "@/lib/clerk-client";
+import { cn } from "@/lib/utils";
 
 const MOTIVATIONAL_QUOTES = [
   "Every day is a fresh start.",
@@ -99,15 +100,23 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           <div className="flex gap-2 mb-6">
             <Button
               onClick={() => setIsSignup(false)}
-              variant={!isSignup ? "gradient" : "outline"}
-              className="flex-1"
+              variant={!isSignup ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                !isSignup &&
+                  "bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
+              )}
             >
               Sign In
             </Button>
             <Button
               onClick={() => setIsSignup(true)}
-              variant={isSignup ? "gradient" : "outline"}
-              className="flex-1"
+              variant={isSignup ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                isSignup &&
+                  "bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
+              )}
             >
               Sign Up
             </Button>
@@ -160,8 +169,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             <Button
               type="submit"
               disabled={loading}
-              variant="gradient"
-              className="w-full"
+              variant="default"
+              className="w-full bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
             >
               {loading ? "Loading..." : isSignup ? "Create Account" : "Sign In"}
             </Button>
