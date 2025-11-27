@@ -61,6 +61,13 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
   }, [emmaMessage]);
 
   useEffect(() => {
+    // Reset spoken flag when step changes
+    hasSpokenCurrentMessage.current = false;
+    // Stop any ongoing speech when step changes
+    stop();
+  }, [currentStep, stop]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
@@ -171,9 +178,27 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
 
   useEffect(() => {
     const currentQuestion = questions[currentStep];
-    if (currentQuestion && currentStep > 0) {
+    if (!currentQuestion) return;
+    
+    // Step 0 is handled by initial state, skip it
+    if (currentStep === 0) return;
+    
+    // Small delay to let UI settle before speaking
+    const timer = setTimeout(() => {
+      // Handle mobile voice nudge step specially
+      if (currentQuestion.type === "mobile_voice_nudge") {
+        setEmmaMessage(
+          "Great! On your phone, you can use the keyboard microphone to talk to me. " +
+          "Just tap the mic icon on your keyboard and say what's on your mind."
+        );
+        return;
+      }
+      
+      // For all other steps, use the question text
       setEmmaMessage(currentQuestion.question);
-    }
+    }, 200);
+    
+    return () => clearTimeout(timer);
   }, [questions, currentStep]);
 
   const handleAnswer = async (answer: string) => {
@@ -229,7 +254,6 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
         if (isMobilePhone) {
           setIsLoading(false);
           setCurrentStep(5);
-          setEmmaMessage("Great! On your phone, you can use the keyboard microphone to talk to me. Just tap the mic icon on your keyboard and say what's on your mind.");
         } else {
           try {
             const completionResponse = await backend.onboarding.complete({ user_id: userId });
@@ -244,12 +268,6 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
       } else {
         setIsLoading(false);
         setCurrentStep(response.current_step);
-        
-        const nextQuestion = questions[response.current_step];
-        if (nextQuestion) {
-          setEmmaMessage(nextQuestion.question);
-        }
-        
         setTextInput("");
       }
     } catch (error) {
