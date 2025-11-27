@@ -262,8 +262,8 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
             </p>
             <Button 
               onClick={onProviderClick}
-              className="w-full"
-              variant="outline"
+              variant="default"
+              className="w-full bg-gradient-to-r from-[#6656cb] to-[#4e8f71] text-white shadow hover:opacity-90 border-0"
             >
               <Stethoscope className="w-4 h-4 mr-2" />
               Sign In to Provider Portal
