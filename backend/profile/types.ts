@@ -2,6 +2,7 @@ export interface UserProfile {
   id: number;
   user_id: string;
   name: string;
+  name_pronunciation?: string | null;
   wake_time?: string;
   morning_routine_preferences?: {
     stretching?: boolean;
@@ -35,11 +36,13 @@ export interface UserProfile {
 export interface CreateProfileRequest {
   user_id: string;
   name: string;
+  name_pronunciation?: string;
 }
 
 export interface UpdateProfileRequest {
   user_id: string;
   name?: string;
+  name_pronunciation?: string;
 }
 
 export interface GetProfileRequest {

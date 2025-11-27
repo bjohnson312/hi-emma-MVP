@@ -58,6 +58,21 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
 
               <div className="bg-white/90 rounded-2xl p-4 border border-[#4e8f71]/20">
                 <label className="flex items-center gap-2 text-sm font-medium text-[#323e48] mb-2">
+                  <Mic className="w-4 h-4" />
+                  Name pronunciation (for Emma's voice only)
+                </label>
+                <Input 
+                  type="text" 
+                  placeholder="e.g., Bree-in"
+                  className="bg-white border-white/40"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Emma will use this for her voice. Your name will still show the way you spelled it.
+                </p>
+              </div>
+
+              <div className="bg-white/90 rounded-2xl p-4 border border-[#4e8f71]/20">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#323e48] mb-2">
                   <Mail className="w-4 h-4" />
                   Email
                 </label>

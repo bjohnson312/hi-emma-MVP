@@ -23,9 +23,18 @@ export const updateStep = api(
     let firstName: string | undefined = req.first_name;
     
     if (req.step === 1 && req.first_name) {
+      const trimmedPronunciation = req.name_pronunciation?.trim() || null;
+      const finalPronunciation = trimmedPronunciation && trimmedPronunciation.length > 0 && trimmedPronunciation.length <= 100 ? trimmedPronunciation : null;
+
       await db.exec`
         UPDATE onboarding_preferences
         SET onboarding_step = ${req.step}, first_name = ${req.first_name}, updated_at = NOW()
+        WHERE user_id = ${req.user_id}
+      `;
+
+      await db.exec`
+        UPDATE user_profiles
+        SET name = ${req.first_name}, name_pronunciation = ${finalPronunciation}, updated_at = NOW()
         WHERE user_id = ${req.user_id}
       `;
     } else if (req.step === 2 && req.reason_for_joining) {

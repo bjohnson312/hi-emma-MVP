@@ -12,7 +12,7 @@ export const get = api<GetProfileRequest, GetProfileResponse>(
     const { user_id } = req;
 
     const profile = await db.queryRow<UserProfile>`
-      SELECT id, user_id, name, wake_time, morning_routine_preferences, created_at, updated_at
+      SELECT id, user_id, name, name_pronunciation, wake_time, morning_routine_preferences, created_at, updated_at
       FROM user_profiles
       WHERE user_id = ${user_id}
     `;

@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  name_pronunciation?: string | null;
   createdAt: string;
   updatedAt: string;
   preferences: UserPreferences;
@@ -12,6 +13,7 @@ export interface UserProfile {
   userId: string;
   email: string;
   name: string;
+  name_pronunciation?: string | null;
   dateOfBirth?: string;
   phone?: string;
   timezone: string;
@@ -33,6 +35,7 @@ export type NotificationChannel = 'push' | 'sms' | 'email';
 
 export interface UpdateProfileRequest {
   name?: string;
+  name_pronunciation?: string;
   dateOfBirth?: string;
   phone?: string;
   timezone?: string;

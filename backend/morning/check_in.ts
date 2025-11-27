@@ -47,7 +47,7 @@ export const checkIn = api<CheckInRequest, CheckInResponse>(
       `;
 
       const existingProfile = await db.queryRow<UserProfile>`
-        SELECT id, user_id, name, created_at, updated_at, interaction_count, morning_routine_preferences
+        SELECT id, user_id, name, name_pronunciation, created_at, updated_at, interaction_count, morning_routine_preferences
         FROM user_profiles
         WHERE user_id = ${user_id}
       `;

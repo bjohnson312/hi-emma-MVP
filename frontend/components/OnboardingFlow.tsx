@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
-import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { getUserSpokenName } from "@/lib/user-utils";
 
 interface OnboardingFlowProps {
   userId: string;
@@ -25,6 +26,8 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
   });
   const [currentStep, setCurrentStep] = useState(0);
   const [firstName, setFirstName] = useState("");
+  const [namePronunciation, setNamePronunciation] = useState("");
+  const [showPronunciation, setShowPronunciation] = useState(false);
   const [reasonForJoining, setReasonForJoining] = useState("");
   const [currentFeeling, setCurrentFeeling] = useState("");
   const [preferredCheckIn, setPreferredCheckIn] = useState("");
@@ -94,6 +97,8 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     }
   };
 
+  const spokenName = useMemo(() => getUserSpokenName({ name: firstName, name_pronunciation: namePronunciation }), [firstName, namePronunciation]);
+
   const questions: Question[] = useMemo(() => [
     {
       id: 0,
@@ -104,7 +109,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     },
     {
       id: 1,
-      question: `Nice to meet you${firstName ? `, ${firstName}` : ''}! What brought you to Hi, Emma today?`,
+      question: `Nice to meet you${spokenName ? `, ${spokenName}` : ''}! What brought you to Hi, Emma today?`,
       options: [
         { value: "routine", label: "Getting back into a healthy routine", icon: Coffee },
         { value: "stress", label: "Managing stress better", icon: Heart },
@@ -145,7 +150,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       ],
       type: "choice"
     }
-  ], [firstName]);
+  ], [spokenName]);
 
   useEffect(() => {
     const currentQuestion = questions[currentStep];
@@ -167,6 +172,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       switch (currentStep) {
         case 0:
           updateData.first_name = answer;
+          updateData.name_pronunciation = namePronunciation || undefined;
           setFirstName(answer);
           break;
         case 1:
@@ -302,6 +308,41 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
                       disabled={isLoading}
                       autoFocus
                     />
+
+                    <div className="border-t border-gray-200 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowPronunciation(!showPronunciation)}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#6656cb] transition-colors"
+                      >
+                        {showPronunciation ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                        <span>Help Emma say your name</span>
+                      </button>
+
+                      {showPronunciation && (
+                        <div className="mt-4 space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            How does your name sound? <span className="text-gray-500 font-normal">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={namePronunciation}
+                            onChange={(e) => setNamePronunciation(e.target.value)}
+                            placeholder="e.g., Rah-nah-duh"
+                            className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#6656cb] transition-colors bg-white"
+                            disabled={isLoading}
+                          />
+                          <p className="text-xs text-gray-500">
+                            Emma will use this for her voice. Your name will still show the way you spelled it.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <Button
                       onClick={handleTextSubmit}
                       disabled={!textInput.trim() || isLoading}
