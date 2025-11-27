@@ -77,7 +77,7 @@ export const inboundSMS = api.raw(
       const normalized = Body.trim().toLowerCase().replace(/^hi,\s*/i, 'hi ');
       
       if (normalized.startsWith('hi emma')) {
-        const replyBody = "Hi, I'm Emma. Thanks for reaching out. I'm your personal wellness companion. I'll send your daily check-in link here soon. Brian appreciates you helping me be the best I it can be! - Health is wealth, invest in yourself.";
+        const replyBody = "Hi, I'm Emma. Thanks for reaching out. I'm your personal wellness companion. I'll send your daily check-in link here soon. Brian appreciates you helping me be the best I can be! - Health is wealth, invest in yourself.";
         
         try {
           let fromIdentifier: string;
