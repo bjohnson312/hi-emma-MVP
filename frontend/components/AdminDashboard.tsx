@@ -5,11 +5,12 @@ import type { SystemInfoResponse } from "~backend/admin_portal/admin_types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
-import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX, Heart, UserPlus, Utensils } from "lucide-react";
+import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX, Heart, UserPlus, Utensils, Mail } from "lucide-react";
 import { SimpleLineChart } from "./admin/SimpleLineChart";
 import { SimpleBarChart } from "./admin/SimpleBarChart";
 import { UserTable } from "./admin/UserTable";
 import { AccessStatsSection } from "./admin/AccessStatsSection";
+import MessagesView from "./admin/MessagesView";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -17,7 +18,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages">("overview");
   const [users, setUsers] = useState<UserListResponse | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStatsResponse | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
@@ -331,6 +332,13 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
             <TrendingUp className="w-4 h-4 mr-2" />
             Usage Stats
           </Button>
+          <Button
+            onClick={() => setActiveTab("messages")}
+            className={activeTab === "messages" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            Messages
+          </Button>
         </div>
 
         {activeTab === "overview" && (
@@ -624,6 +632,10 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === "messages" && (
+          <MessagesView />
         )}
       </div>
     </div>

@@ -1,43 +1,50 @@
-// import { secret } from "encore.dev/config";
+import { secret } from "encore.dev/config";
+import twilio from "twilio";
 
-// const twilioAccountSid = secret("TwilioAccountSid");
-// const twilioAuthToken = secret("TwilioAuthToken");
-// const twilioPhoneNumber = secret("TwilioPhoneNumber");
+const twilioAccountSid = secret("TwilioAccountSID");
+const twilioAuthToken = secret("TwilioAuthToken");
+const twilioMessagingServiceSid = secret("TwilioMessagingServiceSID");
+const twilioPhoneNumber = secret("TwilioPhoneNumber");
 
-export async function sendSMS(to: string, message: string): Promise<void> {
-  console.warn("Twilio SMS integration temporarily disabled. SMS not sent to:", to);
-  return;
+export async function sendSMS(to: string, body: string): Promise<{ sid: string }> {
+  let accountSid: string;
+  let authToken: string;
+  
+  try {
+    accountSid = twilioAccountSid();
+    authToken = twilioAuthToken();
+    
+    if (!accountSid || !authToken) {
+      throw new Error("Twilio credentials not configured");
+    }
+  } catch (err) {
+    console.warn("Twilio credentials not configured. SMS not sent to:", to);
+    throw new Error("Twilio not configured. Please add TwilioAccountSID and TwilioAuthToken to Settings.");
+  }
+  
+  const client = twilio(accountSid, authToken);
+  
+  const messageOptions: any = {
+    to,
+    body
+  };
+  
+  try {
+    const serviceSid = twilioMessagingServiceSid();
+    if (serviceSid) {
+      messageOptions.messagingServiceSid = serviceSid;
+    } else {
+      messageOptions.from = twilioPhoneNumber();
+    }
+  } catch {
+    try {
+      messageOptions.from = twilioPhoneNumber();
+    } catch {
+      throw new Error("Neither TwilioMessagingServiceSID nor TwilioPhoneNumber configured");
+    }
+  }
+  
+  const twilioMessage = await client.messages.create(messageOptions);
+  
+  return { sid: twilioMessage.sid };
 }
-
-// export async function sendSMS(to: string, message: string): Promise<void> {
-//   const accountSid = twilioAccountSid();
-//   const authToken = twilioAuthToken();
-//   const from = twilioPhoneNumber();
-
-//   if (!accountSid || !authToken || !from) {
-//     console.warn("Twilio credentials not configured. SMS not sent.");
-//     return;
-//   }
-
-//   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-//   
-//   const params = new URLSearchParams({
-//     To: to,
-//     From: from,
-//     Body: message,
-//   });
-
-//   const response = await fetch(url, {
-//     method: 'POST',
-//     headers: {
-//       'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
-//       'Content-Type': 'application/x-www-form-urlencoded',
-//     },
-//     body: params.toString(),
-//   });
-
-//   if (!response.ok) {
-//     const error = await response.text();
-//     throw new Error(`Twilio API error: ${error}`);
-//   }
-// }
