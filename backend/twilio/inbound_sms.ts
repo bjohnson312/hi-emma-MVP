@@ -6,38 +6,32 @@ import { secret } from "encore.dev/config";
 const twilioMessagingServiceSid = secret("TwilioMessagingServiceSID");
 const twilioPhoneNumber = secret("TwilioPhoneNumber");
 
-interface TwilioWebhookParams {
-  Body: string;
-}
-
-export const inboundSMS = api(
-  { expose: true, method: "POST", path: "/twilio/inbound-sms", auth: false },
-  async (params: TwilioWebhookParams): Promise<void> => {
-    const bodyRaw = (params as any).Body || params.Body || '';
+export const inboundSMS = api.raw(
+  { expose: true, method: "POST", path: "/twilio/inbound-sms" },
+  async (req, resp) => {
+    console.log('[Twilio Inbound] Webhook received');
     
-    let MessageSid = '';
-    let From = '';
-    let To = '';
-    let Body = '';
-    
-    if (typeof bodyRaw === 'string' && bodyRaw.includes('MessageSid=')) {
-      const urlParams = new URLSearchParams(bodyRaw);
-      MessageSid = urlParams.get('MessageSid') || urlParams.get('SmsMessageSid') || '';
-      From = urlParams.get('From') || '';
-      To = urlParams.get('To') || '';
-      Body = urlParams.get('Body') || '';
-    } else {
-      Body = bodyRaw;
-      MessageSid = (params as any).MessageSid || (params as any).SmsMessageSid || '';
-      From = (params as any).From || '';
-      To = (params as any).To || '';
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
     }
+    const bodyText = Buffer.concat(chunks).toString('utf-8');
     
-    console.log(`[Twilio Inbound] MessageSid: ${MessageSid}, From: ${From}, To: ${To}, Body: ${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}`);
+    console.log('[Twilio Inbound] raw body:', bodyText.substring(0, 200));
+    
+    const params = new URLSearchParams(bodyText);
+    
+    const MessageSid = params.get('MessageSid') || params.get('SmsMessageSid') || '';
+    const From = params.get('From') || '';
+    const To = params.get('To') || '';
+    const Body = params.get('Body') || '';
+    
+    console.log(`[Twilio Inbound] MessageSid: ${MessageSid}, From: ${From}, To: ${To}, Body: ${Body}`);
     
     if (!MessageSid || !From || !To || !Body) {
-      console.error('[Twilio Inbound] Missing required fields in webhook');
-      console.error('[Twilio Inbound] Raw params:', JSON.stringify(params).substring(0, 200));
+      console.error('[Twilio Inbound] Missing required fields');
+      resp.writeHead(200, { 'Content-Type': 'text/xml; charset=utf-8' });
+      resp.end('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
       return;
     }
     
@@ -48,7 +42,9 @@ export const inboundSMS = api(
       `;
       
       if (existing) {
-        console.log(`[Twilio Inbound] Already processed message ${MessageSid}, returning`);
+        console.log(`[Twilio Inbound] Already processed message ${MessageSid}`);
+        resp.writeHead(200, { 'Content-Type': 'text/xml; charset=utf-8' });
+        resp.end('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
         return;
       }
       
@@ -70,7 +66,9 @@ export const inboundSMS = api(
       `;
       
       if (!inboundMessage) {
-        console.log(`[Twilio Inbound] Message ${MessageSid} already processed (via conflict), returning`);
+        console.log(`[Twilio Inbound] Message ${MessageSid} already processed (via conflict)`);
+        resp.writeHead(200, { 'Content-Type': 'text/xml; charset=utf-8' });
+        resp.end('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
         return;
       }
       
@@ -121,5 +119,8 @@ export const inboundSMS = api(
     } catch (error) {
       console.error(`[Twilio Inbound] Error processing webhook:`, error);
     }
+    
+    resp.writeHead(200, { 'Content-Type': 'text/xml; charset=utf-8' });
+    resp.end('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
 );
