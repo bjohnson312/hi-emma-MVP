@@ -51,6 +51,7 @@ export class Client {
     public readonly provider_chat: provider_chat.ServiceClient
     public readonly provider_portal: provider_portal.ServiceClient
     public readonly push: push.ServiceClient
+    public readonly twilio: twilio.ServiceClient
     public readonly voice: voice.ServiceClient
     public readonly wellness: wellness.ServiceClient
     public readonly wellness_journal: wellness_journal.ServiceClient
@@ -86,6 +87,7 @@ export class Client {
         this.provider_chat = new provider_chat.ServiceClient(base)
         this.provider_portal = new provider_portal.ServiceClient(base)
         this.push = new push.ServiceClient(base)
+        this.twilio = new twilio.ServiceClient(base)
         this.voice = new voice.ServiceClient(base)
         this.wellness = new wellness.ServiceClient(base)
         this.wellness_journal = new wellness_journal.ServiceClient(base)
@@ -164,10 +166,12 @@ import { getDailyAccesses as api_admin_portal_get_daily_accesses_getDailyAccesse
 import { getSystemInfo as api_admin_portal_get_system_info_getSystemInfo } from "~backend/admin_portal/get_system_info";
 import { getUsageStats as api_admin_portal_get_usage_stats_getUsageStats } from "~backend/admin_portal/get_usage_stats";
 import { getWeeklyAccesses as api_admin_portal_get_weekly_accesses_getWeeklyAccesses } from "~backend/admin_portal/get_weekly_accesses";
+import { listMessages as api_admin_portal_list_messages_listMessages } from "~backend/admin_portal/list_messages";
 import { listUsers as api_admin_portal_list_users_listUsers } from "~backend/admin_portal/list_users";
 import { logAccess as api_admin_portal_log_access_logAccess } from "~backend/admin_portal/log_access";
 import { reactivateUser as api_admin_portal_reactivate_user_reactivateUser } from "~backend/admin_portal/reactivate_user";
 import { resetPassword as api_admin_portal_reset_password_resetPassword } from "~backend/admin_portal/reset_password";
+import { sendTestSMS as api_admin_portal_send_test_sms_sendTestSMS } from "~backend/admin_portal/send_test_sms";
 import { syncClerkUsers as api_admin_portal_sync_clerk_users_syncClerkUsers } from "~backend/admin_portal/sync_clerk_users";
 
 export namespace admin_portal {
@@ -184,10 +188,12 @@ export namespace admin_portal {
             this.getSystemInfo = this.getSystemInfo.bind(this)
             this.getUsageStats = this.getUsageStats.bind(this)
             this.getWeeklyAccesses = this.getWeeklyAccesses.bind(this)
+            this.listMessages = this.listMessages.bind(this)
             this.listUsers = this.listUsers.bind(this)
             this.logAccess = this.logAccess.bind(this)
             this.reactivateUser = this.reactivateUser.bind(this)
             this.resetPassword = this.resetPassword.bind(this)
+            this.sendTestSMS = this.sendTestSMS.bind(this)
             this.syncClerkUsers = this.syncClerkUsers.bind(this)
         }
 
@@ -233,6 +239,12 @@ export namespace admin_portal {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_get_weekly_accesses_getWeeklyAccesses>
         }
 
+        public async listMessages(params: RequestType<typeof api_admin_portal_list_messages_listMessages>): Promise<ResponseType<typeof api_admin_portal_list_messages_listMessages>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/messages/list`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_list_messages_listMessages>
+        }
+
         public async listUsers(): Promise<ResponseType<typeof api_admin_portal_list_users_listUsers>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/users`, {method: "GET", body: undefined})
@@ -255,6 +267,12 @@ export namespace admin_portal {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/users/reset-password`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_reset_password_resetPassword>
+        }
+
+        public async sendTestSMS(params: RequestType<typeof api_admin_portal_send_test_sms_sendTestSMS>): Promise<ResponseType<typeof api_admin_portal_send_test_sms_sendTestSMS>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/messages/send-test-sms`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_portal_send_test_sms_sendTestSMS>
         }
 
         public async syncClerkUsers(): Promise<ResponseType<typeof api_admin_portal_sync_clerk_users_syncClerkUsers>> {
@@ -1375,6 +1393,24 @@ export namespace push {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/push/unsubscribe`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_push_unsubscribe_unsubscribe>
+        }
+    }
+}
+
+
+export namespace twilio {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.inboundSMS = this.inboundSMS.bind(this)
+        }
+
+        public async inboundSMS(options: PickMethods<"POST"> = {}): Promise<globalThis.Response> {
+            options.method ||= "POST";
+            return this.baseClient.callAPI(`/twilio/inbound-sms`, options)
         }
     }
 }
