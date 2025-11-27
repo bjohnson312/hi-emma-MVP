@@ -26,6 +26,7 @@ import { CareTeamView } from "./components/views/CareTeamView";
 import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { clerkClient } from "./lib/clerk-client";
+import { isMobilePhoneDevice } from "@/lib/device-detection";
 import AdminPortalApp from "./AdminPortalApp";
 import ProviderPortalApp from "./ProviderPortalApp";
 import backend from "@/lib/backend-client";
@@ -242,6 +243,8 @@ export default function App() {
   }
 
   if (showOnboarding) {
+    const isMobilePhone = isMobilePhoneDevice();
+    
     return (
       <div 
         className="min-h-screen relative"
@@ -256,12 +259,21 @@ export default function App() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-[#e8f5e9]/50 to-[#d6f0c2]/50 backdrop-blur-[1px]"></div>
         <div className="relative z-10">
           <OnboardingFlow 
-            userId={userId} 
+            userId={userId}
+            isMobilePhone={isMobilePhone}
             onComplete={async (firstName, welcomeMessage) => {
               setUserName(firstName);
               setShowOnboarding(false);
               await ensureTrinityVoiceDefault();
-              setShowMicSetup(true);
+              
+              const shouldShowMicSetup = !isMobilePhone;
+              setShowMicSetup(shouldShowMicSetup);
+              
+              if (!shouldShowMicSetup) {
+                localStorage.setItem('emma_mic_setup_complete', 'skipped_mobile');
+                console.log('[Onboarding] Skipped mic setup for mobile phone');
+              }
+              
               if (welcomeMessage) {
                 localStorage.setItem('emma_welcome_message', welcomeMessage);
               }

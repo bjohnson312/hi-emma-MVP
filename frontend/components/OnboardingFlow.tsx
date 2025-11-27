@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
-import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight } from "lucide-react";
+import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight, Mic } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 
 interface OnboardingFlowProps {
   userId: string;
+  isMobilePhone?: boolean;
   onComplete: (firstName: string, welcomeMessage?: string) => void;
 }
 
@@ -13,11 +14,11 @@ interface Question {
   id: number;
   question: string;
   options: { value: string; label: string; icon?: any }[];
-  type: "choice" | "text";
+  type: "choice" | "text" | "mobile_voice_nudge";
   placeholder?: string;
 }
 
-export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
+export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: OnboardingFlowProps) {
   const [firstName, setFirstName] = useState("");
   const [namePronunciation, setNamePronunciation] = useState("");
   
@@ -102,58 +103,71 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     }
   };
 
-  const questions: Question[] = useMemo(() => [
-    {
-      id: 0,
-      question: "What's your first name?",
-      options: [],
-      type: "text",
-      placeholder: "Enter your first name"
-    },
-    {
-      id: 1,
-      question: `Nice to meet you${firstName ? `, ${firstName}` : ''}! What brought you to Hi, Emma today?`,
-      options: [
-        { value: "routine", label: "Getting back into a healthy routine", icon: Coffee },
-        { value: "stress", label: "Managing stress better", icon: Heart },
-        { value: "nutrition", label: "Eating better", icon: Sparkles },
-        { value: "consistency", label: "Managing my care routine or chronic condition", icon: Bell },
-        { value: "other", label: "Something else", icon: MessageSquare }
-      ],
-      type: "choice"
-    },
-    {
-      id: 2,
-      question: "How have you been feeling lately?",
-      options: [
-        { value: "pretty_good", label: "Pretty good, just want to keep it up", icon: Heart },
-        { value: "up_and_down", label: "Up and down, some good days and some tough ones", icon: Sparkles },
-        { value: "low_energy", label: "Low energy or stressed", icon: Moon },
-        { value: "need_support", label: "I could use some extra support", icon: MessageSquare }
-      ],
-      type: "choice"
-    },
-    {
-      id: 3,
-      question: "When would you like me to check in with you?",
-      options: [
-        { value: "morning", label: "Morning – help me start my day", icon: Coffee },
-        { value: "evening", label: "Evening – help me wind down", icon: Moon },
-        { value: "both", label: "Both morning and evening", icon: Heart }
-      ],
-      type: "choice"
-    },
-    {
-      id: 4,
-      question: "How would you like to receive reminders?",
-      options: [
-        { value: "voice", label: "Voice (through this app)", icon: MessageSquare },
-        { value: "sms", label: "SMS text messages", icon: Bell },
-        { value: "both", label: "Both Voice and SMS", icon: Heart }
-      ],
-      type: "choice"
+  const questions: Question[] = useMemo(() => {
+    const baseQuestions: Question[] = [
+      {
+        id: 0,
+        question: "What's your first name?",
+        options: [],
+        type: "text",
+        placeholder: "Enter your first name"
+      },
+      {
+        id: 1,
+        question: `Nice to meet you${firstName ? `, ${firstName}` : ''}! What brought you to Hi, Emma today?`,
+        options: [
+          { value: "routine", label: "Getting back into a healthy routine", icon: Coffee },
+          { value: "stress", label: "Managing stress better", icon: Heart },
+          { value: "nutrition", label: "Eating better", icon: Sparkles },
+          { value: "consistency", label: "Managing my care routine or chronic condition", icon: Bell },
+          { value: "other", label: "Something else", icon: MessageSquare }
+        ],
+        type: "choice"
+      },
+      {
+        id: 2,
+        question: "How have you been feeling lately?",
+        options: [
+          { value: "pretty_good", label: "Pretty good, just want to keep it up", icon: Heart },
+          { value: "up_and_down", label: "Up and down, some good days and some tough ones", icon: Sparkles },
+          { value: "low_energy", label: "Low energy or stressed", icon: Moon },
+          { value: "need_support", label: "I could use some extra support", icon: MessageSquare }
+        ],
+        type: "choice"
+      },
+      {
+        id: 3,
+        question: "When would you like me to check in with you?",
+        options: [
+          { value: "morning", label: "Morning – help me start my day", icon: Coffee },
+          { value: "evening", label: "Evening – help me wind down", icon: Moon },
+          { value: "both", label: "Both morning and evening", icon: Heart }
+        ],
+        type: "choice"
+      },
+      {
+        id: 4,
+        question: "How would you like to receive reminders?",
+        options: [
+          { value: "voice", label: "Voice (through this app)", icon: MessageSquare },
+          { value: "sms", label: "SMS text messages", icon: Bell },
+          { value: "both", label: "Both Voice and SMS", icon: Heart }
+        ],
+        type: "choice"
+      }
+    ];
+    
+    if (isMobilePhone) {
+      baseQuestions.push({
+        id: 5,
+        question: "Talking to Emma on Your Phone",
+        options: [],
+        type: "mobile_voice_nudge"
+      });
     }
-  ], [firstName]);
+    
+    return baseQuestions;
+  }, [firstName, isMobilePhone]);
 
   useEffect(() => {
     const currentQuestion = questions[currentStep];
@@ -167,6 +181,19 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     setIsLoading(true);
     
     try {
+      if (isMobilePhone && currentStep === 5 && questions[currentStep]?.type === "mobile_voice_nudge") {
+        try {
+          const completionResponse = await backend.onboarding.complete({ user_id: userId });
+          setIsLoading(false);
+          onComplete(firstName || "User", completionResponse.welcome_message);
+        } catch (completeError) {
+          console.error("Failed to complete onboarding:", completeError);
+          setIsLoading(false);
+          onComplete(firstName || "User", "Welcome! Let's get started with your wellness journey.");
+        }
+        return;
+      }
+      
       const updateData: any = {
         user_id: userId,
         step: currentStep + 1
@@ -199,15 +226,20 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       const response = await backend.onboarding.updateStep(updateData);
       
       if (response.onboarding_completed) {
-        try {
-          const completionResponse = await backend.onboarding.complete({ user_id: userId });
+        if (isMobilePhone) {
           setIsLoading(false);
-          onComplete(firstName || "User", completionResponse.welcome_message);
-        } catch (completeError) {
-          console.error("Failed to complete onboarding:", completeError);
-          setIsLoading(false);
-          // Fallback: Complete without calling the API
-          onComplete(firstName || "User", "Welcome! Let's get started with your wellness journey.");
+          setCurrentStep(5);
+          setEmmaMessage("Great! On your phone, you can use the keyboard microphone to talk to me. Just tap the mic icon on your keyboard and say what's on your mind.");
+        } else {
+          try {
+            const completionResponse = await backend.onboarding.complete({ user_id: userId });
+            setIsLoading(false);
+            onComplete(firstName || "User", completionResponse.welcome_message);
+          } catch (completeError) {
+            console.error("Failed to complete onboarding:", completeError);
+            setIsLoading(false);
+            onComplete(firstName || "User", "Welcome! Let's get started with your wellness journey.");
+          }
         }
       } else {
         setIsLoading(false);
@@ -391,6 +423,68 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
                         </button>
                       );
                     })}
+                  </div>
+                )}
+
+                {currentQuestion.type === "mobile_voice_nudge" && (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#4e8f71]/20 to-[#364d89]/20 flex items-center justify-center">
+                        <Mic className="w-10 h-10 text-[#4e8f71]" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-[#323e48] mb-3">
+                        Talking to Emma on Your Phone
+                      </h3>
+                    </div>
+                    
+                    <div className="bg-gradient-to-b from-white/60 to-[#f8fdf9]/80 rounded-2xl p-6 border border-[#8BC34A]/10 space-y-4">
+                      <p className="text-base text-gray-700 leading-relaxed">
+                        On your iPhone or Android, you can tap the microphone icon 🎤 on your 
+                        keyboard and just say what you want Emma to hear.
+                      </p>
+                      
+                      <div className="bg-white/80 rounded-xl p-4 border-2 border-[#4e8f71]/20">
+                        <p className="text-sm font-semibold text-[#323e48] mb-2">Try saying:</p>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <span className="text-[#6656cb]">•</span>
+                            <p className="text-base font-medium text-[#6656cb]">"Hi, Emma"</p>
+                          </div>
+                          <p className="text-sm text-gray-600 text-center">or</p>
+                          <div className="flex items-start gap-2">
+                            <span className="text-[#6656cb]">•</span>
+                            <p className="text-base font-medium text-[#6656cb]">
+                              "Hi, Emma, help me with my morning routine."
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                        <p className="text-sm text-gray-700 flex items-start gap-2">
+                          <span>💡</span>
+                          <span>
+                            This uses your phone's built-in dictation. You don't need to 
+                            change browser settings.
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={() => handleAnswer("acknowledged")}
+                      disabled={isLoading}
+                      className="w-full py-6 text-lg bg-gradient-to-r from-[#4e8f71] via-[#364d89] to-[#6656cb] hover:opacity-90 text-white rounded-2xl shadow-lg disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Starting...
+                        </>
+                      ) : (
+                        "Got it, let's start!"
+                      )}
+                    </Button>
                   </div>
                 )}
               </div>

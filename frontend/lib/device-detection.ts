@@ -13,3 +13,15 @@ export const isIOSSafariMobile = (): boolean => {
   
   return isIOS && isMobileViewport && isSafari;
 };
+
+export const isMobilePhoneDevice = (): boolean => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isIPhone = /iphone|ipod/.test(userAgent);
+  const isAndroidPhone = /android/.test(userAgent) && /mobile/.test(userAgent);
+
+  return isIPhone || isAndroidPhone;
+};
