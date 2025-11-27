@@ -1143,7 +1143,8 @@ export namespace profile {
         public async update(params: RequestType<typeof api_profile_update_update>): Promise<ResponseType<typeof api_profile_update_update>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                name: params.name,
+                name:                 params.name,
+                "name_pronunciation": params["name_pronunciation"],
             }
 
             // Now make the actual call to the API
