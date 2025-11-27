@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -35,6 +35,12 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
   
   const randomQuote = useMemo(() => {
     return MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +112,7 @@ export function ClerkLoginPage({ onLoginSuccess, onAdminClick, onProviderClick }
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center px-4 relative"
+      className="min-h-screen flex items-start justify-center px-4 pt-12 md:pt-16 relative"
       style={{
         backgroundImage: "url('/background.jpg')",
         backgroundSize: "cover",
