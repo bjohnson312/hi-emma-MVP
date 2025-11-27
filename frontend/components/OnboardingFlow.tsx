@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
 import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
-import { getUserSpokenName } from "@/lib/user-utils";
 
 interface OnboardingFlowProps {
   userId: string;
@@ -19,14 +18,20 @@ interface Question {
 }
 
 export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
-  const { speak, stop, isSpeaking } = useTextToSpeech();
+  const [firstName, setFirstName] = useState("");
+  const [namePronunciation, setNamePronunciation] = useState("");
+  
+  const { speak, stop, isSpeaking } = useTextToSpeech({
+    userProfile: firstName ? {
+      name: firstName,
+      name_pronunciation: namePronunciation || null
+    } : undefined
+  });
   const hasSpokenCurrentMessage = useRef(false);
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem("emma-voice-muted") === "true";
   });
   const [currentStep, setCurrentStep] = useState(0);
-  const [firstName, setFirstName] = useState("");
-  const [namePronunciation, setNamePronunciation] = useState("");
   const [showPronunciation, setShowPronunciation] = useState(false);
   const [reasonForJoining, setReasonForJoining] = useState("");
   const [currentFeeling, setCurrentFeeling] = useState("");
@@ -97,8 +102,6 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     }
   };
 
-  const spokenName = useMemo(() => getUserSpokenName({ name: firstName, name_pronunciation: namePronunciation }), [firstName, namePronunciation]);
-
   const questions: Question[] = useMemo(() => [
     {
       id: 0,
@@ -109,7 +112,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
     },
     {
       id: 1,
-      question: `Nice to meet you${spokenName ? `, ${spokenName}` : ''}! What brought you to Hi, Emma today?`,
+      question: `Nice to meet you${firstName ? `, ${firstName}` : ''}! What brought you to Hi, Emma today?`,
       options: [
         { value: "routine", label: "Getting back into a healthy routine", icon: Coffee },
         { value: "stress", label: "Managing stress better", icon: Heart },
@@ -150,7 +153,7 @@ export default function OnboardingFlow({ userId, onComplete }: OnboardingFlowPro
       ],
       type: "choice"
     }
-  ], [spokenName]);
+  ], [firstName]);
 
   useEffect(() => {
     const currentQuestion = questions[currentStep];

@@ -36,6 +36,7 @@ export default function ConversationalCheckIn({
   const [showSuggestionPanel, setShowSuggestionPanel] = useState(false);
   const [showIOSSafariBanner, setShowIOSSafariBanner] = useState(false);
   const [autoSpeakFailedMessageId, setAutoSpeakFailedMessageId] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name: string; name_pronunciation?: string | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastMessageCountRef = useRef(0);
@@ -62,7 +63,7 @@ export default function ConversationalCheckIn({
     selectedElevenLabsVoice,
     setSelectedElevenLabsVoice,
     resumeAudioContext
-  } = useTextToSpeech();
+  } = useTextToSpeech({ userProfile: userProfile || undefined });
 
   const {
     messages,
@@ -161,15 +162,21 @@ export default function ConversationalCheckIn({
     const fetchProfile = async () => {
       try {
         const response = await backend.profile.get({ user_id: userId });
-        if (response.profile && response.profile.name) {
-          onNameUpdate?.(response.profile.name);
+        if (response.profile) {
+          setUserProfile({
+            name: response.profile.name,
+            name_pronunciation: response.profile.name_pronunciation
+          });
+          if (response.profile.name) {
+            onNameUpdate?.(response.profile.name);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       }
     };
     fetchProfile();
-  }, [userId]);
+  }, [userId, onNameUpdate]);
 
   const handleSendMessage = async () => {
     if (!currentInput.trim() || loading) return;

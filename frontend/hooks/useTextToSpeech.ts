@@ -6,6 +6,13 @@ import { isIOSDevice } from '@/lib/device-detection';
 
 type SpeakResult = { status: 'success' | 'blocked' | 'error' };
 
+interface UseTextToSpeechOptions {
+  userProfile?: {
+    name: string;
+    name_pronunciation?: string | null;
+  };
+}
+
 interface UseTextToSpeechResult {
   speak: (text: string) => Promise<SpeakResult>;
   stop: () => void;
@@ -20,7 +27,12 @@ interface UseTextToSpeechResult {
   resumeAudioContext: () => Promise<void>;
 }
 
-export function useTextToSpeech(): UseTextToSpeechResult {
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function useTextToSpeech(options?: UseTextToSpeechOptions): UseTextToSpeechResult {
+  const userProfile = options?.userProfile;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentlySpeakingText, setCurrentlySpeakingText] = useState<string | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -235,6 +247,15 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     }
   }, [isIOS]);
 
+  const transformMessageForTTS = useCallback((text: string): string => {
+    if (!userProfile || !userProfile.name_pronunciation) {
+      return text;
+    }
+
+    const namePattern = new RegExp(`\\b${escapeRegex(userProfile.name)}\\b`, 'gi');
+    return text.replace(namePattern, userProfile.name_pronunciation);
+  }, [userProfile]);
+
   const speak = useCallback(async (text: string): Promise<SpeakResult> => {
     if (!text) return { status: 'error' };
     
@@ -247,6 +268,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     
     await new Promise(resolve => setTimeout(resolve, 100));
     
+    const transformedText = transformMessageForTTS(text);
     setCurrentlySpeakingText(text);
 
     if (selectedElevenLabsVoice) {
@@ -258,7 +280,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
         }
 
         const { audioUrl } = await backend.voice.generateSpeech({
-          text,
+          text: transformedText,
           voiceId: selectedElevenLabsVoice.id,
         });
         
@@ -306,7 +328,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
         }
       }
     } else if (isSupported && selectedVoice) {
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(transformedText);
       
       utterance.voice = selectedVoice;
       utterance.rate = 0.92;
@@ -334,7 +356,7 @@ export function useTextToSpeech(): UseTextToSpeechResult {
     }
     
     return { status: 'error' };
-  }, [isSupported, selectedVoice, selectedElevenLabsVoice, currentlySpeakingText, isSpeaking, stop, isIOS]);
+  }, [isSupported, selectedVoice, selectedElevenLabsVoice, currentlySpeakingText, isSpeaking, stop, isIOS, transformMessageForTTS]);
 
   useEffect(() => {
     return () => {
