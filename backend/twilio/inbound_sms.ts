@@ -1,4 +1,4 @@
-import { api, Header } from "encore.dev/api";
+import { api } from "encore.dev/api";
 import db from "../db";
 import { sendSMS } from "../notifications/sms";
 import { secret } from "encore.dev/config";
@@ -6,39 +6,40 @@ import { secret } from "encore.dev/config";
 const twilioMessagingServiceSid = secret("TwilioMessagingServiceSID");
 const twilioPhoneNumber = secret("TwilioPhoneNumber");
 
-interface TwilioInboundSMSRequest {
-  MessageSid: string;
-  From: string;
-  To: string;
+interface TwilioWebhookParams {
   Body: string;
-  NumMedia?: string;
-  contentType: Header<"Content-Type">;
 }
 
 export const inboundSMS = api(
   { expose: true, method: "POST", path: "/twilio/inbound-sms", auth: false },
-  async (req: TwilioInboundSMSRequest): Promise<void> => {
+  async (params: TwilioWebhookParams): Promise<void> => {
+    const bodyRaw = (params as any).Body || params.Body || '';
+    
     let MessageSid = '';
     let From = '';
     let To = '';
     let Body = '';
     
-    if (req.contentType.includes('application/x-www-form-urlencoded')) {
-      const bodyStr = (req as any).body || '';
-      const params = new URLSearchParams(bodyStr);
-      
-      MessageSid = params.get('MessageSid') || '';
-      From = params.get('From') || '';
-      To = params.get('To') || '';
-      Body = params.get('Body') || '';
+    if (typeof bodyRaw === 'string' && bodyRaw.includes('MessageSid=')) {
+      const urlParams = new URLSearchParams(bodyRaw);
+      MessageSid = urlParams.get('MessageSid') || urlParams.get('SmsMessageSid') || '';
+      From = urlParams.get('From') || '';
+      To = urlParams.get('To') || '';
+      Body = urlParams.get('Body') || '';
     } else {
-      MessageSid = req.MessageSid;
-      From = req.From;
-      To = req.To;
-      Body = req.Body;
+      Body = bodyRaw;
+      MessageSid = (params as any).MessageSid || (params as any).SmsMessageSid || '';
+      From = (params as any).From || '';
+      To = (params as any).To || '';
     }
     
     console.log(`[Twilio Inbound] MessageSid: ${MessageSid}, From: ${From}, To: ${To}, Body: ${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}`);
+    
+    if (!MessageSid || !From || !To || !Body) {
+      console.error('[Twilio Inbound] Missing required fields in webhook');
+      console.error('[Twilio Inbound] Raw params:', JSON.stringify(params).substring(0, 200));
+      return;
+    }
     
     try {
       const existing = await db.queryRow<{ id: number }>`
