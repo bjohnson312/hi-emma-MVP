@@ -375,6 +375,7 @@ export default function App() {
         return <NotificationsView />;
       case "settings":
         return <SettingsView 
+          userId={userId}
           designVersion={designVersion}
           onDesignChange={(newDesign) => {
             setDesignVersion(newDesign);
