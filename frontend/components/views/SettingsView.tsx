@@ -1,4 +1,4 @@
-import { Settings, User, Mail, Link, Mic } from "lucide-react";
+import { Settings, User, Mail, Link, Mic, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
@@ -6,7 +6,13 @@ import { useToast } from "@/components/ui/use-toast";
 import VoiceSelector from "@/components/VoiceSelector";
 import Tooltip from "@/components/Tooltip";
 
-export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () => void }) {
+interface SettingsViewProps {
+  designVersion: 'classic' | 'gradient-top';
+  onDesignChange: (design: 'classic' | 'gradient-top') => void;
+  onOpenMicSetup?: () => void;
+}
+
+export default function SettingsView({ designVersion, onDesignChange, onOpenMicSetup }: SettingsViewProps) {
   const { 
     voices, 
     selectedVoice, 
@@ -18,6 +24,14 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
   } = useTextToSpeech();
   
   const { toast } = useToast();
+
+  const isUrlOverride = (() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDesign = urlParams.get('design');
+    if (!urlDesign) return false;
+    const savedDesign = localStorage.getItem('emma_design_version');
+    return urlDesign !== savedDesign;
+  })();
 
   const handleSaveSettings = () => {
     toast({
@@ -82,6 +96,50 @@ export default function SettingsView({ onOpenMicSetup }: { onOpenMicSetup?: () =
                   className="bg-white border-white/40"
                 />
               </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-[#323e48] mb-3">Navigation Style (Mobile)</h3>
+            <p className="text-xs text-[#323e48]/60 mb-3">Choose your preferred mobile navigation layout</p>
+            
+            {isUrlOverride && (
+              <div className="mb-3 text-sm text-orange-600 bg-orange-50 p-3 rounded-xl border border-orange-200">
+                <p className="font-medium">Preview mode active</p>
+                <p className="text-xs mt-1">Design set by URL parameter. Your saved preference will apply when the URL parameter is removed.</p>
+              </div>
+            )}
+            
+            <div className="space-y-2 bg-white/90 rounded-2xl p-4 border border-[#4e8f71]/20">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="design"
+                  value="classic"
+                  checked={designVersion === 'classic'}
+                  onChange={() => onDesignChange('classic')}
+                  className="w-4 h-4 text-[#4e8f71] focus:ring-[#4e8f71]"
+                />
+                <div className="flex-1">
+                  <span className="font-medium text-[#323e48] group-hover:text-[#4e8f71] transition-colors">Classic bottom navigation</span>
+                  <p className="text-xs text-[#323e48]/60 mt-0.5">Traditional bottom bar with labeled icons</p>
+                </div>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="design"
+                  value="gradient-top"
+                  checked={designVersion === 'gradient-top'}
+                  onChange={() => onDesignChange('gradient-top')}
+                  className="w-4 h-4 text-[#4e8f71] focus:ring-[#4e8f71]"
+                />
+                <div className="flex-1">
+                  <span className="font-medium text-[#323e48] group-hover:text-[#4e8f71] transition-colors">Top gradient navigation</span>
+                  <p className="text-xs text-[#323e48]/60 mt-0.5">Modern top bar with gradient background</p>
+                </div>
+              </label>
             </div>
           </div>
 

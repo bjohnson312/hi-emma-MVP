@@ -79,6 +79,21 @@ export default function App() {
     return stored || "";
   });
 
+  const [designVersion, setDesignVersion] = useState<'classic' | 'gradient-top'>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDesign = urlParams.get('design');
+    if (urlDesign === 'classic' || urlDesign === 'gradient-top') {
+      return urlDesign;
+    }
+    
+    const saved = localStorage.getItem('emma_design_version');
+    if (saved === 'classic' || saved === 'gradient-top') {
+      return saved;
+    }
+    
+    return 'classic';
+  });
+
   useEffect(() => {
     registerServiceWorker();
   }, []);
@@ -359,10 +374,17 @@ export default function App() {
       case "notifications":
         return <NotificationsView />;
       case "settings":
-        return <SettingsView onOpenMicSetup={() => {
-          localStorage.removeItem('emma_mic_setup_complete');
-          setShowMicSetup(true);
-        }} />;
+        return <SettingsView 
+          designVersion={designVersion}
+          onDesignChange={(newDesign) => {
+            setDesignVersion(newDesign);
+            localStorage.setItem('emma_design_version', newDesign);
+          }}
+          onOpenMicSetup={() => {
+            localStorage.removeItem('emma_mic_setup_complete');
+            setShowMicSetup(true);
+          }} 
+        />;
       case "export":
         return <ExportView />;
       case "provider-access":
@@ -396,7 +418,11 @@ export default function App() {
           onLogout={handleLogout}
         />
         
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        <main className={`flex-1 overflow-y-auto ${
+          designVersion === 'classic' 
+            ? 'pb-20 md:pb-0'
+            : 'pt-20 md:pt-0'
+        }`}>
           <div className="container mx-auto px-4 lg:px-8 py-8">
             {renderMainContent()}
           </div>
@@ -404,6 +430,7 @@ export default function App() {
       </div>
       
       <BottomNav 
+        designVersion={designVersion}
         activeView={getMobileView()}
         onNavigate={handleMobileNavigate}
         onMenuOpen={() => setIsMobileMenuOpen(true)}
