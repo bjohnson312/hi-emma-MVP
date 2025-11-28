@@ -41,6 +41,7 @@ export default function ConversationalCheckIn({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastMessageCountRef = useRef(0);
   const autoSpeakTimeoutRef = useRef<number | null>(null);
+  const lastSpokenMessageIdRef = useRef<string | null>(null);
   const {
     transcript,
     isListening,
@@ -67,6 +68,7 @@ export default function ConversationalCheckIn({
 
   const {
     messages,
+    sessionId,
     loading,
     conversationComplete,
     pendingSuggestions,
@@ -89,40 +91,85 @@ export default function ConversationalCheckIn({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const getSessionStorageKey = (sid: number | null): string => {
+    return `emma_last_spoken_message_${sid || 'unknown'}`;
+  };
+
+  const getLastSpokenMessageId = (sid: number | null): string | null => {
+    if (typeof window === 'undefined' || !sid) return null;
+    try {
+      return sessionStorage.getItem(getSessionStorageKey(sid));
+    } catch {
+      return null;
+    }
+  };
+
+  const setLastSpokenMessageId = (sid: number | null, messageId: string | null) => {
+    if (typeof window === 'undefined' || !sid) return;
+    try {
+      if (messageId === null) {
+        sessionStorage.removeItem(getSessionStorageKey(sid));
+      } else {
+        sessionStorage.setItem(getSessionStorageKey(sid), messageId);
+      }
+      lastSpokenMessageIdRef.current = messageId;
+    } catch (error) {
+      console.warn('[TTS] Failed to save lastSpokenMessageId to sessionStorage:', error);
+    }
+  };
+
+  const generateMessageId = (message: { sender: string; text: string; timestamp: Date }, index: number): string => {
+    return `${message.sender}-${message.timestamp.getTime()}-${index}`;
+  };
+
   useEffect(() => {
     scrollToBottom();
 
     const runAutoSpeak = async () => {
-      if (voiceEnabled && isTTSSupported && messages.length > lastMessageCountRef.current) {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage && lastMessage.sender === "emma") {
-          const result = await speak(lastMessage.text);
-          const messageId = `${lastMessage.sender}-${messages.length - 1}`;
-          
-          console.log(`[TTS] auto-speak status for message ${messageId}: ${result.status}`);
-          
-          if (result.status === "blocked" || result.status === "error") {
-            setAutoSpeakFailedMessageId(messageId);
-            
-            if (autoSpeakTimeoutRef.current) {
-              window.clearTimeout(autoSpeakTimeoutRef.current);
-            }
-            
-            autoSpeakTimeoutRef.current = window.setTimeout(() => {
-              setAutoSpeakFailedMessageId(prev => 
-                prev === messageId ? null : prev
-              );
-            }, 5000);
-          } else if (result.status === "success") {
-            setAutoSpeakFailedMessageId(null);
-            if (autoSpeakTimeoutRef.current) {
-              window.clearTimeout(autoSpeakTimeoutRef.current);
-            }
-          }
+      if (!voiceEnabled || !isTTSSupported || messages.length === 0) {
+        return;
+      }
+
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage || lastMessage.sender !== "emma") {
+        return;
+      }
+
+      const currentMessageId = generateMessageId(lastMessage, messages.length - 1);
+      const cachedLastSpoken = getLastSpokenMessageId(sessionId);
+      const lastSpoken = lastSpokenMessageIdRef.current || cachedLastSpoken;
+
+      if (currentMessageId === lastSpoken) {
+        console.log('[TTS] Skipping auto-speak - message already spoken:', currentMessageId);
+        return;
+      }
+
+      console.log('[TTS] Auto-speaking new message:', currentMessageId);
+      
+      const result = await speak(lastMessage.text);
+      const displayMessageId = `${lastMessage.sender}-${messages.length - 1}`;
+      
+      console.log(`[TTS] auto-speak status for message ${displayMessageId}: ${result.status}`);
+      
+      if (result.status === "blocked" || result.status === "error") {
+        setAutoSpeakFailedMessageId(displayMessageId);
+        
+        if (autoSpeakTimeoutRef.current) {
+          window.clearTimeout(autoSpeakTimeoutRef.current);
+        }
+        
+        autoSpeakTimeoutRef.current = window.setTimeout(() => {
+          setAutoSpeakFailedMessageId(prev => 
+            prev === displayMessageId ? null : prev
+          );
+        }, 5000);
+      } else if (result.status === "success") {
+        setLastSpokenMessageId(sessionId, currentMessageId);
+        setAutoSpeakFailedMessageId(null);
+        if (autoSpeakTimeoutRef.current) {
+          window.clearTimeout(autoSpeakTimeoutRef.current);
         }
       }
-      
-      lastMessageCountRef.current = messages.length;
       
       const hasEmmaMessages = messages.some(m => m.sender === "emma");
       if (isIOSSafariMobile() && voiceEnabled && hasEmmaMessages) {
@@ -140,7 +187,7 @@ export default function ConversationalCheckIn({
         window.clearTimeout(autoSpeakTimeoutRef.current);
       }
     };
-  }, [messages, voiceEnabled, isTTSSupported, speak]);
+  }, [messages, voiceEnabled, isTTSSupported, speak, sessionId]);
 
   useEffect(() => {
     loadOrStartConversation();
@@ -230,6 +277,14 @@ export default function ConversationalCheckIn({
       setConversationComplete(result.completed);
       setSelectedDate(date);
       setShowHistory(false);
+      
+      if (result.messages.length > 0) {
+        const lastMsg = result.messages[result.messages.length - 1];
+        if (lastMsg.sender === "emma") {
+          const msgId = generateMessageId(lastMsg, result.messages.length - 1);
+          setLastSpokenMessageId(result.sessionId, msgId);
+        }
+      }
     }
   };
 
@@ -245,6 +300,8 @@ export default function ConversationalCheckIn({
     setCurrentInput("");
     setSelectedDate(null);
     setShowResetConfirm(false);
+    setLastSpokenMessageId(sessionId, null);
+    lastSpokenMessageIdRef.current = null;
     resetConversation(false);
   };
 
