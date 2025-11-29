@@ -41,6 +41,7 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
   const [emmaMessage, setEmmaMessage] = useState("Hi there! I'm Emma, your personal wellness companion. Let's get to know each other. What's your name?");
   const [isLoading, setIsLoading] = useState(false);
   const [textInput, setTextInput] = useState("");
+  const [isTestingPronunciation, setIsTestingPronunciation] = useState(false);
 
   useEffect(() => {
     loadOnboardingStatus();
@@ -377,7 +378,7 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
                       </button>
 
                       {showPronunciation && (
-                        <div className="mt-4 space-y-2">
+                        <div className="mt-4 space-y-3">
                           <label className="block text-sm font-medium text-gray-700">
                             How does your name sound? <span className="text-gray-500 font-normal">(optional)</span>
                           </label>
@@ -392,6 +393,45 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
                           <p className="text-xs text-gray-500">
                             Emma will use this for her voice. Your name will still show the way you spelled it.
                           </p>
+                          
+                          {isMuted && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1">
+                              <VolumeX className="w-3 h-3" />
+                              Turn Emma's voice on to test pronunciation.
+                            </p>
+                          )}
+                          
+                          <Button
+                            type="button"
+                            onClick={async () => {
+                              if (isTestingPronunciation || !textInput.trim()) return;
+                              
+                              setIsTestingPronunciation(true);
+                              stop();
+                              
+                              await new Promise(resolve => setTimeout(resolve, 150));
+                              
+                              const spokenName = namePronunciation || textInput.trim();
+                              await speak(`Hi, ${spokenName}. Did I say that right?`);
+                              
+                              setIsTestingPronunciation(false);
+                            }}
+                            disabled={!textInput.trim() || isLoading || isMuted || isTestingPronunciation}
+                            variant="outline"
+                            className="w-full py-2.5 text-sm border-2 border-[#4e8f71]/30 hover:border-[#6656cb] hover:bg-[#6656cb]/5 transition-colors"
+                          >
+                            {isTestingPronunciation ? (
+                              <>
+                                <Volume2 className="w-4 h-4 mr-2 animate-pulse" />
+                                Playing...
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="w-4 h-4 mr-2" />
+                                Test how Emma says it
+                              </>
+                            )}
+                          </Button>
                         </div>
                       )}
                     </div>
