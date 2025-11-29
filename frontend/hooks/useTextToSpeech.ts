@@ -11,6 +11,7 @@ interface UseTextToSpeechOptions {
     name: string;
     name_pronunciation?: string | null;
   };
+  forceVoice?: 'trinity';
 }
 
 interface UseTextToSpeechResult {
@@ -100,6 +101,21 @@ export function useTextToSpeech(options?: UseTextToSpeechOptions): UseTextToSpee
   useEffect(() => {
     if (elevenLabsVoices.length === 0) return; // Wait for voices to load
     
+    // Force Trinity voice if explicitly requested (e.g., during onboarding)
+    // This does NOT overwrite the user's saved global preference
+    if (options?.forceVoice === 'trinity') {
+      const trinityVoice = elevenLabsVoices.find(v => v.name.toLowerCase().includes('trinity'));
+      if (trinityVoice) {
+        console.log('[TTS] Force-selecting Trinity for this instance (onboarding):', trinityVoice.name);
+        setSelectedElevenLabsVoice(trinityVoice);
+        setSelectedVoice(null);
+      } else {
+        console.warn('[TTS] Trinity voice not found. Available voices:', elevenLabsVoices.map(v => v.name));
+      }
+      return;
+    }
+    
+    // Normal voice preference logic (when NOT forcing a specific voice)
     if (savedVoicePreference?.type === 'elevenlabs') {
       const savedVoice = elevenLabsVoices.find(v => v.name === savedVoicePreference.name);
       if (savedVoice) {
@@ -118,7 +134,7 @@ export function useTextToSpeech(options?: UseTextToSpeechOptions): UseTextToSpee
         console.warn('Trinity voice not found in list. Available voices:', elevenLabsVoices.map(v => v.name));
       }
     }
-  }, [elevenLabsVoices, savedVoicePreference, saveVoicePreference]);
+  }, [elevenLabsVoices, savedVoicePreference, saveVoicePreference, options?.forceVoice]);
 
   useEffect(() => {
     if (!isSupported) return;

@@ -26,7 +26,8 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
     userProfile: firstName ? {
       name: firstName,
       name_pronunciation: namePronunciation || null
-    } : undefined
+    } : undefined,
+    forceVoice: 'trinity'
   });
   const hasSpokenCurrentMessage = useRef(false);
   const [isMuted, setIsMuted] = useState(() => {
@@ -412,7 +413,7 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
                               await new Promise(resolve => setTimeout(resolve, 150));
                               
                               const spokenName = namePronunciation || textInput.trim();
-                              await speak(`Hi, ${spokenName}. Did I say that right?`);
+                              await speak(`Hi, ${spokenName}. Hope I said that right. If not, please update the pronunciation and test again.`);
                               
                               setIsTestingPronunciation(false);
                             }}
