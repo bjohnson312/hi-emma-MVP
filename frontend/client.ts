@@ -791,7 +791,11 @@ import { getRoutineStats as api_morning_get_routine_stats_getRoutineStats } from
 import { getRoutineTemplates as api_morning_get_routine_templates_getRoutineTemplates } from "~backend/morning/get_routine_templates";
 import { getMorningSetupProgress as api_morning_get_setup_progress_getMorningSetupProgress } from "~backend/morning/get_setup_progress";
 import { getTodayCompletion as api_morning_get_today_completion_getTodayCompletion } from "~backend/morning/get_today_completion";
+import { listActivities as api_morning_list_activities_listActivities } from "~backend/morning/list_activities";
 import { logRoutineCompletion as api_morning_log_routine_completion_logRoutineCompletion } from "~backend/morning/log_routine_completion";
+import { markActivityComplete as api_morning_mark_activity_complete_markActivityComplete } from "~backend/morning/mark_activity_complete";
+import { markAllComplete as api_morning_mark_all_complete_markAllComplete } from "~backend/morning/mark_all_complete";
+import { updateActivity as api_morning_update_activity_updateActivity } from "~backend/morning/update_activity";
 
 export namespace morning {
 
@@ -811,7 +815,11 @@ export namespace morning {
             this.getRoutineStats = this.getRoutineStats.bind(this)
             this.getRoutineTemplates = this.getRoutineTemplates.bind(this)
             this.getTodayCompletion = this.getTodayCompletion.bind(this)
+            this.listActivities = this.listActivities.bind(this)
             this.logRoutineCompletion = this.logRoutineCompletion.bind(this)
+            this.markActivityComplete = this.markActivityComplete.bind(this)
+            this.markAllComplete = this.markAllComplete.bind(this)
+            this.updateActivity = this.updateActivity.bind(this)
         }
 
         public async addActivity(params: RequestType<typeof api_morning_add_activity_addActivity>): Promise<ResponseType<typeof api_morning_add_activity_addActivity>> {
@@ -887,10 +895,34 @@ export namespace morning {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_morning_get_today_completion_getTodayCompletion>
         }
 
+        public async listActivities(params: { user_id: string }): Promise<ResponseType<typeof api_morning_list_activities_listActivities>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/morning_routine/activities/${encodeURIComponent(params.user_id)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_morning_list_activities_listActivities>
+        }
+
         public async logRoutineCompletion(params: RequestType<typeof api_morning_log_routine_completion_logRoutineCompletion>): Promise<ResponseType<typeof api_morning_log_routine_completion_logRoutineCompletion>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/morning_routine/completion/log`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_morning_log_routine_completion_logRoutineCompletion>
+        }
+
+        public async markActivityComplete(params: RequestType<typeof api_morning_mark_activity_complete_markActivityComplete>): Promise<ResponseType<typeof api_morning_mark_activity_complete_markActivityComplete>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/morning_routine/activity/complete`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_morning_mark_activity_complete_markActivityComplete>
+        }
+
+        public async markAllComplete(params: RequestType<typeof api_morning_mark_all_complete_markAllComplete>): Promise<ResponseType<typeof api_morning_mark_all_complete_markAllComplete>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/morning_routine/complete_all`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_morning_mark_all_complete_markAllComplete>
+        }
+
+        public async updateActivity(params: RequestType<typeof api_morning_update_activity_updateActivity>): Promise<ResponseType<typeof api_morning_update_activity_updateActivity>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/morning_routine/activity/update`, {method: "PATCH", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_morning_update_activity_updateActivity>
         }
     }
 }
