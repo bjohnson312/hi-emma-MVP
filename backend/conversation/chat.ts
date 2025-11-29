@@ -368,15 +368,55 @@ function extractActivitiesFromUserDescription(userMessage: string): string[] {
 
 /**
  * Detect morning routine CRUD operations from user message
- * Phase 1: View operation only
+ * Phase 1: View operation
+ * Phase 2: Update operation (duration and name changes)
  * 
  * Returns operation type and extracted data for CRUD operations
  */
 function detectMorningRoutineCRUDIntent(userMessage: string): {
-  operation: 'view' | null;
+  operation: 'view' | 'update' | null;
   activityName?: string;
+  newDuration?: number;
+  newName?: string;
 } {
   const msg = userMessage.toLowerCase();
+  
+  // UPDATE patterns - Duration changes
+  const updateDurationPatterns = [
+    /(?:change|update|make|set)\s+(.+?)\s+to\s+(\d+)\s*(?:min|minutes?)/i,
+    /(?:change|update)\s+(.+?)\s+(?:duration|time)\s+to\s+(\d+)/i,
+    /make\s+(.+?)\s+(\d+)\s*(?:min|minutes?)/i,
+    /set\s+(.+?)\s+(?:to|at)\s+(\d+)\s*(?:min|minutes?)/i,
+    /(?:change|update)\s+(?:the\s+)?(?:duration|time)\s+(?:of|for)\s+(.+?)\s+to\s+(\d+)/i,
+  ];
+  
+  for (const pattern of updateDurationPatterns) {
+    const match = userMessage.match(pattern);
+    if (match) {
+      return {
+        operation: 'update',
+        activityName: match[1].trim(),
+        newDuration: parseInt(match[2])
+      };
+    }
+  }
+  
+  // UPDATE patterns - Name changes
+  const updateNamePatterns = [
+    /(?:rename|change\s+(?:the\s+)?name\s+of)\s+(.+?)\s+to\s+(.+?)(?:\.|$)/i,
+    /call\s+(.+?)\s+(.+?)\s+instead/i,
+  ];
+  
+  for (const pattern of updateNamePatterns) {
+    const match = userMessage.match(pattern);
+    if (match) {
+      return {
+        operation: 'update',
+        activityName: match[1].trim(),
+        newName: match[2].trim()
+      };
+    }
+  }
   
   // VIEW patterns
   const viewPatterns = [
@@ -625,6 +665,85 @@ export const chat = api<ChatRequest, ChatResponse>(
           session_id: session.id,
           conversation_complete: false
         };
+      }
+      
+      // PHASE 2: Update operation (duration or name changes)
+      if (crudIntent.operation === 'update') {
+        console.log("🔧 CRUD: Update operation detected");
+        console.log(`   Activity: "${crudIntent.activityName}"`);
+        if (crudIntent.newDuration) console.log(`   New duration: ${crudIntent.newDuration} min`);
+        if (crudIntent.newName) console.log(`   New name: "${crudIntent.newName}"`);
+        
+        try {
+          const { updateActivity } = await import("../morning/update_activity");
+          const result = await updateActivity({
+            user_id,
+            activity_identifier: crudIntent.activityName!,
+            new_duration: crudIntent.newDuration,
+            new_name: crudIntent.newName
+          });
+          
+          const changesList = result.changes_made.join(' and ');
+          const updateReply = `I've updated ${result.matched_original_name}: ${changesList}.`;
+          
+          console.log("✅ CRUD: Update successful");
+          console.log(`   ${updateReply}`);
+          
+          await db.exec`
+            INSERT INTO conversation_history 
+              (user_id, conversation_type, user_message, emma_response, context)
+            VALUES 
+              (${user_id}, ${session_type}, ${user_message}, ${updateReply}, 
+               ${JSON.stringify({ 
+                 crud_operation: 'update', 
+                 activity_updated: result.updated_activity,
+                 changes: result.changes_made
+               })})
+          `;
+          
+          await db.exec`
+            UPDATE conversation_sessions
+            SET last_activity_at = NOW()
+            WHERE id = ${session.id}
+          `;
+          
+          return {
+            emma_reply: updateReply,
+            session_id: session.id,
+            conversation_complete: false
+          };
+          
+        } catch (error: any) {
+          console.log("❌ CRUD: Update failed");
+          console.log(`   Error: ${error.message}`);
+          
+          let errorReply: string;
+          if (error.message.includes('not found')) {
+            errorReply = `I couldn't find "${crudIntent.activityName}" in your morning routine. Would you like to add it instead?`;
+          } else if (error.message.includes('No active morning routine')) {
+            errorReply = `You don't have a morning routine set up yet. Want to start one together?`;
+          } else {
+            errorReply = `I had trouble updating that activity. ${error.message}`;
+          }
+          
+          await db.exec`
+            INSERT INTO conversation_history 
+              (user_id, conversation_type, user_message, emma_response)
+            VALUES (${user_id}, ${session_type}, ${user_message}, ${errorReply})
+          `;
+          
+          await db.exec`
+            UPDATE conversation_sessions
+            SET last_activity_at = NOW()
+            WHERE id = ${session.id}
+          `;
+          
+          return {
+            emma_reply: errorReply,
+            session_id: session.id,
+            conversation_complete: false
+          };
+        }
       }
     }
 
