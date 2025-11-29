@@ -367,6 +367,38 @@ function extractActivitiesFromUserDescription(userMessage: string): string[] {
 }
 
 /**
+ * Detect morning routine CRUD operations from user message
+ * Phase 1: View operation only
+ * 
+ * Returns operation type and extracted data for CRUD operations
+ */
+function detectMorningRoutineCRUDIntent(userMessage: string): {
+  operation: 'view' | null;
+  activityName?: string;
+} {
+  const msg = userMessage.toLowerCase();
+  
+  // VIEW patterns
+  const viewPatterns = [
+    /what'?s?\s+in\s+my\s+(?:morning\s+)?routine/i,
+    /show\s+(?:me\s+)?my\s+(?:morning\s+)?routine/i,
+    /list\s+(?:my\s+)?(?:morning\s+)?routine/i,
+    /view\s+(?:my\s+)?(?:morning\s+)?routine/i,
+    /what\s+do\s+I\s+do\s+in\s+(?:the\s+)?morning/i,
+    /what\s+(?:are\s+)?my\s+morning\s+activities/i,
+    /(?:my\s+)?morning\s+routine\s+activities/i,
+  ];
+  
+  for (const pattern of viewPatterns) {
+    if (pattern.test(userMessage)) {
+      return { operation: 'view' };
+    }
+  }
+  
+  return { operation: null };
+}
+
+/**
  * Update wake time from conversation
  * Workflow: extract time → update profile → log to journal → update memory
  */
@@ -548,6 +580,53 @@ export const chat = api<ChatRequest, ChatResponse>(
       role: "user",
       content: user_message
     });
+
+    // PHASE 1: Morning Routine CRUD Operations - View Only
+    if (session_type === "morning") {
+      const crudIntent = detectMorningRoutineCRUDIntent(user_message);
+      
+      if (crudIntent.operation === 'view') {
+        console.log("🔍 CRUD: View operation detected");
+        
+        const { listActivities } = await import("../morning/list_activities");
+        const result = await listActivities({ user_id });
+        
+        let viewReply: string;
+        
+        if (result.activities.length === 0) {
+          viewReply = "You don't have a morning routine set up yet. Want to start one together?";
+        } else {
+          const activityList = result.activities
+            .map((a, i) => `${i + 1}. ${a.name}${a.duration_minutes ? ` (${a.duration_minutes} min)` : ''}`)
+            .join('\n');
+          
+          const totalTime = result.total_duration;
+          viewReply = `Here's your morning routine right now:\n\n${activityList}\n\nTotal time: ${totalTime} minutes.\n\nWould you like to add or change anything?`;
+        }
+        
+        console.log("✅ CRUD: View response:", viewReply.substring(0, 100) + "...");
+        
+        await db.exec`
+          INSERT INTO conversation_history 
+            (user_id, conversation_type, user_message, emma_response, context)
+          VALUES 
+            (${user_id}, ${session_type}, ${user_message}, ${viewReply}, 
+             ${JSON.stringify({ crud_operation: 'view', activities_count: result.activities.length })})
+        `;
+        
+        await db.exec`
+          UPDATE conversation_sessions
+          SET last_activity_at = NOW()
+          WHERE id = ${session.id}
+        `;
+        
+        return {
+          emma_reply: viewReply,
+          session_id: session.id,
+          conversation_complete: false
+        };
+      }
+    }
 
     const emmaReply = await callAI(conversationHistory);
 
