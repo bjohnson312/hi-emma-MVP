@@ -39,9 +39,7 @@ export default function ConversationalCheckIn({
   const [userProfile, setUserProfile] = useState<{ name: string; name_pronunciation?: string | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const lastMessageCountRef = useRef(0);
   const autoSpeakTimeoutRef = useRef<number | null>(null);
-  const lastSpokenMessageIdRef = useRef<string | null>(null);
   const {
     transcript,
     isListening,
@@ -65,6 +63,8 @@ export default function ConversationalCheckIn({
     setSelectedElevenLabsVoice,
     resumeAudioContext
   } = useTextToSpeech({ userProfile: userProfile || undefined });
+
+  const speakRef = useRef(speak);
 
   const {
     messages,
@@ -91,36 +91,45 @@ export default function ConversationalCheckIn({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const getSessionStorageKey = (sid: number | null): string => {
-    return `emma_last_spoken_message_${sid || 'unknown'}`;
+  const generateMessageId = (
+    message: { sender: string; text: string },
+    sessionId: number | null
+  ): string => {
+    const normalizedText = (message.text || "").trim();
+    const textKey = normalizedText.substring(0, 100) + normalizedText.length;
+    return `${sessionId ?? "no-session"}-${message.sender}-${textKey}`;
   };
 
-  const getLastSpokenMessageId = (sid: number | null): string | null => {
-    if (typeof window === 'undefined' || !sid) return null;
+  const getLastSpokenMessageId = (sessionId: number | null): string | null => {
+    if (!sessionId) return null;
     try {
-      return sessionStorage.getItem(getSessionStorageKey(sid));
+      return sessionStorage.getItem(`emma_last_spoken_message_${sessionId}`);
     } catch {
       return null;
     }
   };
 
-  const setLastSpokenMessageId = (sid: number | null, messageId: string | null) => {
-    if (typeof window === 'undefined' || !sid) return;
+  const setLastSpokenMessageId = (sessionId: number | null, id: string): void => {
+    if (!sessionId) return;
     try {
-      if (messageId === null) {
-        sessionStorage.removeItem(getSessionStorageKey(sid));
-      } else {
-        sessionStorage.setItem(getSessionStorageKey(sid), messageId);
-      }
-      lastSpokenMessageIdRef.current = messageId;
+      sessionStorage.setItem(`emma_last_spoken_message_${sessionId}`, id);
     } catch (error) {
       console.warn('[TTS] Failed to save lastSpokenMessageId to sessionStorage:', error);
     }
   };
 
-  const generateMessageId = (message: { sender: string; text: string; timestamp: Date }, index: number): string => {
-    return `${message.sender}-${message.timestamp.getTime()}-${index}`;
+  const clearLastSpokenMessageId = (sessionId: number | null): void => {
+    if (!sessionId) return;
+    try {
+      sessionStorage.removeItem(`emma_last_spoken_message_${sessionId}`);
+    } catch (error) {
+      console.warn('[TTS] Failed to clear lastSpokenMessageId from sessionStorage:', error);
+    }
   };
+
+  useEffect(() => {
+    speakRef.current = speak;
+  }, [speak]);
 
   useEffect(() => {
     scrollToBottom();
@@ -135,9 +144,8 @@ export default function ConversationalCheckIn({
         return;
       }
 
-      const currentMessageId = generateMessageId(lastMessage, messages.length - 1);
-      const cachedLastSpoken = getLastSpokenMessageId(sessionId);
-      const lastSpoken = lastSpokenMessageIdRef.current || cachedLastSpoken;
+      const currentMessageId = generateMessageId(lastMessage, sessionId);
+      const lastSpoken = getLastSpokenMessageId(sessionId);
 
       if (currentMessageId === lastSpoken) {
         console.log('[TTS] Skipping auto-speak - message already spoken:', currentMessageId);
@@ -146,7 +154,7 @@ export default function ConversationalCheckIn({
 
       console.log('[TTS] Auto-speaking new message:', currentMessageId);
       
-      const result = await speak(lastMessage.text);
+      const result = await speakRef.current(lastMessage.text);
       const displayMessageId = `${lastMessage.sender}-${messages.length - 1}`;
       
       console.log(`[TTS] auto-speak status for message ${displayMessageId}: ${result.status}`);
@@ -187,7 +195,7 @@ export default function ConversationalCheckIn({
         window.clearTimeout(autoSpeakTimeoutRef.current);
       }
     };
-  }, [messages, voiceEnabled, isTTSSupported, speak, sessionId]);
+  }, [messages, voiceEnabled, isTTSSupported, sessionId]);
 
   useEffect(() => {
     loadOrStartConversation();
@@ -281,7 +289,7 @@ export default function ConversationalCheckIn({
       if (result.messages.length > 0) {
         const lastMsg = result.messages[result.messages.length - 1];
         if (lastMsg.sender === "emma") {
-          const msgId = generateMessageId(lastMsg, result.messages.length - 1);
+          const msgId = generateMessageId(lastMsg, result.sessionId);
           setLastSpokenMessageId(result.sessionId, msgId);
         }
       }
@@ -300,8 +308,7 @@ export default function ConversationalCheckIn({
     setCurrentInput("");
     setSelectedDate(null);
     setShowResetConfirm(false);
-    setLastSpokenMessageId(sessionId, null);
-    lastSpokenMessageIdRef.current = null;
+    clearLastSpokenMessageId(sessionId);
     resetConversation(false);
   };
 
