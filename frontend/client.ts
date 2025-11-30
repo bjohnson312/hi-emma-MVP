@@ -37,6 +37,7 @@ export class Client {
     public readonly admin_portal: admin_portal.ServiceClient
     public readonly api_v2_gateway: api_v2_gateway.ServiceClient
     public readonly appointments: appointments.ServiceClient
+    public readonly care_plans: care_plans.ServiceClient
     public readonly care_team: care_team.ServiceClient
     public readonly conversation: conversation.ServiceClient
     public readonly insights: insights.ServiceClient
@@ -73,6 +74,7 @@ export class Client {
         this.admin_portal = new admin_portal.ServiceClient(base)
         this.api_v2_gateway = new api_v2_gateway.ServiceClient(base)
         this.appointments = new appointments.ServiceClient(base)
+        this.care_plans = new care_plans.ServiceClient(base)
         this.care_team = new care_team.ServiceClient(base)
         this.conversation = new conversation.ServiceClient(base)
         this.insights = new insights.ServiceClient(base)
@@ -410,6 +412,93 @@ export namespace appointments {
 
 
 export namespace auth {
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { addTask as api_care_plans_add_task_addTask } from "~backend/care_plans/add_task";
+import { createPlan as api_care_plans_create_plan_createPlan } from "~backend/care_plans/create_plan";
+import { deleteTask as api_care_plans_delete_task_deleteTask } from "~backend/care_plans/delete_task";
+import { generateAIPlan as api_care_plans_generate_ai_plan_generateAIPlan } from "~backend/care_plans/generate_ai_plan";
+import { getPresets as api_care_plans_get_presets_getPresets } from "~backend/care_plans/get_presets";
+import { getTodayTasks as api_care_plans_get_today_tasks_getTodayTasks } from "~backend/care_plans/get_today_tasks";
+import { getUserPlan as api_care_plans_get_user_plan_getUserPlan } from "~backend/care_plans/get_user_plan";
+import { markTaskComplete as api_care_plans_mark_task_complete_markTaskComplete } from "~backend/care_plans/mark_task_complete";
+import { updateTask as api_care_plans_update_task_updateTask } from "~backend/care_plans/update_task";
+
+export namespace care_plans {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.addTask = this.addTask.bind(this)
+            this.createPlan = this.createPlan.bind(this)
+            this.deleteTask = this.deleteTask.bind(this)
+            this.generateAIPlan = this.generateAIPlan.bind(this)
+            this.getPresets = this.getPresets.bind(this)
+            this.getTodayTasks = this.getTodayTasks.bind(this)
+            this.getUserPlan = this.getUserPlan.bind(this)
+            this.markTaskComplete = this.markTaskComplete.bind(this)
+            this.updateTask = this.updateTask.bind(this)
+        }
+
+        public async addTask(params: RequestType<typeof api_care_plans_add_task_addTask>): Promise<ResponseType<typeof api_care_plans_add_task_addTask>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/tasks/add`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_add_task_addTask>
+        }
+
+        public async createPlan(params: RequestType<typeof api_care_plans_create_plan_createPlan>): Promise<ResponseType<typeof api_care_plans_create_plan_createPlan>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/create`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_create_plan_createPlan>
+        }
+
+        public async deleteTask(params: RequestType<typeof api_care_plans_delete_task_deleteTask>): Promise<ResponseType<typeof api_care_plans_delete_task_deleteTask>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/tasks/delete`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_delete_task_deleteTask>
+        }
+
+        public async generateAIPlan(params: RequestType<typeof api_care_plans_generate_ai_plan_generateAIPlan>): Promise<ResponseType<typeof api_care_plans_generate_ai_plan_generateAIPlan>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/generate`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_generate_ai_plan_generateAIPlan>
+        }
+
+        public async getPresets(): Promise<ResponseType<typeof api_care_plans_get_presets_getPresets>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/presets`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_get_presets_getPresets>
+        }
+
+        public async getTodayTasks(params: { user_id: string }): Promise<ResponseType<typeof api_care_plans_get_today_tasks_getTodayTasks>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/today/${encodeURIComponent(params.user_id)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_get_today_tasks_getTodayTasks>
+        }
+
+        public async getUserPlan(params: { user_id: string }): Promise<ResponseType<typeof api_care_plans_get_user_plan_getUserPlan>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/user/${encodeURIComponent(params.user_id)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_get_user_plan_getUserPlan>
+        }
+
+        public async markTaskComplete(params: RequestType<typeof api_care_plans_mark_task_complete_markTaskComplete>): Promise<ResponseType<typeof api_care_plans_mark_task_complete_markTaskComplete>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/tasks/complete`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_mark_task_complete_markTaskComplete>
+        }
+
+        public async updateTask(params: RequestType<typeof api_care_plans_update_task_updateTask>): Promise<ResponseType<typeof api_care_plans_update_task_updateTask>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/tasks/update`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_update_task_updateTask>
+        }
+    }
 }
 
 /**
