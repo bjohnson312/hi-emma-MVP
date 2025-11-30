@@ -120,7 +120,7 @@ export const markAllComplete = api<MarkAllCompleteRequest, MarkAllCompleteRespon
       user_id,
       "all_activities_completed",
       `Completed entire morning routine (${total_activities} activities)`,
-      null,
+      undefined,
       {
         newly_completed_activity_ids: remaining_ids,
         newly_completed_activity_names: newly_completed_names,
@@ -135,12 +135,8 @@ export const markAllComplete = api<MarkAllCompleteRequest, MarkAllCompleteRespon
     if (!completionRecord || !completionRecord.all_completed) {
       console.log(`   🏆 Awarding milestone: morning_routine_complete`);
       try {
-        const { updateProgress } = await import("../journey/update_progress");
-        await updateProgress({
-          user_id,
-          milestone_id: "morning_routine_complete",
-          increment: 1
-        });
+        const { updateJourneyProgress } = await import("../journey/update_progress");
+        await updateJourneyProgress(user_id, "morning_routine_completed", true);
       } catch (error) {
         console.log(`   ⚠️  Milestone award failed (non-critical):`, error);
       }

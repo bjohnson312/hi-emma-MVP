@@ -737,7 +737,10 @@ export const chat = api<ChatRequest, ChatResponse>(
             
             if (choiceIndex >= 0 && choiceIndex < pendingCompletion.candidates.length) {
               resolvedActivity = pendingCompletion.candidates[choiceIndex];
-              console.log(`   ✅ [Numeric Choice] Resolved to: "${resolvedActivity.activityName}"`);
+              
+              if (resolvedActivity) {
+                console.log(`   ✅ [Numeric Choice] Resolved to: "${resolvedActivity.activityName}"`);
+              }
             } else {
               console.log(`   ❌ [Numeric Choice] Index out of bounds (candidates: ${pendingCompletion.candidates.length})`);
             }
