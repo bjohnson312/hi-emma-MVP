@@ -11,6 +11,7 @@ import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import VoiceSelector from "@/components/VoiceSelector";
 import Tooltip from "@/components/Tooltip";
 import InsightsSuggestionPanel from "@/components/InsightsSuggestionPanel";
+import TodayCareTasks from "@/components/TodayCareTasks";
 import { VOICEFLOW_TEST_URL, ENABLE_VOICEFLOW_TEST } from "@/config";
 import { isIOSSafariMobile } from "@/lib/device-detection";
 
@@ -544,6 +545,12 @@ export default function ConversationalCheckIn({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {sessionType === "morning" && conversationComplete && (
+        <div className="px-4 pb-2 bg-white/95 backdrop-blur-md">
+          <TodayCareTasks userId={userId} />
+        </div>
+      )}
 
       {showIOSSafariBanner && (
         <div className="px-4 pb-2 bg-white/95 backdrop-blur-md">

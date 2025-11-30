@@ -3,7 +3,17 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { DoctorsOrder } from "../wellness/types";
 import type { NotificationPreferences } from "./types";
+import type { CarePlanItem } from "../care_plans/types";
 import { sendPushToUser } from "../push/send";
+
+const ENABLE_CARE_PLAN_REMINDERS = process.env.ENABLE_CARE_PLAN_REMINDERS === "true";
+
+function parseJsonField<T>(field: any): T {
+  if (typeof field === 'string') {
+    return JSON.parse(field);
+  }
+  return field as T;
+}
 
 export const checkMedicationRemindersHandler = api<void, void>(
   { expose: false, method: "POST", path: "/internal/check-medication-reminders" },
@@ -23,6 +33,32 @@ export const checkMedicationRemindersHandler = api<void, void>(
   }
 
   for (const pref of prefs) {
+    let itemsToCheck: Array<{ id: number; label: string; dosage?: string; times: string[] }> = [];
+
+    if (ENABLE_CARE_PLAN_REMINDERS) {
+      const carePlanItemsQuery = await db.query<CarePlanItem>`
+        SELECT cpi.*
+        FROM care_plan_items cpi
+        JOIN care_plans cp ON cpi.care_plan_id = cp.id
+        WHERE cp.user_id = ${pref.user_id}
+          AND cp.is_active = true
+          AND cpi.is_active = true
+          AND cpi.reminder_enabled = true
+          AND cpi.type = 'medication'
+      `;
+      
+      for await (const item of carePlanItemsQuery) {
+        const timesOfDay = parseJsonField<string[]>(item.times_of_day);
+        const details = parseJsonField<any>(item.details);
+        itemsToCheck.push({
+          id: item.id,
+          label: item.label,
+          dosage: details?.dosage,
+          times: timesOfDay || []
+        });
+      }
+    }
+
     const ordersQuery = await db.query<DoctorsOrder>`
       SELECT id, user_id, medication_name, dosage, time_of_day, start_date, end_date
       FROM doctors_orders
@@ -35,10 +71,16 @@ export const checkMedicationRemindersHandler = api<void, void>(
     const orders = [];
     for await (const order of ordersQuery) {
       orders.push(order);
+      itemsToCheck.push({
+        id: order.id,
+        label: order.medication_name,
+        dosage: order.dosage,
+        times: order.time_of_day
+      });
     }
 
-    for (const order of orders) {
-      for (const timeSlot of order.time_of_day) {
+    for (const item of itemsToCheck) {
+      for (const timeSlot of item.times) {
         const [hours, minutes] = timeSlot.split(':');
         const reminderTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
         
@@ -51,7 +93,7 @@ export const checkMedicationRemindersHandler = api<void, void>(
             FROM notification_queue
             WHERE user_id = ${pref.user_id}
               AND notification_type = 'medication_reminder'
-              AND metadata->>'doctors_order_id' = ${order.id.toString()}
+              AND (metadata->>'item_id' = ${item.id.toString()} OR metadata->>'doctors_order_id' = ${item.id.toString()})
               AND DATE(scheduled_time) = CURRENT_DATE
               AND EXTRACT(HOUR FROM scheduled_time) = ${parseInt(hours)}
               AND status IN ('pending', 'sent')
@@ -65,7 +107,8 @@ export const checkMedicationRemindersHandler = api<void, void>(
           scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
           const title = "💊 Medication Reminder from Emma";
-          const message = `Hi! Emma here 😊 It's time to take ${order.medication_name} (${order.dosage}). Tap here to mark it as taken!`;
+          const dosageText = item.dosage ? ` (${item.dosage})` : '';
+          const message = `Hi! Emma here 😊 It's time to take ${item.label}${dosageText}. Tap here to mark it as taken!`;
 
           if (pref.push_enabled !== false) {
             await sendPushToUser(
@@ -84,7 +127,7 @@ export const checkMedicationRemindersHandler = api<void, void>(
               VALUES 
                 (${pref.user_id}, 'medication_reminder', ${title}, ${message}, 
                  ${scheduledTime}, 'browser', 
-                 ${JSON.stringify({ doctors_order_id: order.id, medication_name: order.medication_name })})
+                 ${JSON.stringify({ item_id: item.id, medication_name: item.label })})
             `;
           }
 
@@ -96,8 +139,8 @@ export const checkMedicationRemindersHandler = api<void, void>(
                 (${pref.user_id}, 'medication_reminder', ${title}, ${message}, 
                  ${scheduledTime}, 'sms', 
                  ${JSON.stringify({ 
-                   doctors_order_id: order.id, 
-                   medication_name: order.medication_name,
+                   item_id: item.id, 
+                   medication_name: item.label,
                    phone_number: pref.phone_number 
                  })})
             `;
