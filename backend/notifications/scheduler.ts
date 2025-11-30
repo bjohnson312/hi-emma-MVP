@@ -3,17 +3,7 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { DoctorsOrder } from "../wellness/types";
 import type { NotificationPreferences } from "./types";
-import type { CarePlanItem } from "../care_plans/types";
 import { sendPushToUser } from "../push/send";
-
-const ENABLE_CARE_PLAN_REMINDERS = process.env.ENABLE_CARE_PLAN_REMINDERS === "true";
-
-function parseJsonField<T>(field: any): T {
-  if (typeof field === 'string') {
-    return JSON.parse(field);
-  }
-  return field as T;
-}
 
 export const checkMedicationRemindersHandler = api<void, void>(
   { expose: false, method: "POST", path: "/internal/check-medication-reminders" },
@@ -33,32 +23,6 @@ export const checkMedicationRemindersHandler = api<void, void>(
   }
 
   for (const pref of prefs) {
-    let itemsToCheck: Array<{ id: number; label: string; dosage?: string; times: string[] }> = [];
-
-    if (ENABLE_CARE_PLAN_REMINDERS) {
-      const carePlanItemsQuery = await db.query<CarePlanItem>`
-        SELECT cpi.*
-        FROM care_plan_items cpi
-        JOIN care_plans cp ON cpi.care_plan_id = cp.id
-        WHERE cp.user_id = ${pref.user_id}
-          AND cp.is_active = true
-          AND cpi.is_active = true
-          AND cpi.reminder_enabled = true
-          AND cpi.type = 'medication'
-      `;
-      
-      for await (const item of carePlanItemsQuery) {
-        const timesOfDay = parseJsonField<string[]>(item.times_of_day);
-        const details = parseJsonField<any>(item.details);
-        itemsToCheck.push({
-          id: item.id,
-          label: item.label,
-          dosage: details?.dosage,
-          times: timesOfDay || []
-        });
-      }
-    }
-
     const ordersQuery = await db.query<DoctorsOrder>`
       SELECT id, user_id, medication_name, dosage, time_of_day, start_date, end_date
       FROM doctors_orders
@@ -71,16 +35,12 @@ export const checkMedicationRemindersHandler = api<void, void>(
     const orders = [];
     for await (const order of ordersQuery) {
       orders.push(order);
-      itemsToCheck.push({
-        id: order.id,
-        label: order.medication_name,
-        dosage: order.dosage,
-        times: order.time_of_day
-      });
     }
 
-    for (const item of itemsToCheck) {
-      for (const timeSlot of item.times) {
+    for (const order of orders) {
+      if (!order.time_of_day) continue;
+      
+      for (const timeSlot of order.time_of_day) {
         const [hours, minutes] = timeSlot.split(':');
         const reminderTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
         
@@ -93,7 +53,7 @@ export const checkMedicationRemindersHandler = api<void, void>(
             FROM notification_queue
             WHERE user_id = ${pref.user_id}
               AND notification_type = 'medication_reminder'
-              AND (metadata->>'item_id' = ${item.id.toString()} OR metadata->>'doctors_order_id' = ${item.id.toString()})
+              AND metadata->>'doctors_order_id' = ${order.id.toString()}
               AND DATE(scheduled_time) = CURRENT_DATE
               AND EXTRACT(HOUR FROM scheduled_time) = ${parseInt(hours)}
               AND status IN ('pending', 'sent')
@@ -107,8 +67,8 @@ export const checkMedicationRemindersHandler = api<void, void>(
           scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
           const title = "💊 Medication Reminder from Emma";
-          const dosageText = item.dosage ? ` (${item.dosage})` : '';
-          const message = `Hi! Emma here 😊 It's time to take ${item.label}${dosageText}. Tap here to mark it as taken!`;
+          const dosageText = order.dosage ? ` (${order.dosage})` : '';
+          const message = `Hi! Emma here 😊 It's time to take ${order.medication_name}${dosageText}. Tap here to mark it as taken!`;
 
           if (pref.push_enabled !== false) {
             await sendPushToUser(
@@ -127,7 +87,7 @@ export const checkMedicationRemindersHandler = api<void, void>(
               VALUES 
                 (${pref.user_id}, 'medication_reminder', ${title}, ${message}, 
                  ${scheduledTime}, 'browser', 
-                 ${JSON.stringify({ item_id: item.id, medication_name: item.label })})
+                 ${JSON.stringify({ doctors_order_id: order.id, medication_name: order.medication_name })})
             `;
           }
 
@@ -139,8 +99,8 @@ export const checkMedicationRemindersHandler = api<void, void>(
                 (${pref.user_id}, 'medication_reminder', ${title}, ${message}, 
                  ${scheduledTime}, 'sms', 
                  ${JSON.stringify({ 
-                   item_id: item.id, 
-                   medication_name: item.label,
+                   doctors_order_id: order.id, 
+                   medication_name: order.medication_name,
                    phone_number: pref.phone_number 
                  })})
             `;
@@ -151,71 +111,196 @@ export const checkMedicationRemindersHandler = api<void, void>(
   }
 });
 
-// Temporarily disabled
-// const checkMedicationReminders = new CronJob("check-medication-reminders", {
-//   title: "Check Medication Reminders",
-//   schedule: "*/15 * * * *",
-//   endpoint: checkMedicationRemindersHandler,
-// });
+const checkMedicationReminders = new CronJob(
+  "check-medication-reminders",
+  {
+    title: "Check Medication Reminders",
+    every: "15m",
+    endpoint: checkMedicationRemindersHandler,
+  }
+);
 
-export const processPendingNotificationsHandler = api<void, void>(
-  { expose: false, method: "POST", path: "/internal/process-pending-notifications" },
+export const checkMorningRoutineRemindersHandler = api<void, void>(
+  { expose: false, method: "POST", path: "/internal/check-morning-routine-reminders" },
   async () => {
-  const pendingNotificationsQuery = await db.query<{
-    id: number;
-    user_id: string;
-    title: string;
-    message: string;
-    delivery_method: string;
-    metadata: Record<string, any>;
-  }>`
-    SELECT id, user_id, title, message, delivery_method, metadata
-    FROM notification_queue
-    WHERE status = 'pending'
-      AND scheduled_time <= NOW()
-    ORDER BY scheduled_time ASC
-    LIMIT 100
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  const prefsQuery = await db.query<NotificationPreferences & { user_id: string; push_enabled?: boolean }>`
+    SELECT user_id, morning_routine_reminders_enabled, notification_method, phone_number, push_subscription, timezone, push_enabled
+    FROM notification_preferences
+    WHERE morning_routine_reminders_enabled = true
   `;
   
-  const pendingNotifications = [];
-  for await (const notification of pendingNotificationsQuery) {
-    pendingNotifications.push(notification);
+  const prefs = [];
+  for await (const pref of prefsQuery) {
+    prefs.push(pref);
   }
 
-  for (const notification of pendingNotifications) {
-    try {
-      if (notification.delivery_method === 'sms') {
-        const { sendSMS } = await import('./sms');
-        const phoneNumber = notification.metadata?.phone_number;
-        
-        if (phoneNumber) {
-          try {
-            await sendSMS(phoneNumber, notification.message);
-          } catch (error) {
-            console.warn('SMS sending skipped (Twilio not configured):', error);
-          }
-        }
+  for (const pref of prefs) {
+    const routinePrefs = await db.queryRow<{ target_wake_time: string; reminder_time: string }>`
+      SELECT target_wake_time, reminder_time
+      FROM morning_routine_preferences
+      WHERE user_id = ${pref.user_id}
+    `;
+
+    if (!routinePrefs || !routinePrefs.reminder_time) {
+      continue;
+    }
+
+    const [reminderHour, reminderMinute] = routinePrefs.reminder_time.split(':').map(Number);
+
+    if (currentHour === reminderHour && Math.abs(currentMinute - reminderMinute) <= 5) {
+      const existingNotification = await db.queryRow<{ count: number }>`
+        SELECT COUNT(*) as count
+        FROM notification_queue
+        WHERE user_id = ${pref.user_id}
+          AND notification_type = 'morning_routine'
+          AND DATE(scheduled_time) = CURRENT_DATE
+          AND EXTRACT(HOUR FROM scheduled_time) = ${reminderHour}
+          AND status IN ('pending', 'sent')
+      `;
+
+      if (existingNotification && existingNotification.count > 0) {
+        continue;
       }
-      
-      await db.exec`
-        UPDATE notification_queue
-        SET status = 'sent', sent_at = NOW()
-        WHERE id = ${notification.id}
-      `;
-    } catch (error) {
-      await db.exec`
-        UPDATE notification_queue
-        SET status = 'failed', 
-            error_message = ${error instanceof Error ? error.message : 'Unknown error'}
-        WHERE id = ${notification.id}
-      `;
+
+      const scheduledTime = new Date();
+      scheduledTime.setHours(reminderHour, reminderMinute, 0, 0);
+
+      const title = "🌅 Morning Routine Reminder from Emma";
+      const message = "Good morning! 🌞 Ready to start your day with your morning routine?";
+
+      if (pref.push_enabled !== false) {
+        await sendPushToUser(
+          pref.user_id,
+          title,
+          message,
+          '/morning-routine',
+          '/logo.png'
+        );
+      }
+
+      if (pref.notification_method === 'browser' || pref.notification_method === 'both') {
+        await db.exec`
+          INSERT INTO notification_queue 
+            (user_id, notification_type, title, message, scheduled_time, delivery_method, metadata)
+          VALUES 
+            (${pref.user_id}, 'morning_routine', ${title}, ${message}, 
+             ${scheduledTime}, 'browser', 
+             ${JSON.stringify({ reminder_time: routinePrefs.reminder_time })})
+        `;
+      }
+
+      if ((pref.notification_method === 'sms' || pref.notification_method === 'both') && pref.phone_number) {
+        await db.exec`
+          INSERT INTO notification_queue 
+            (user_id, notification_type, title, message, scheduled_time, delivery_method, metadata)
+          VALUES 
+            (${pref.user_id}, 'morning_routine', ${title}, ${message}, 
+             ${scheduledTime}, 'sms', 
+             ${JSON.stringify({ 
+               reminder_time: routinePrefs.reminder_time,
+               phone_number: pref.phone_number 
+             })})
+        `;
+      }
     }
   }
 });
 
-// Temporarily disabled
-// const processPendingNotifications = new CronJob("process-pending-notifications", {
-//   title: "Process Pending Notifications",
-//   schedule: "*/5 * * * *",
-//   endpoint: processPendingNotificationsHandler,
-// });
+const checkMorningRoutineReminders = new CronJob(
+  "check-morning-routine-reminders",
+  {
+    title: "Check Morning Routine Reminders",
+    every: "5m",
+    endpoint: checkMorningRoutineRemindersHandler,
+  }
+);
+
+export const checkEveningRoutineRemindersHandler = api<void, void>(
+  { expose: false, method: "POST", path: "/internal/check-evening-routine-reminders" },
+  async () => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  const prefsQuery = await db.query<NotificationPreferences & { user_id: string; push_enabled?: boolean }>`
+    SELECT user_id, evening_routine_reminders_enabled, notification_method, phone_number, push_subscription, timezone, push_enabled
+    FROM notification_preferences
+    WHERE evening_routine_reminders_enabled = true
+  `;
+  
+  const prefs = [];
+  for await (const pref of prefsQuery) {
+    prefs.push(pref);
+  }
+
+  for (const pref of prefs) {
+    const eveningRoutineTime = 21;
+
+    if (currentHour === eveningRoutineTime && currentMinute <= 5) {
+      const existingNotification = await db.queryRow<{ count: number }>`
+        SELECT COUNT(*) as count
+        FROM notification_queue
+        WHERE user_id = ${pref.user_id}
+          AND notification_type = 'evening_routine'
+          AND DATE(scheduled_time) = CURRENT_DATE
+          AND EXTRACT(HOUR FROM scheduled_time) = ${eveningRoutineTime}
+          AND status IN ('pending', 'sent')
+      `;
+
+      if (existingNotification && existingNotification.count > 0) {
+        continue;
+      }
+
+      const scheduledTime = new Date();
+      scheduledTime.setHours(eveningRoutineTime, 0, 0, 0);
+
+      const title = "🌙 Evening Check-in from Emma";
+      const message = "Good evening! How was your day? Let's reflect together.";
+
+      if (pref.push_enabled !== false) {
+        await sendPushToUser(
+          pref.user_id,
+          title,
+          message,
+          '/evening-routine',
+          '/logo.png'
+        );
+      }
+
+      if (pref.notification_method === 'browser' || pref.notification_method === 'both') {
+        await db.exec`
+          INSERT INTO notification_queue 
+            (user_id, notification_type, title, message, scheduled_time, delivery_method, metadata)
+          VALUES 
+            (${pref.user_id}, 'evening_routine', ${title}, ${message}, 
+             ${scheduledTime}, 'browser', 
+             ${JSON.stringify({})})
+        `;
+      }
+
+      if ((pref.notification_method === 'sms' || pref.notification_method === 'both') && pref.phone_number) {
+        await db.exec`
+          INSERT INTO notification_queue 
+            (user_id, notification_type, title, message, scheduled_time, delivery_method, metadata)
+          VALUES 
+            (${pref.user_id}, 'evening_routine', ${title}, ${message}, 
+             ${scheduledTime}, 'sms', 
+             ${JSON.stringify({ phone_number: pref.phone_number })})
+        `;
+      }
+    }
+  }
+});
+
+const checkEveningRoutineReminders = new CronJob(
+  "check-evening-routine-reminders",
+  {
+    title: "Check Evening Routine Reminders",
+    every: "15m",
+    endpoint: checkEveningRoutineRemindersHandler,
+  }
+);
