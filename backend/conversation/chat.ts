@@ -660,6 +660,215 @@ export const chat = api<ChatRequest, ChatResponse>(
 
     // PHASE 1: Morning Routine CRUD Operations - View Only
     if (session_type === "morning") {
+      // CRITICAL: Check for pending clarification FIRST (before intent detection)
+      // Parse session.context safely (PostgreSQL JSONB may return as string or object)
+      const rawContext = session.context;
+      const sessionContext = typeof rawContext === 'string' 
+        ? (() => {
+            console.log("   🔍 [Context Parse] session.context returned as string, parsing...");
+            return JSON.parse(rawContext);
+          })()
+        : rawContext || {};
+      
+      const pendingCompletion = sessionContext.pendingCompletion;
+      
+      if (pendingCompletion && pendingCompletion.type === 'activity_completion_clarification') {
+        console.log("   🔔 [Morning Complete] Pending clarification detected BEFORE intent check", {
+          hasPending: !!pendingCompletion,
+          candidatesCount: pendingCompletion?.candidates?.length,
+          userMessage: user_message
+        });
+        
+        // Handle clarification follow-up (moved from inside complete handler)
+        const { findActivityMatches, PENDING_CLARIFICATION_TIMEOUT_MS } = await import("../morning/activity_utils");
+        const { markActivityComplete } = await import("../morning/mark_activity_complete");
+        
+        const now = Date.now();
+        const isExpired = now - pendingCompletion.timestamp > PENDING_CLARIFICATION_TIMEOUT_MS;
+        
+        if (isExpired) {
+          console.log("   ⏱️  Clarification expired, clearing context");
+          await db.exec`
+            UPDATE conversation_sessions
+            SET context = '{}'::jsonb
+            WHERE id = ${session.id}
+          `;
+          // Continue to normal intent detection below
+        } else {
+          // Process clarification follow-up
+          const followUpText = user_message.toLowerCase().trim();
+          
+          // Check for cancel keywords
+          const cancelKeywords = ['neither', 'none', 'cancel', 'never mind', 'nevermind', 'no', 'no thanks'];
+          if (cancelKeywords.some(kw => followUpText === kw || followUpText.includes(kw))) {
+            console.log("   ❌ User canceled clarification");
+            
+            const cancelReply = "No problem. I won't mark anything complete. If you'd like, you can tell me the exact activity you finished.";
+            
+            await db.exec`
+              UPDATE conversation_sessions
+              SET context = '{}'::jsonb,
+                  last_activity_at = NOW()
+              WHERE id = ${session.id}
+            `;
+            
+            await db.exec`
+              INSERT INTO conversation_history 
+                (user_id, conversation_type, user_message, emma_response)
+              VALUES (${user_id}, ${session_type}, ${user_message}, ${cancelReply})
+            `;
+            
+            return {
+              emma_reply: cancelReply,
+              session_id: session.id,
+              conversation_complete: false
+            };
+          }
+          
+          // Parse number selection (1, 2, 3)
+          const numberMatch = followUpText.match(/^\s*(\d+)\s*$/);
+          let resolvedActivity: { activityId: string; activityName: string } | null = null;
+          
+          if (numberMatch) {
+            const choiceNum = parseInt(numberMatch[1]);
+            const choiceIndex = choiceNum - 1;
+            
+            console.log(`   🔢 [Numeric Choice] User replied with number: ${choiceNum} (index: ${choiceIndex})`);
+            
+            if (choiceIndex >= 0 && choiceIndex < pendingCompletion.candidates.length) {
+              resolvedActivity = pendingCompletion.candidates[choiceIndex];
+              console.log(`   ✅ [Numeric Choice] Resolved to: "${resolvedActivity.activityName}"`);
+            } else {
+              console.log(`   ❌ [Numeric Choice] Index out of bounds (candidates: ${pendingCompletion.candidates.length})`);
+            }
+          }
+          
+          // Parse text match within candidates
+          if (!resolvedActivity) {
+            const matchResult = findActivityMatches(
+              user_message,
+              pendingCompletion.candidates.map((c: any) => ({ 
+                id: c.activityId, 
+                name: c.activityName 
+              }))
+            );
+            
+            if (matchResult.bestMatch) {
+              resolvedActivity = {
+                activityId: matchResult.bestMatch.activity.id,
+                activityName: matchResult.bestMatch.activity.name
+              };
+              console.log(`   ✅ Resolved by name match: "${resolvedActivity.activityName}"`);
+            }
+          }
+          
+          // If we resolved an activity, mark it complete
+          if (resolvedActivity) {
+            console.log(`   ✅ [Clarification Handler] Calling markActivityComplete`, {
+              activityId: resolvedActivity.activityId,
+              activityName: resolvedActivity.activityName
+            });
+            
+            try {
+              const result = await markActivityComplete({
+                user_id,
+                activity_identifier: resolvedActivity.activityName
+              });
+              
+              console.log(`   ✅ [Clarification Handler] markActivityComplete succeeded`, {
+                matched: result.matched_activity_name,
+                completed_today: result.activities_completed_today,
+                total: result.total_activities,
+                all_complete: result.all_completed
+              });
+              
+              let completeReply: string;
+              if (result.already_complete) {
+                completeReply = `You're on it! ${result.matched_activity_name} is already marked as complete for today. Keep going—you've got this.`;
+              } else if (result.all_completed) {
+                completeReply = `🎉 Amazing! You've completed ${result.matched_activity_name} and finished your entire morning routine (${result.total_activities}/${result.total_activities} activities). You're crushing it today!`;
+              } else {
+                const remaining = result.total_activities - result.activities_completed_today;
+                completeReply = `Great job! I've marked ${result.matched_activity_name} as complete. ${remaining} more to go!`;
+              }
+              
+              // Clear context
+              await db.exec`
+                UPDATE conversation_sessions
+                SET context = '{}'::jsonb,
+                    last_activity_at = NOW()
+                WHERE id = ${session.id}
+              `;
+              
+              await db.exec`
+                INSERT INTO conversation_history 
+                  (user_id, conversation_type, user_message, emma_response, context)
+                VALUES 
+                  (${user_id}, ${session_type}, ${user_message}, ${completeReply}, 
+                   ${JSON.stringify({ 
+                     crud_operation: 'complete',
+                     clarification_resolved: true,
+                     activity_name: result.matched_activity_name,
+                     activities_completed_today: result.activities_completed_today,
+                     total_activities: result.total_activities,
+                     all_completed: result.all_completed
+                   })})
+              `;
+              
+              return {
+                emma_reply: completeReply,
+                session_id: session.id,
+                conversation_complete: result.all_completed
+              };
+            } catch (error: any) {
+              console.log("❌ [Clarification Handler] markActivityComplete failed:", error.message);
+              const errorReply = `I had trouble marking that activity as complete. ${error.message}`;
+              
+              await db.exec`
+                UPDATE conversation_sessions
+                SET context = '{}'::jsonb,
+                    last_activity_at = NOW()
+                WHERE id = ${session.id}
+              `;
+              
+              await db.exec`
+                INSERT INTO conversation_history 
+                  (user_id, conversation_type, user_message, emma_response)
+                VALUES (${user_id}, ${session_type}, ${user_message}, ${errorReply})
+              `;
+              
+              return {
+                emma_reply: errorReply,
+                session_id: session.id,
+                conversation_complete: false
+              };
+            }
+          } else {
+            // Couldn't resolve - ask for clarification again
+            const retryReply = `I'm not sure which one you mean. Please reply with the number (1, 2, or 3) or the full activity name.`;
+            
+            await db.exec`
+              UPDATE conversation_sessions
+              SET last_activity_at = NOW()
+              WHERE id = ${session.id}
+            `;
+            
+            await db.exec`
+              INSERT INTO conversation_history 
+                (user_id, conversation_type, user_message, emma_response)
+              VALUES (${user_id}, ${session_type}, ${user_message}, ${retryReply})
+            `;
+            
+            return {
+              emma_reply: retryReply,
+              session_id: session.id,
+              conversation_complete: false
+            };
+          }
+        }
+      }
+      
+      // No pending clarification - continue with normal intent detection
       const crudIntent = detectMorningRoutineCRUDIntent(user_message);
       
       if (crudIntent.operation === 'view') {
@@ -863,190 +1072,12 @@ export const chat = api<ChatRequest, ChatResponse>(
       // PHASE "COMPLETE": Mark activity as done (with improved matching + clarification)
       if (crudIntent.operation === 'complete') {
         console.log("✅ CRUD: Complete operation detected");
+        console.log(`   Activity: "${crudIntent.activityName}"`);
         
         // Import utilities
-        const { findActivityMatches, PENDING_CLARIFICATION_TIMEOUT_MS } = await import("../morning/activity_utils");
+        const { findActivityMatches } = await import("../morning/activity_utils");
         const { listActivities } = await import("../morning/list_activities");
         const { markActivityComplete } = await import("../morning/mark_activity_complete");
-        
-        // CHECK 1: Handle pending clarification follow-up
-        const pendingCompletion = session.context?.pendingCompletion;
-        if (pendingCompletion && pendingCompletion.type === 'activity_completion_clarification') {
-          const now = Date.now();
-          const isExpired = now - pendingCompletion.timestamp > PENDING_CLARIFICATION_TIMEOUT_MS;
-          
-          if (isExpired) {
-            console.log("   ⏱️  Clarification expired, treating as new request");
-            // Clear expired context and continue to new request handling below
-            await db.exec`
-              UPDATE conversation_sessions
-              SET context = '{}'::jsonb
-              WHERE id = ${session.id}
-            `;
-          } else {
-            // Parse follow-up response
-            console.log("   🔍 Processing clarification follow-up");
-            
-            const followUpText = user_message.toLowerCase().trim();
-            
-            // Check for cancel keywords
-            const cancelKeywords = ['neither', 'none', 'cancel', 'never mind', 'nevermind', 'no', 'no thanks'];
-            if (cancelKeywords.some(kw => followUpText === kw || followUpText.includes(kw))) {
-              console.log("   ❌ User canceled clarification");
-              
-              const cancelReply = "No problem. I won't mark anything complete. If you'd like, you can tell me the exact activity you finished.";
-              
-              // Clear context
-              await db.exec`
-                UPDATE conversation_sessions
-                SET context = '{}'::jsonb,
-                    last_activity_at = NOW()
-                WHERE id = ${session.id}
-              `;
-              
-              await db.exec`
-                INSERT INTO conversation_history 
-                  (user_id, conversation_type, user_message, emma_response)
-                VALUES (${user_id}, ${session_type}, ${user_message}, ${cancelReply})
-              `;
-              
-              return {
-                emma_reply: cancelReply,
-                session_id: session.id,
-                conversation_complete: false
-              };
-            }
-            
-            // Parse number selection (1, 2, 3)
-            const numberMatch = followUpText.match(/^\s*(\d+)\s*$/);
-            let resolvedActivity: { activityId: string; activityName: string } | null = null;
-            
-            if (numberMatch) {
-              const choiceNum = parseInt(numberMatch[1]);
-              const choiceIndex = choiceNum - 1;
-              
-              if (choiceIndex >= 0 && choiceIndex < pendingCompletion.candidates.length) {
-                resolvedActivity = pendingCompletion.candidates[choiceIndex];
-                console.log(`   ✅ Resolved by number: ${choiceNum} → "${resolvedActivity.activityName}"`);
-              }
-            }
-            
-            // Parse text match within candidates
-            if (!resolvedActivity) {
-              const matchResult = findActivityMatches(
-                user_message,
-                pendingCompletion.candidates.map((c: any) => ({ 
-                  id: c.activityId, 
-                  name: c.activityName 
-                }))
-              );
-              
-              if (matchResult.bestMatch) {
-                resolvedActivity = {
-                  activityId: matchResult.bestMatch.activity.id,
-                  activityName: matchResult.bestMatch.activity.name
-                };
-                console.log(`   ✅ Resolved by name match: "${resolvedActivity.activityName}"`);
-              }
-            }
-            
-            // If we resolved an activity, mark it complete
-            if (resolvedActivity) {
-              try {
-                const result = await markActivityComplete({
-                  user_id,
-                  activity_identifier: resolvedActivity.activityName
-                });
-                
-                let completeReply: string;
-                if (result.already_complete) {
-                  completeReply = `You're on it! ${result.matched_activity_name} is already marked as complete for today. Keep going—you've got this.`;
-                } else if (result.all_completed) {
-                  completeReply = `🎉 Amazing! You've completed ${result.matched_activity_name} and finished your entire morning routine (${result.total_activities}/${result.total_activities} activities). You're crushing it today!`;
-                } else {
-                  const remaining = result.total_activities - result.activities_completed_today;
-                  completeReply = `Great job! I've marked ${result.matched_activity_name} as complete. ${remaining} more to go!`;
-                }
-                
-                // Clear context
-                await db.exec`
-                  UPDATE conversation_sessions
-                  SET context = '{}'::jsonb,
-                      last_activity_at = NOW()
-                  WHERE id = ${session.id}
-                `;
-                
-                await db.exec`
-                  INSERT INTO conversation_history 
-                    (user_id, conversation_type, user_message, emma_response, context)
-                  VALUES 
-                    (${user_id}, ${session_type}, ${user_message}, ${completeReply}, 
-                     ${JSON.stringify({ 
-                       crud_operation: 'complete',
-                       clarification_resolved: true,
-                       activity_name: result.matched_activity_name,
-                       activities_completed_today: result.activities_completed_today,
-                       total_activities: result.total_activities,
-                       all_completed: result.all_completed
-                     })})
-                `;
-                
-                return {
-                  emma_reply: completeReply,
-                  session_id: session.id,
-                  conversation_complete: result.all_completed
-                };
-              } catch (error: any) {
-                console.log("❌ CRUD: Complete failed after clarification");
-                const errorReply = `I had trouble marking that activity as complete. ${error.message}`;
-                
-                // Clear context on error
-                await db.exec`
-                  UPDATE conversation_sessions
-                  SET context = '{}'::jsonb,
-                      last_activity_at = NOW()
-                  WHERE id = ${session.id}
-                `;
-                
-                await db.exec`
-                  INSERT INTO conversation_history 
-                    (user_id, conversation_type, user_message, emma_response)
-                  VALUES (${user_id}, ${session_type}, ${user_message}, ${errorReply})
-                `;
-                
-                return {
-                  emma_reply: errorReply,
-                  session_id: session.id,
-                  conversation_complete: false
-                };
-              }
-            } else {
-              // Couldn't resolve - ask for clarification again
-              const retryReply = `I'm not sure which one you mean. Please reply with the number (1, 2, or 3) or the full activity name.`;
-              
-              await db.exec`
-                UPDATE conversation_sessions
-                SET last_activity_at = NOW()
-                WHERE id = ${session.id}
-              `;
-              
-              await db.exec`
-                INSERT INTO conversation_history 
-                  (user_id, conversation_type, user_message, emma_response)
-                VALUES (${user_id}, ${session_type}, ${user_message}, ${retryReply})
-              `;
-              
-              return {
-                emma_reply: retryReply,
-                session_id: session.id,
-                conversation_complete: false
-              };
-            }
-          }
-        }
-        
-        // CHECK 2: New completion request - get routine and find matches
-        console.log(`   Activity: "${crudIntent.activityName}"`);
         
         try {
           const routineResult = await listActivities({ user_id });
