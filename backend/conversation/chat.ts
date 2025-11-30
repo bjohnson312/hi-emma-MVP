@@ -370,16 +370,37 @@ function extractActivitiesFromUserDescription(userMessage: string): string[] {
  * Detect morning routine CRUD operations from user message
  * Phase 1: View operation
  * Phase 2: Update operation (duration and name changes)
+ * Phase "Complete": Complete/check off operation
  * 
  * Returns operation type and extracted data for CRUD operations
  */
 function detectMorningRoutineCRUDIntent(userMessage: string): {
-  operation: 'view' | 'update' | null;
+  operation: 'view' | 'update' | 'complete' | null;
   activityName?: string;
   newDuration?: number;
   newName?: string;
 } {
   const msg = userMessage.toLowerCase();
+  
+  // COMPLETE patterns - Mark activity as done
+  const completePatterns = [
+    /(?:I\s+)?(?:just\s+)?(?:did|finished|completed|done)(?:\s+my)?\s+(.+?)(?:\s+this\s+morning)?$/i,
+    /(?:I'?ve?\s+)?done\s+(?:my\s+)?(.+?)$/i,
+    /(?:just\s+)?checked?\s+off\s+(.+?)$/i,
+    /(?:I\s+)?did\s+my\s+(.+?)$/i,
+    /(?:I\s+)?finished\s+my\s+(.+?)$/i,
+    /(?:I\s+)?completed\s+my\s+(.+?)$/i,
+  ];
+  
+  for (const pattern of completePatterns) {
+    const match = userMessage.match(pattern);
+    if (match) {
+      return {
+        operation: 'complete',
+        activityName: match[1].trim()
+      };
+    }
+  }
   
   // UPDATE patterns - Duration changes
   const updateDurationPatterns = [
@@ -724,6 +745,91 @@ export const chat = api<ChatRequest, ChatResponse>(
             errorReply = `You don't have a morning routine set up yet. Want to start one together?`;
           } else {
             errorReply = `I had trouble updating that activity. ${error.message}`;
+          }
+          
+          await db.exec`
+            INSERT INTO conversation_history 
+              (user_id, conversation_type, user_message, emma_response)
+            VALUES (${user_id}, ${session_type}, ${user_message}, ${errorReply})
+          `;
+          
+          await db.exec`
+            UPDATE conversation_sessions
+            SET last_activity_at = NOW()
+            WHERE id = ${session.id}
+          `;
+          
+          return {
+            emma_reply: errorReply,
+            session_id: session.id,
+            conversation_complete: false
+          };
+        }
+      }
+      
+      // PHASE "COMPLETE": Mark activity as done
+      if (crudIntent.operation === 'complete') {
+        console.log("✅ CRUD: Complete operation detected");
+        console.log(`   Activity: "${crudIntent.activityName}"`);
+        
+        try {
+          const { markActivityComplete } = await import("../morning/mark_activity_complete");
+          const result = await markActivityComplete({
+            user_id,
+            activity_identifier: crudIntent.activityName!
+          });
+          
+          let completeReply: string;
+          
+          if (result.already_complete) {
+            completeReply = `You're on it! ${result.matched_activity_name} is already marked as complete for today. Keep going—you've got this.`;
+          } else if (result.all_completed) {
+            completeReply = `🎉 Amazing! You've completed ${result.matched_activity_name} and finished your entire morning routine (${result.total_activities}/${result.total_activities} activities). You're crushing it today!`;
+          } else {
+            const remaining = result.total_activities - result.activities_completed_today;
+            completeReply = `Great job! I've marked ${result.matched_activity_name} as complete. ${remaining} more to go!`;
+          }
+          
+          console.log("✅ CRUD: Complete successful");
+          console.log(`   ${completeReply}`);
+          
+          await db.exec`
+            INSERT INTO conversation_history 
+              (user_id, conversation_type, user_message, emma_response, context)
+            VALUES 
+              (${user_id}, ${session_type}, ${user_message}, ${completeReply}, 
+               ${JSON.stringify({ 
+                 crud_operation: 'complete', 
+                 activity_name: result.matched_activity_name,
+                 activities_completed_today: result.activities_completed_today,
+                 total_activities: result.total_activities,
+                 all_completed: result.all_completed
+               })})
+          `;
+          
+          await db.exec`
+            UPDATE conversation_sessions
+            SET last_activity_at = NOW()
+            WHERE id = ${session.id}
+          `;
+          
+          return {
+            emma_reply: completeReply,
+            session_id: session.id,
+            conversation_complete: result.all_completed
+          };
+          
+        } catch (error: any) {
+          console.log("❌ CRUD: Complete failed");
+          console.log(`   Error: ${error.message}`);
+          
+          let errorReply: string;
+          if (error.message.includes('not found')) {
+            errorReply = `I couldn't find "${crudIntent.activityName}" in your morning routine. What activity did you just complete?`;
+          } else if (error.message.includes('No active morning routine')) {
+            errorReply = `You don't have a morning routine set up yet. Want to start one together?`;
+          } else {
+            errorReply = `I had trouble marking that activity as complete. ${error.message}`;
           }
           
           await db.exec`
