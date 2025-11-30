@@ -546,12 +546,6 @@ export default function ConversationalCheckIn({
         <div ref={messagesEndRef} />
       </div>
 
-      {sessionType === "morning" && conversationComplete && (
-        <div className="px-4 pb-2 bg-white/95 backdrop-blur-md">
-          <TodayCareTasks userId={userId} />
-        </div>
-      )}
-
       {showIOSSafariBanner && (
         <div className="px-4 pb-2 bg-white/95 backdrop-blur-md">
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3 md:hidden">

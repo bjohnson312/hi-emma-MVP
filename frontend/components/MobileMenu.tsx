@@ -43,7 +43,7 @@ export default function MobileMenu({ isOpen, onClose, activeView, onNavigate, on
         { id: "evening-routine", label: "Evening Routine", icon: Moon },
         { id: "mood", label: "Mood Check-In", icon: Heart },
         { id: "diet-nutrition", label: "Diet & Nutrition", icon: UtensilsCrossed },
-        { id: "doctors-orders", label: "Medications", icon: Pill }
+        { id: "doctors-orders", label: "Doctor's Orders", icon: Pill }
       ]
     },
     {
