@@ -2,20 +2,21 @@ import {
   X, 
   Sun, 
   Moon, 
-  Heart, 
-  UtensilsCrossed, 
-  Pill,
+  Smile,
+  Apple,
+  Stethoscope,
   TrendingUp,
-  Award,
+  Trophy,
   Brain,
-  Bell,
   Users,
-  FileText,
   Share2,
+  Bell,
   Settings,
   HelpCircle,
   Sparkles,
-  Stethoscope,
+  Shield,
+  MessageCircle,
+  BookOpen,
   LogOut
 } from "lucide-react";
 
@@ -37,29 +38,31 @@ export default function MobileMenu({ isOpen, onClose, activeView, onNavigate, on
 
   const menuSections = [
     {
-      title: "Daily Tracking",
+      title: "Daily Use",
       items: [
+        { id: "home", label: "Chat", icon: MessageCircle },
+        { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen },
         { id: "morning-routine", label: "Morning Routine", icon: Sun },
         { id: "evening-routine", label: "Evening Routine", icon: Moon },
-        { id: "mood", label: "Mood Check-In", icon: Heart },
-        { id: "diet-nutrition", label: "Diet & Nutrition", icon: UtensilsCrossed },
-        { id: "doctors-orders", label: "Doctor's Orders", icon: Pill }
+        { id: "mood", label: "How Are You Feeling", icon: Smile },
+        { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple },
+        { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope }
       ]
     },
     {
       title: "Insights & Progress",
       items: [
-        { id: "progress", label: "Progress", icon: TrendingUp },
+        { id: "progress", label: "My Progress", icon: TrendingUp },
         { id: "insights", label: "Insights", icon: Sparkles },
-        { id: "milestones", label: "Milestones", icon: Award },
-        { id: "memories", label: "Memories", icon: Brain }
+        { id: "milestones", label: "Milestones", icon: Trophy },
+        { id: "memories", label: "Emma's Memory", icon: Brain }
       ]
     },
     {
       title: "Care & Sharing",
       items: [
         { id: "care-team", label: "Care Team", icon: Users },
-        { id: "provider-access", label: "Provider Access", icon: Stethoscope },
+        { id: "provider-access", label: "Provider Access", icon: Shield },
         { id: "export", label: "Export & Share", icon: Share2 }
       ]
     },
@@ -68,7 +71,7 @@ export default function MobileMenu({ isOpen, onClose, activeView, onNavigate, on
       items: [
         { id: "notifications", label: "Notifications", icon: Bell },
         { id: "settings", label: "Settings", icon: Settings },
-        { id: "help", label: "Help & Support", icon: HelpCircle }
+        { id: "help", label: "Help / About Emma", icon: HelpCircle }
       ]
     }
   ];

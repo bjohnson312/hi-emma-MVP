@@ -62,26 +62,32 @@ interface NavItem {
   tooltip: string;
 }
 
-const mainNavItems: NavItem[] = [
+const dailyUseItems: NavItem[] = [
   { id: "home", label: "Chat", icon: MessageCircle, tooltip: "Have a conversation with Emma about anything" },
   { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, tooltip: "Track your daily health & wellness journey" },
   { id: "morning-routine", label: "Morning Routine", icon: Sun, tooltip: "Start your day with a guided check-in" },
-  { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, tooltip: "Manage medications and treatment plans" },
+  { id: "evening-routine", label: "Evening Routine", icon: Moon, tooltip: "Wind down with a reflective evening routine" },
+  { id: "mood", label: "How Are You Feeling", icon: Smile, tooltip: "Check in with your emotional wellbeing" },
   { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, tooltip: "Log meals and track nutrition goals" },
-  { id: "mood", label: "How Are You Feeling", icon: Smile, badge: "beta", tooltip: "Check in with your emotional wellbeing" },
-  { id: "evening-routine", label: "Evening Routine", icon: Moon, badge: "beta", tooltip: "Wind down with a reflective evening routine" }
+  { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, tooltip: "Manage medications and treatment plans" }
 ];
 
-const bottomNavItems: NavItem[] = [
-  { id: "progress", label: "My Progress", icon: TrendingUp, badge: "beta", tooltip: "See how your wellness journey is evolving" },
-  { id: "insights", label: "Insights", icon: Sparkles, badge: "beta", tooltip: "Discover patterns in your health data" },
-  { id: "milestones", label: "Milestones", icon: Trophy, badge: "beta", tooltip: "Celebrate achievements in your wellness journey" },
-  { id: "memories", label: "Emma's Memory", icon: Brain, badge: "beta", tooltip: "View what Emma remembers about you" },
+const insightsProgressItems: NavItem[] = [
+  { id: "progress", label: "My Progress", icon: TrendingUp, tooltip: "See how your wellness journey is evolving" },
+  { id: "insights", label: "Insights", icon: Sparkles, tooltip: "Discover patterns in your health data" },
+  { id: "milestones", label: "Milestones", icon: Trophy, tooltip: "Celebrate achievements in your wellness journey" },
+  { id: "memories", label: "Emma's Memory", icon: Brain, tooltip: "View what Emma remembers about you" }
+];
+
+const careSharingItems: NavItem[] = [
   { id: "care-team", label: "Care Team", icon: Users, tooltip: "Manage your support network and caregivers" },
-  { id: "notifications", label: "Notifications", icon: Bell, badge: "beta", tooltip: "Set up reminders for check-ins and medications" },
-  { id: "provider-access", label: "Provider Access", icon: Shield, badge: "beta", tooltip: "Share your data with healthcare providers" },
+  { id: "provider-access", label: "Provider Access", icon: Shield, tooltip: "Share your data with healthcare providers" },
+  { id: "export", label: "Export & Share", icon: Share2, tooltip: "Download or share your wellness reports" }
+];
+
+const settingsItems: NavItem[] = [
+  { id: "notifications", label: "Notifications", icon: Bell, tooltip: "Set up reminders for check-ins and medications" },
   { id: "settings", label: "Settings", icon: Settings, tooltip: "Customize Emma's voice and preferences" },
-  { id: "export", label: "Export & Share", icon: Share2, tooltip: "Download or share your wellness reports" },
   { id: "help", label: "Help / About Emma", icon: HelpCircle, tooltip: "Learn more about Emma and get support" }
 ];
 
@@ -150,7 +156,10 @@ export default function Sidebar({ currentView, onNavigate, userName, userId, onL
 
           <nav className="flex-1 overflow-y-auto space-y-2 pb-4" aria-label="Main navigation">
             <div className="space-y-1">
-              {mainNavItems.map((item) => {
+              <div className="px-2 pb-1">
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Daily Use</h3>
+              </div>
+              {dailyUseItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentView === item.id;
                 
@@ -171,19 +180,17 @@ export default function Sidebar({ currentView, onNavigate, userName, userId, onL
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" />
                       <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
-                      {item.badge && (
-                        <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Coming Soon" : "Exp"}
-                        </StatusBadge>
-                      )}
                     </button>
                   </Tooltip>
                 );
               })}
             </div>
 
-            <div className="pt-4 mt-4 border-t border-white/30">
-              {bottomNavItems.map((item) => {
+            <div className="pt-4 mt-4 border-t border-white/30 space-y-1">
+              <div className="px-2 pb-1">
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Insights & Progress</h3>
+              </div>
+              {insightsProgressItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentView === item.id;
                 
@@ -204,11 +211,68 @@ export default function Sidebar({ currentView, onNavigate, userName, userId, onL
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" />
                       <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
-                      {item.badge && (
-                        <StatusBadge variant={item.badge} className="text-[10px] px-1.5 py-0">
-                          {item.badge === "beta" ? "Beta" : item.badge === "coming-soon" ? "Coming Soon" : "Exp"}
-                        </StatusBadge>
-                      )}
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-white/30 space-y-1">
+              <div className="px-2 pb-1">
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Care & Sharing</h3>
+              </div>
+              {careSharingItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentView === item.id;
+                
+                return (
+                  <Tooltip key={item.id} content={item.tooltip} side="right" >
+                    <button
+                      onClick={() => handleNavigate(item.id)}
+                      className={`
+                        w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                        transition-all duration-200
+                        ${isActive 
+                          ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
+                          : "text-white/90 hover:bg-white/15 hover:shadow-md"
+                        }
+                      `}
+                      aria-label={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-white/30 space-y-1">
+              <div className="px-2 pb-1">
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Settings</h3>
+              </div>
+              {settingsItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentView === item.id;
+                
+                return (
+                  <Tooltip key={item.id} content={item.tooltip} side="right" >
+                    <button
+                      onClick={() => handleNavigate(item.id)}
+                      className={`
+                        w-full flex items-center gap-3 px-4 py-3 rounded-xl
+                        transition-all duration-200
+                        ${isActive 
+                          ? "bg-white/30 backdrop-blur-sm text-white shadow-lg"
+                          : "text-white/90 hover:bg-white/15 hover:shadow-md"
+                        }
+                      `}
+                      aria-label={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
                     </button>
                   </Tooltip>
                 );
