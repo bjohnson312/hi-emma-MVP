@@ -474,11 +474,6 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
                           <span className="text-lg text-gray-700 font-medium flex-1">
                             {option.label}
                           </span>
-                          {isSmsOption && (
-                            <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-[#4e8f71] to-[#6656cb] text-white rounded-full">
-                              Coming Soon
-                            </span>
-                          )}
                         </button>
                       );
                     })}
