@@ -43,19 +43,19 @@ export default function MobileMenu({ isOpen, onClose, activeView, onNavigate, on
         { id: "home", label: "Chat", icon: MessageCircle },
         { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen },
         { id: "morning-routine", label: "Morning Routine", icon: Sun },
-        { id: "evening-routine", label: "Evening Routine", icon: Moon },
-        { id: "mood", label: "How Are You Feeling", icon: Smile },
+        { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope },
         { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple },
-        { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope }
+        { id: "mood", label: "Mood Check-In", icon: Smile },
+        { id: "evening-routine", label: "Evening Routine", icon: Moon }
       ]
     },
     {
       title: "Insights & Progress",
       items: [
         { id: "progress", label: "My Progress", icon: TrendingUp },
-        { id: "insights", label: "Insights", icon: Sparkles },
         { id: "milestones", label: "Milestones", icon: Trophy },
-        { id: "memories", label: "Emma's Memory", icon: Brain }
+        { id: "memories", label: "Emma's Memory", icon: Brain },
+        { id: "insights", label: "Insights", icon: Sparkles }
       ]
     },
     {
@@ -71,7 +71,7 @@ export default function MobileMenu({ isOpen, onClose, activeView, onNavigate, on
       items: [
         { id: "notifications", label: "Notifications", icon: Bell },
         { id: "settings", label: "Settings", icon: Settings },
-        { id: "help", label: "Help / About Emma", icon: HelpCircle }
+        { id: "help", label: "Help & Support", icon: HelpCircle }
       ]
     }
   ];

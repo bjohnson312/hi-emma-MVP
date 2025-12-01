@@ -66,17 +66,17 @@ const dailyUseItems: NavItem[] = [
   { id: "home", label: "Chat", icon: MessageCircle, tooltip: "Have a conversation with Emma about anything" },
   { id: "wellness-journal", label: "Wellness Journal", icon: BookOpen, tooltip: "Track your daily health & wellness journey" },
   { id: "morning-routine", label: "Morning Routine", icon: Sun, tooltip: "Start your day with a guided check-in" },
-  { id: "evening-routine", label: "Evening Routine", icon: Moon, tooltip: "Wind down with a reflective evening routine" },
-  { id: "mood", label: "How Are You Feeling", icon: Smile, tooltip: "Check in with your emotional wellbeing" },
+  { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, tooltip: "Manage medications and treatment plans" },
   { id: "diet-nutrition", label: "Diet & Nutrition", icon: Apple, tooltip: "Log meals and track nutrition goals" },
-  { id: "doctors-orders", label: "Doctor's Orders", icon: Stethoscope, tooltip: "Manage medications and treatment plans" }
+  { id: "mood", label: "Mood Check-In", icon: Smile, tooltip: "Check in with your emotional wellbeing" },
+  { id: "evening-routine", label: "Evening Routine", icon: Moon, tooltip: "Wind down with a reflective evening routine" }
 ];
 
 const insightsProgressItems: NavItem[] = [
   { id: "progress", label: "My Progress", icon: TrendingUp, tooltip: "See how your wellness journey is evolving" },
-  { id: "insights", label: "Insights", icon: Sparkles, tooltip: "Discover patterns in your health data" },
   { id: "milestones", label: "Milestones", icon: Trophy, tooltip: "Celebrate achievements in your wellness journey" },
-  { id: "memories", label: "Emma's Memory", icon: Brain, tooltip: "View what Emma remembers about you" }
+  { id: "memories", label: "Emma's Memory", icon: Brain, tooltip: "View what Emma remembers about you" },
+  { id: "insights", label: "Insights", icon: Sparkles, tooltip: "Discover patterns in your health data" }
 ];
 
 const careSharingItems: NavItem[] = [
@@ -88,7 +88,7 @@ const careSharingItems: NavItem[] = [
 const settingsItems: NavItem[] = [
   { id: "notifications", label: "Notifications", icon: Bell, tooltip: "Set up reminders for check-ins and medications" },
   { id: "settings", label: "Settings", icon: Settings, tooltip: "Customize Emma's voice and preferences" },
-  { id: "help", label: "Help / About Emma", icon: HelpCircle, tooltip: "Learn more about Emma and get support" }
+  { id: "help", label: "Help & Support", icon: HelpCircle, tooltip: "Learn more about Emma and get support" }
 ];
 
 export default function Sidebar({ currentView, onNavigate, userName, userId, onLogout }: SidebarProps) {
