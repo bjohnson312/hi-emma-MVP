@@ -11,6 +11,7 @@ import ProviderSettingsView from "./provider/ProviderSettingsView";
 import HelpView from "./provider/HelpView";
 import VisitsView from "./provider/VisitsView";
 import AppointmentDetailView from "./provider/AppointmentDetailView";
+import ProviderCarePlansView from "./provider/ProviderCarePlansView";
 import { MessageCircle, Home as HomeIcon, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -60,6 +61,8 @@ export function ProviderDashboard({ token, providerData, onLogout }: ProviderDas
         return <CommunicationsView />;
       case "care-team":
         return <CareTeamView />;
+      case "care-plans":
+        return <ProviderCarePlansView />;
       case "notes":
         return (
           <div className="text-center py-12">

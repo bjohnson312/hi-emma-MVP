@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Home, Users, BarChart3, MessageSquare, Settings, LogOut, UserPlus, HelpCircle, FileText, Shield, MessageCircle, Calendar } from "lucide-react";
+import { Home, Users, BarChart3, MessageSquare, Settings, LogOut, UserPlus, HelpCircle, FileText, Shield, MessageCircle, Calendar, Heart } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Tooltip from "@/components/Tooltip";
 import backend from "@/lib/backend-client";
@@ -12,6 +12,7 @@ export type ProviderView =
   | "analytics" 
   | "communications" 
   | "care-team"
+  | "care-plans"
   | "visits"
   | "notes"
   | "settings"
@@ -37,10 +38,11 @@ const navItems: NavItem[] = [
   { id: "chat", label: "Chat", icon: MessageCircle, tooltip: "Chat with Emma AI assistant" },
   { id: "home", label: "Dashboard", icon: Home, tooltip: "Overview of patients and alerts" },
   { id: "patients", label: "Patients", icon: Users, tooltip: "View and manage patient list" },
-  { id: "visits", label: "Visits", icon: Calendar, badge: "coming-soon", tooltip: "Appointments and patient visits" },
   { id: "analytics", label: "Analytics", icon: BarChart3, badge: "beta", tooltip: "Reports and insights across patients" },
   { id: "communications", label: "Messages", icon: MessageSquare, tooltip: "Secure messaging with patients" },
   { id: "care-team", label: "Care Team", icon: UserPlus, tooltip: "Manage providers and team members" },
+  { id: "care-plans", label: "Care Plans", icon: Heart, tooltip: "Create and manage patient care plans" },
+  { id: "visits", label: "Visits", icon: Calendar, badge: "coming-soon", tooltip: "Appointments and patient visits" },
   { id: "notes", label: "Notes", icon: FileText, badge: "coming-soon", tooltip: "Clinical notes and documentation" },
   { id: "settings", label: "Settings", icon: Settings, tooltip: "Configure preferences and profile" },
   { id: "help", label: "Help / Resources", icon: HelpCircle, tooltip: "Get support and learning resources" },
