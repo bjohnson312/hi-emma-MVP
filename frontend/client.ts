@@ -47,6 +47,7 @@ export class Client {
     public readonly notifications: notifications.ServiceClient
     public readonly onboarding: onboarding.ServiceClient
     public readonly patient_sharing: patient_sharing.ServiceClient
+    public readonly patients: patients.ServiceClient
     public readonly profile: profile.ServiceClient
     public readonly provider_auth: provider_auth.ServiceClient
     public readonly provider_chat: provider_chat.ServiceClient
@@ -84,6 +85,7 @@ export class Client {
         this.notifications = new notifications.ServiceClient(base)
         this.onboarding = new onboarding.ServiceClient(base)
         this.patient_sharing = new patient_sharing.ServiceClient(base)
+        this.patients = new patients.ServiceClient(base)
         this.profile = new profile.ServiceClient(base)
         this.provider_auth = new provider_auth.ServiceClient(base)
         this.provider_chat = new provider_chat.ServiceClient(base)
@@ -421,6 +423,7 @@ import { addTask as api_care_plans_add_task_addTask } from "~backend/care_plans/
 import { createPlan as api_care_plans_create_plan_createPlan } from "~backend/care_plans/create_plan";
 import { deleteTask as api_care_plans_delete_task_deleteTask } from "~backend/care_plans/delete_task";
 import { generateAIPlan as api_care_plans_generate_ai_plan_generateAIPlan } from "~backend/care_plans/generate_ai_plan";
+import { getPatientPlan as api_care_plans_get_patient_plan_getPatientPlan } from "~backend/care_plans/get_patient_plan";
 import { getPresets as api_care_plans_get_presets_getPresets } from "~backend/care_plans/get_presets";
 import { getTodayTasks as api_care_plans_get_today_tasks_getTodayTasks } from "~backend/care_plans/get_today_tasks";
 import { getUserPlan as api_care_plans_get_user_plan_getUserPlan } from "~backend/care_plans/get_user_plan";
@@ -438,6 +441,7 @@ export namespace care_plans {
             this.createPlan = this.createPlan.bind(this)
             this.deleteTask = this.deleteTask.bind(this)
             this.generateAIPlan = this.generateAIPlan.bind(this)
+            this.getPatientPlan = this.getPatientPlan.bind(this)
             this.getPresets = this.getPresets.bind(this)
             this.getTodayTasks = this.getTodayTasks.bind(this)
             this.getUserPlan = this.getUserPlan.bind(this)
@@ -467,6 +471,12 @@ export namespace care_plans {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/care_plans/generate`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_generate_ai_plan_generateAIPlan>
+        }
+
+        public async getPatientPlan(params: { patient_id: string }): Promise<ResponseType<typeof api_care_plans_get_patient_plan_getPatientPlan>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/patient/${encodeURIComponent(params.patient_id)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_get_patient_plan_getPatientPlan>
         }
 
         public async getPresets(): Promise<ResponseType<typeof api_care_plans_get_presets_getPresets>> {
@@ -1170,6 +1180,105 @@ export namespace patient_sharing {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/patient/revoke-access/${encodeURIComponent(params.providerId)}`, {method: "POST", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patient_sharing_revoke_provider_access_revokeProviderAccess>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { createPatient as api_patients_create_createPatient } from "~backend/patients/create";
+import { deletePatient as api_patients_delete_deletePatient } from "~backend/patients/delete";
+import { getPatient as api_patients_get_getPatient } from "~backend/patients/get";
+import { linkUser as api_patients_link_user_linkUser } from "~backend/patients/link_user";
+import { listPatients as api_patients_list_listPatients } from "~backend/patients/list";
+import { updatePatient as api_patients_update_updatePatient } from "~backend/patients/update";
+
+export namespace patients {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.createPatient = this.createPatient.bind(this)
+            this.deletePatient = this.deletePatient.bind(this)
+            this.getPatient = this.getPatient.bind(this)
+            this.linkUser = this.linkUser.bind(this)
+            this.listPatients = this.listPatients.bind(this)
+            this.updatePatient = this.updatePatient.bind(this)
+        }
+
+        public async createPatient(params: RequestType<typeof api_patients_create_createPatient>): Promise<ResponseType<typeof api_patients_create_createPatient>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/patients/create`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patients_create_createPatient>
+        }
+
+        public async deletePatient(params: RequestType<typeof api_patients_delete_deletePatient>): Promise<ResponseType<typeof api_patients_delete_deletePatient>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                permanent: params.permanent === undefined ? undefined : String(params.permanent),
+                token:     params.token,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/patients/${encodeURIComponent(params.patient_id)}`, {query, method: "DELETE", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patients_delete_deletePatient>
+        }
+
+        public async getPatient(params: RequestType<typeof api_patients_get_getPatient>): Promise<ResponseType<typeof api_patients_get_getPatient>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                token: params.token,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/patients/${encodeURIComponent(params.patient_id)}`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patients_get_getPatient>
+        }
+
+        public async linkUser(params: RequestType<typeof api_patients_link_user_linkUser>): Promise<ResponseType<typeof api_patients_link_user_linkUser>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                token:     params.token,
+                "user_id": params["user_id"],
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/patients/${encodeURIComponent(params.patient_id)}/link-user`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patients_link_user_linkUser>
+        }
+
+        public async listPatients(params: RequestType<typeof api_patients_list_listPatients>): Promise<ResponseType<typeof api_patients_list_listPatients>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                "include_inactive": params["include_inactive"] === undefined ? undefined : String(params["include_inactive"]),
+                search:             params.search,
+                token:              params.token,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/patients/list`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patients_list_listPatients>
+        }
+
+        public async updatePatient(params: RequestType<typeof api_patients_update_updatePatient>): Promise<ResponseType<typeof api_patients_update_updatePatient>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                address:                 params.address,
+                "date_of_birth":         params["date_of_birth"],
+                email:                   params.email,
+                "full_name":             params["full_name"],
+                "medical_record_number": params["medical_record_number"],
+                notes:                   params.notes,
+                phone:                   params.phone,
+                token:                   params.token,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/patients/${encodeURIComponent(params.patient_id)}/update`, {method: "PUT", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_patients_update_updatePatient>
         }
     }
 }
