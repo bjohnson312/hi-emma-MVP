@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { Heart, Sparkles, FileText, Edit, Plus, Users, ArrowLeft, Loader2, Clock, CheckCircle } from "lucide-react";
+import { Heart, Sparkles, FileText, Edit, Plus, Users, ArrowLeft, Loader2, Clock, CheckCircle, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
-import type { CarePlanTask, TaskType } from "~backend/care_plans/types";
+import type { CarePlanTask, TaskType, CarePlanWithTasks } from "~backend/care_plans/types";
 import type { PresetTemplate } from "~backend/care_plans/presets";
 import type { PatientListItem } from "~backend/patients/types";
+import PatientCarePlansListView from "./PatientCarePlansListView";
 
-type ViewMode = "home" | "create-select" | "ai-generate" | "template-select" | "editor" | "assign";
+type ViewMode = "home" | "create-select" | "ai-generate" | "template-select" | "editor" | "assign" | "patient-list" | "edit-patient-plan";
 
 interface TemplatePlan {
   name: string;
@@ -36,6 +37,8 @@ export default function ProviderCarePlansView() {
   const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [patientsLoaded, setPatientsLoaded] = useState(false);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
+  const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
 
 
 
@@ -270,7 +273,74 @@ export default function ProviderCarePlansView() {
     setSelectedPatientIds([]);
     setPatientsLoaded(false);
     setPatients([]);
+    setEditingPatientId(null);
+    setEditingPlanId(null);
     setView("home");
+  }
+
+  function handleEditPatientPlan(patientId: string, plan: CarePlanWithTasks) {
+    setEditingPatientId(patientId);
+    setEditingPlanId(plan.id || null);
+    setPlanName(plan.name);
+    setPlanDescription(plan.description || "");
+    setTasks(plan.tasks);
+    setView("edit-patient-plan");
+  }
+
+  async function handleSavePatientPlan() {
+    if (!editingPlanId || !editingPatientId) return;
+
+    setLoading(true);
+    try {
+      const tasksToUpdate = tasks.map((task, index) => ({
+        label: task.label,
+        type: task.type,
+        frequency: task.frequency,
+        time_of_day: task.time_of_day || undefined,
+        reminder_enabled: task.reminder_enabled,
+        order_index: index
+      }));
+
+      for (const task of tasks) {
+        if (task.id) {
+          await backend.care_plans.updateTask({
+            task_id: task.id,
+            updates: {
+              label: task.label,
+              type: task.type,
+              frequency: task.frequency,
+              time_of_day: task.time_of_day || undefined,
+              reminder_enabled: task.reminder_enabled
+            }
+          });
+        }
+      }
+
+      toast({
+        title: "Care Plan Updated",
+        description: "The patient's care plan has been successfully updated."
+      });
+
+      handleReset();
+    } catch (error) {
+      console.error("Failed to update care plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update care plan.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (view === "patient-list") {
+    return (
+      <PatientCarePlansListView
+        onBack={() => setView("home")}
+        onEditPlan={handleEditPatientPlan}
+      />
+    );
   }
 
   if (view === "home") {
@@ -289,6 +359,25 @@ export default function ProviderCarePlansView() {
         </div>
 
         <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+          <h2 className="text-2xl font-bold text-[#323e48] mb-6">Manage Care Plans</h2>
+
+          <button
+            onClick={() => setView("patient-list")}
+            className="w-full text-left p-6 rounded-2xl border-2 border-[#323e48]/10 bg-gradient-to-br from-rose-50 to-pink-50 hover:border-rose-500/50 transition-all hover:shadow-xl mb-6"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center">
+                <List className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#323e48] mb-1">View Patients with Care Plans</h3>
+                <p className="text-sm text-[#323e48]/70">
+                  See all patients assigned to care plans, edit their plans, and send SMS messages
+                </p>
+              </div>
+            </div>
+          </button>
+
           <h2 className="text-2xl font-bold text-[#323e48] mb-2">Create a New Care Plan</h2>
           <p className="text-[#323e48]/70 mb-6">Choose how you'd like to get started</p>
 
@@ -434,6 +523,197 @@ export default function ProviderCarePlansView() {
                 <p className="text-xs text-[#323e48]/60">{template.tasks.length} tasks</p>
               </button>
             ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "edit-patient-plan") {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+          <button
+            onClick={() => {
+              setView("patient-list");
+              setEditingPatientId(null);
+              setEditingPlanId(null);
+            }}
+            className="flex items-center gap-2 text-[#323e48]/60 hover:text-[#323e48] mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Patient List
+          </button>
+
+          <h2 className="text-3xl font-bold text-[#323e48] mb-6">Edit Patient Care Plan</h2>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-[#323e48] mb-2">
+                Plan Name
+              </label>
+              <Input
+                value={planName}
+                onChange={(e) => setPlanName(e.target.value)}
+                placeholder="My Care Plan"
+                className="bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#323e48] mb-2">
+                Description (Optional)
+              </label>
+              <Input
+                value={planDescription}
+                onChange={(e) => setPlanDescription(e.target.value)}
+                placeholder="Brief description of this care plan..."
+                className="bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-[#323e48]">Tasks</h3>
+            <Button
+              onClick={addTask}
+              size="sm"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Task
+            </Button>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            {tasks.map((task, index) => (
+              <div
+                key={index}
+                className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-5 border-2 border-[#323e48]/10"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-[#323e48] mb-1">
+                      Task Name
+                    </label>
+                    <Input
+                      value={task.label}
+                      onChange={(e) => updateTask(index, "label", e.target.value)}
+                      placeholder="Take morning medication"
+                      className="bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#323e48] mb-1">
+                      Type
+                    </label>
+                    <select
+                      value={task.type}
+                      onChange={(e) => updateTask(index, "type", e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-[#323e48]/20 rounded-lg text-sm"
+                    >
+                      {TASK_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.icon} {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#323e48] mb-1">
+                      Frequency
+                    </label>
+                    <Input
+                      value={task.frequency}
+                      onChange={(e) => updateTask(index, "frequency", e.target.value)}
+                      placeholder="daily, 2x/day, weekly..."
+                      className="bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#323e48] mb-1">
+                      Time of Day (optional)
+                    </label>
+                    <Input
+                      value={task.time_of_day || ""}
+                      onChange={(e) => updateTask(index, "time_of_day", e.target.value)}
+                      placeholder="8:00 AM, morning, evening..."
+                      className="bg-white"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => updateTask(index, "reminder_enabled", !task.reminder_enabled)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                        task.reminder_enabled
+                          ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                          : "bg-gray-100 text-gray-600 border-2 border-gray-200"
+                      }`}
+                    >
+                      <span className="text-xs font-medium">
+                        {task.reminder_enabled ? "Reminder On" : "Reminder Off"}
+                      </span>
+                    </button>
+
+                    <Button
+                      onClick={() => removeTask(index)}
+                      variant="outline"
+                      size="sm"
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {tasks.length === 0 && (
+              <div className="text-center py-12 text-[#323e48]/60">
+                <p className="mb-4">No tasks yet. Add your first task to get started!</p>
+                <Button
+                  onClick={addTask}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Task
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              onClick={handleSavePatientPlan}
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+            <Button 
+              onClick={() => {
+                setView("patient-list");
+                setEditingPatientId(null);
+                setEditingPlanId(null);
+              }} 
+              variant="outline"
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       </div>

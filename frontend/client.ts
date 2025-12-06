@@ -427,7 +427,9 @@ import { getPatientPlan as api_care_plans_get_patient_plan_getPatientPlan } from
 import { getPresets as api_care_plans_get_presets_getPresets } from "~backend/care_plans/get_presets";
 import { getTodayTasks as api_care_plans_get_today_tasks_getTodayTasks } from "~backend/care_plans/get_today_tasks";
 import { getUserPlan as api_care_plans_get_user_plan_getUserPlan } from "~backend/care_plans/get_user_plan";
+import { listPatientsWithPlans as api_care_plans_list_patients_with_plans_listPatientsWithPlans } from "~backend/care_plans/list_patients_with_plans";
 import { markTaskComplete as api_care_plans_mark_task_complete_markTaskComplete } from "~backend/care_plans/mark_task_complete";
+import { sendPatientSMS as api_care_plans_send_patient_sms_sendPatientSMS } from "~backend/care_plans/send_patient_sms";
 import { updateTask as api_care_plans_update_task_updateTask } from "~backend/care_plans/update_task";
 
 export namespace care_plans {
@@ -445,7 +447,9 @@ export namespace care_plans {
             this.getPresets = this.getPresets.bind(this)
             this.getTodayTasks = this.getTodayTasks.bind(this)
             this.getUserPlan = this.getUserPlan.bind(this)
+            this.listPatientsWithPlans = this.listPatientsWithPlans.bind(this)
             this.markTaskComplete = this.markTaskComplete.bind(this)
+            this.sendPatientSMS = this.sendPatientSMS.bind(this)
             this.updateTask = this.updateTask.bind(this)
         }
 
@@ -497,10 +501,22 @@ export namespace care_plans {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_get_user_plan_getUserPlan>
         }
 
+        public async listPatientsWithPlans(params: RequestType<typeof api_care_plans_list_patients_with_plans_listPatientsWithPlans>): Promise<ResponseType<typeof api_care_plans_list_patients_with_plans_listPatientsWithPlans>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/patients`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_list_patients_with_plans_listPatientsWithPlans>
+        }
+
         public async markTaskComplete(params: RequestType<typeof api_care_plans_mark_task_complete_markTaskComplete>): Promise<ResponseType<typeof api_care_plans_mark_task_complete_markTaskComplete>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/care_plans/tasks/complete`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_mark_task_complete_markTaskComplete>
+        }
+
+        public async sendPatientSMS(params: RequestType<typeof api_care_plans_send_patient_sms_sendPatientSMS>): Promise<ResponseType<typeof api_care_plans_send_patient_sms_sendPatientSMS>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/care_plans/send_sms`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_care_plans_send_patient_sms_sendPatientSMS>
         }
 
         public async updateTask(params: RequestType<typeof api_care_plans_update_task_updateTask>): Promise<ResponseType<typeof api_care_plans_update_task_updateTask>> {
