@@ -2,7 +2,7 @@ import { useState } from "react";
 import ProviderSidebar, { type ProviderView } from "./provider/ProviderSidebar";
 import ProviderChatView from "./provider/ProviderChatView";
 import HomeDashboard from "./provider/HomeDashboard";
-import EnhancedPatientList from "./provider/EnhancedPatientList";
+import CombinedPatientsView from "./provider/CombinedPatientsView";
 import PatientProfileView from "./provider/PatientProfileView";
 import AnalyticsView from "./provider/AnalyticsView";
 import CareTeamView from "./provider/CareTeamView";
@@ -52,7 +52,7 @@ export function ProviderDashboard({ token, providerData, onLogout }: ProviderDas
       case "home":
         return <HomeDashboard />;
       case "patients":
-        return <EnhancedPatientList onSelectPatient={setSelectedPatient} />;
+        return <CombinedPatientsView onSelectPatient={setSelectedPatient} />;
       case "visits":
         return <VisitsView onSelectAppointment={setSelectedAppointment} />;
       case "analytics":

@@ -91,19 +91,7 @@ export default function PatientManagementView() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-            <Users className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-[#323e48]">Patient Management</h1>
-            <p className="text-[#323e48]/70">Manage your patient records</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+      <div>
         <div className="flex gap-4 mb-6">
           <div className="flex-1 flex gap-2">
             <Input
