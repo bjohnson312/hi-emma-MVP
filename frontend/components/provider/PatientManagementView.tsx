@@ -276,122 +276,173 @@ function PatientFormModal({ patient, onClose }: PatientFormModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-[#323e48]">
-            {patient ? "Edit Patient" : "Add New Patient"}
-          </h2>
-          <button onClick={onClose} className="text-[#323e48]/60 hover:text-[#323e48]">
+      <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+          <div>
+            <h2 className="text-2xl font-bold text-[#323e48]">
+              {patient ? "Edit Patient" : "Add New Patient"}
+            </h2>
+            <p className="text-sm text-[#323e48]/60 mt-1">
+              Fields marked with <span className="text-red-500">*</span> are required
+            </p>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-[#323e48]/60 hover:text-[#323e48] hover:bg-gray-100 rounded-full p-2 transition-all"
+            aria-label="Close"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#323e48] mb-2">
-              Full Name *
-            </label>
-            <Input
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              placeholder="John Doe"
-              required
-            />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#323e48] mb-2">
-                Email
-              </label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="john.doe@example.com"
-              />
+        <div className="flex-1 overflow-y-auto p-6">
+          <form onSubmit={handleSubmit} className="space-y-6" id="patient-form">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">Required Information</h3>
+              <div>
+                <label className="block text-sm font-medium text-[#323e48] mb-2">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="Enter patient's full name"
+                  required
+                  className="bg-white"
+                  autoFocus
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#323e48] mb-2">
-                Phone
-              </label>
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="(555) 123-4567"
-              />
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-[#323e48] mb-4 flex items-center gap-2">
+                Contact Information 
+                <span className="text-xs font-normal text-[#323e48]/60">(Optional)</span>
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#323e48] mb-2">
+                    Email
+                  </label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="patient@example.com"
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#323e48] mb-2">
+                    Phone
+                  </label>
+                  <Input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="(555) 123-4567"
+                    className="bg-white"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#323e48] mb-2">
-                Date of Birth
-              </label>
-              <Input
-                type="date"
-                value={formData.date_of_birth}
-                onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-              />
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-[#323e48] mb-4 flex items-center gap-2">
+                Medical Information 
+                <span className="text-xs font-normal text-[#323e48]/60">(Optional)</span>
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#323e48] mb-2">
+                    Date of Birth
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.date_of_birth}
+                    onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#323e48] mb-2">
+                    Medical Record Number (MRN)
+                  </label>
+                  <Input
+                    value={formData.medical_record_number}
+                    onChange={(e) => setFormData({ ...formData, medical_record_number: e.target.value })}
+                    placeholder="MRN-12345"
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-[#323e48]/50 mt-1">Must be unique for your practice</p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#323e48] mb-2">
-                Medical Record Number
-              </label>
-              <Input
-                value={formData.medical_record_number}
-                onChange={(e) => setFormData({ ...formData, medical_record_number: e.target.value })}
-                placeholder="MRN-12345"
-              />
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-[#323e48] mb-4 flex items-center gap-2">
+                Additional Details 
+                <span className="text-xs font-normal text-[#323e48]/60">(Optional)</span>
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#323e48] mb-2">
+                    Address
+                  </label>
+                  <Input
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="123 Main St, City, State 12345"
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#323e48] mb-2">
+                    Clinical Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Enter any relevant clinical notes, allergies, or special considerations..."
+                    className="w-full px-3 py-2 bg-white border border-[#323e48]/20 rounded-lg min-h-[100px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-[#323e48]/50 mt-1">This information will only be visible to you</p>
+                </div>
+              </div>
             </div>
-          </div>
+          </form>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#323e48] mb-2">
-              Address
-            </label>
-            <Input
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="123 Main St, City, State 12345"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#323e48] mb-2">
-              Notes
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Additional notes about the patient..."
-              className="w-full px-3 py-2 bg-white border border-[#323e48]/20 rounded-lg min-h-[100px]"
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                patient ? "Update Patient" : "Add Patient"
-              )}
-            </Button>
-            <Button type="button" onClick={onClose} variant="outline">
-              Cancel
-            </Button>
-          </div>
-        </form>
+        <div className="flex gap-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0 rounded-b-3xl">
+          <Button
+            type="submit"
+            form="patient-form"
+            disabled={loading}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                {patient ? "Update Patient" : "Add Patient"}
+              </>
+            )}
+          </Button>
+          <Button 
+            type="button" 
+            onClick={onClose} 
+            variant="outline"
+            className="px-8"
+          >
+            Cancel
+          </Button>
+        </div>
       </div>
     </div>
   );
