@@ -5,10 +5,20 @@ import type { CreatePlanRequest, CreatePlanResponse, CarePlan, CarePlanTask } fr
 export const createPlan = api<CreatePlanRequest, CreatePlanResponse>(
   { expose: true, method: "POST", path: "/care_plans/create" },
   async (req) => {
-    const { user_id, name, description, tasks } = req;
+    const { user_id, patient_id, name, description, tasks } = req;
+
+    if (!user_id && !patient_id) {
+      throw new Error("Either user_id or patient_id is required");
+    }
+
+    const targetUserId = user_id || patient_id;
+
+    if (!targetUserId) {
+      throw new Error("Failed to determine target user ID");
+    }
 
     const existingPlan = await db.queryRow<{ id: number }>`
-      SELECT id FROM care_plans WHERE user_id = ${user_id} AND is_active = true
+      SELECT id FROM care_plans WHERE user_id = ${targetUserId} AND is_active = true
     `;
 
     if (existingPlan) {
@@ -18,8 +28,8 @@ export const createPlan = api<CreatePlanRequest, CreatePlanResponse>(
     }
 
     const plan = await db.queryRow<CarePlan>`
-      INSERT INTO care_plans (user_id, name, description, is_active)
-      VALUES (${user_id}, ${name}, ${description || null}, true)
+      INSERT INTO care_plans (user_id, patient_id, name, description, is_active)
+      VALUES (${targetUserId}, ${patient_id || null}::uuid, ${name}, ${description || null}, true)
       RETURNING *
     `;
 

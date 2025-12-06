@@ -15,6 +15,7 @@ export interface CarePlanTask {
 export interface CarePlan {
   id?: number;
   user_id: string;
+  patient_id?: string;
   name: string;
   description?: string;
   is_active: boolean;
@@ -36,7 +37,8 @@ export interface TaskCompletion {
 }
 
 export interface CreatePlanRequest {
-  user_id: string;
+  user_id?: string;
+  patient_id?: string;
   name: string;
   description?: string;
   tasks: Omit<CarePlanTask, 'id' | 'care_plan_id' | 'is_active'>[];

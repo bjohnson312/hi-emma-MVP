@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { CarePlanTask, TaskType } from "~backend/care_plans/types";
 import type { PresetTemplate } from "~backend/care_plans/presets";
-import type { PatientListItem } from "~backend/provider_portal/list_patients";
+import type { PatientListItem } from "~backend/patients/types";
 
 type ViewMode = "home" | "create-select" | "ai-generate" | "template-select" | "editor" | "assign";
 
@@ -43,7 +43,7 @@ export default function ProviderCarePlansView() {
     setLoading(true);
     try {
       const token = localStorage.getItem("provider_token") || "";
-      const response = await backend.provider_portal.listPatients({ token });
+      const response = await backend.patients.listPatients({ token });
       setPatients(response.patients);
       setPatientsLoaded(true);
     } catch (error) {
@@ -220,8 +220,11 @@ export default function ProviderCarePlansView() {
 
       for (const patientId of selectedPatientIds) {
         try {
+          const patient = patients.find(p => p.id === patientId);
+          
           await backend.care_plans.createPlan({
-            user_id: patientId,
+            patient_id: patientId,
+            user_id: patient?.user_id || undefined,
             name: planName,
             description: planDescription || undefined,
             tasks: tasksToSave
@@ -682,27 +685,36 @@ export default function ProviderCarePlansView() {
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {patients.map((patient) => (
                     <button
-                      key={patient.userId}
-                      onClick={() => togglePatientSelection(patient.userId)}
+                      key={patient.id}
+                      onClick={() => togglePatientSelection(patient.id)}
                       className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                        selectedPatientIds.includes(patient.userId)
+                        selectedPatientIds.includes(patient.id)
                           ? "bg-pink-50 border-pink-300"
                           : "bg-white border-[#323e48]/10 hover:border-[#323e48]/30"
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                          selectedPatientIds.includes(patient.userId)
+                          selectedPatientIds.includes(patient.id)
                             ? "bg-pink-500 border-pink-500"
                             : "border-[#323e48]/30"
                         }`}>
-                          {selectedPatientIds.includes(patient.userId) && (
+                          {selectedPatientIds.includes(patient.id) && (
                             <CheckCircle className="w-4 h-4 text-white" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-[#323e48]">{patient.fullName}</p>
-                          <p className="text-xs text-[#323e48]/60">{patient.email || 'No email'}</p>
+                          <p className="font-semibold text-[#323e48]">{patient.full_name}</p>
+                          <p className="text-xs text-[#323e48]/60">{patient.email || patient.phone || 'No contact info'}</p>
+                          {patient.medical_record_number && (
+                            <p className="text-xs text-[#323e48]/50">MRN: {patient.medical_record_number}</p>
+                          )}
+                          {patient.has_app_access && (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">
+                              <CheckCircle className="w-3 h-3" />
+                              App User
+                            </span>
+                          )}
                         </div>
                       </div>
                     </button>
