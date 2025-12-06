@@ -35,12 +35,9 @@ export default function ProviderCarePlansView() {
   const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [patientsLoaded, setPatientsLoaded] = useState(false);
 
-  useEffect(() => {
-    if (view === "assign") {
-      loadPatients();
-    }
-  }, [view]);
+
 
   async function loadPatients() {
     setLoading(true);
@@ -48,6 +45,7 @@ export default function ProviderCarePlansView() {
       const token = localStorage.getItem("provider_token") || "";
       const response = await backend.provider_portal.listPatients({ token });
       setPatients(response.patients);
+      setPatientsLoaded(true);
     } catch (error) {
       console.error("Failed to load patients:", error);
       toast({
@@ -267,6 +265,8 @@ export default function ProviderCarePlansView() {
     setTasks([]);
     setAiInput("");
     setSelectedPatientIds([]);
+    setPatientsLoaded(false);
+    setPatients([]);
     setView("home");
   }
 
@@ -637,9 +637,41 @@ export default function ProviderCarePlansView() {
             </p>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+          {!patientsLoaded ? (
+            <div className="space-y-4">
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 mx-auto mb-4 text-[#323e48]/30" />
+                <h3 className="text-lg font-bold text-[#323e48] mb-2">Ready to Assign</h3>
+                <p className="text-[#323e48]/60 mb-6">
+                  Load your patient list to select who should receive this care plan
+                </p>
+                
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    onClick={loadPatients}
+                    disabled={loading}
+                    className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 mr-2" />
+                        Load Patients
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button onClick={handleReset} variant="outline" className="flex-1">
+                  Cancel
+                </Button>
+              </div>
             </div>
           ) : (
             <>
