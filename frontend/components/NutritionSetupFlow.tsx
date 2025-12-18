@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { NutritionSetupProgress } from "~backend/wellness/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 import {
   Target,
   Apple,
@@ -118,7 +119,11 @@ export function NutritionSetupFlow({
         is_completed: currentStep >= totalSteps - 1
       });
     } catch (error) {
-      console.error("Failed to save progress:", error);
+      await logErrorSilently(error, {
+        componentName: 'NutritionSetupFlow',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
     }
   };
 
@@ -210,11 +215,16 @@ export function NutritionSetupFlow({
         description: "Your nutrition plan has been created successfully"
       });
     } catch (error) {
-      console.error("Failed to save plan:", error);
+      await logErrorSilently(error, {
+        componentName: 'NutritionSetupFlow',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/nutrition-plan',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to save nutrition plan",
-        variant: "destructive"
+        title: "Unable to save plan",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   };
@@ -229,11 +239,15 @@ export function NutritionSetupFlow({
       });
       onComplete();
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'NutritionSetupFlow',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error completing setup",
-        description: error.message,
-        variant: "destructive"
+        title: "Unable to complete setup",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   };

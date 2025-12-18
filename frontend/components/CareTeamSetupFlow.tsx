@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import type { CareTeamSetupProgress, CareTeamMemberType } from "~backend/care_team/types";
 import { demoStorage } from "@/lib/demo-storage";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 import {
   Users,
   Heart,
@@ -142,7 +143,11 @@ export function CareTeamSetupFlow({ userId, existingProgress, onComplete, onExit
         currentStep >= totalSteps - 1
       );
     } catch (error) {
-      console.error("Failed to save progress:", error);
+      await logErrorSilently(error, {
+        componentName: 'CareTeamSetupFlow',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
     }
   };
 
@@ -162,7 +167,7 @@ export function CareTeamSetupFlow({ userId, existingProgress, onComplete, onExit
       toast({
         title: "Name required",
         description: "Please enter a name for this care team member",
-        variant: "destructive",
+        variant: "default",
       });
       return;
     }
@@ -193,11 +198,15 @@ export function CareTeamSetupFlow({ userId, existingProgress, onComplete, onExit
         setStepsCompleted([...stepsCompleted, step.id]);
       }
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'CareTeamSetupFlow',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error adding member",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to add member",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     }
   };
@@ -237,11 +246,15 @@ export function CareTeamSetupFlow({ userId, existingProgress, onComplete, onExit
       );
       onComplete();
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'CareTeamSetupFlow',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error completing setup",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to complete setup",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     }
   };

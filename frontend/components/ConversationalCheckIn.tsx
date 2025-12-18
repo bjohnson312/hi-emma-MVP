@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Send, History, RefreshCw, Mic, MicOff, Volume2, VolumeX, Clock, Settings, X } from "lucide-react";
 import AutoExpandTextarea from "@/components/AutoExpandTextarea";
 import backend from "@/lib/backend-client";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 import type { SessionType } from "~backend/conversation/types";
 import { useConversationSession } from "@/hooks/useConversationSession";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
@@ -227,7 +228,12 @@ export default function ConversationalCheckIn({
           }
         }
       } catch (error) {
-        console.error("Failed to fetch profile:", error);
+        await logErrorSilently(error, {
+          componentName: 'ConversationalCheckIn',
+          errorType: 'api_failure',
+          apiEndpoint: '/profile/get',
+          severity: 'low',
+        });
       }
     };
     fetchProfile();

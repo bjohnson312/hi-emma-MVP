@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import backend from "@/lib/backend-client";
 import { useToast } from "@/components/ui/use-toast";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface WellnessJournalOnboardingProps {
   userId: string;
@@ -75,7 +76,7 @@ export default function WellnessJournalOnboarding({ userId, onComplete }: Wellne
       toast({
         title: "Please select a goal",
         description: "Choose one of the wellness goals to get started.",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -112,11 +113,16 @@ export default function WellnessJournalOnboarding({ userId, onComplete }: Wellne
 
       onComplete();
     } catch (error) {
-      console.error("Failed to create chapter:", error);
+      await logErrorSilently(error, {
+        componentName: 'WellnessJournalOnboarding',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness_journal/create-chapter',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to create your wellness chapter.",
-        variant: "destructive"
+        title: "Unable to create chapter",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setCreating(false);
@@ -128,7 +134,7 @@ export default function WellnessJournalOnboarding({ userId, onComplete }: Wellne
       toast({
         title: "Missing Information",
         description: "Please provide a title and motivation for your goal.",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -150,11 +156,16 @@ export default function WellnessJournalOnboarding({ userId, onComplete }: Wellne
 
       onComplete();
     } catch (error) {
-      console.error("Failed to create chapter:", error);
+      await logErrorSilently(error, {
+        componentName: 'WellnessJournalOnboarding',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness_journal/create-chapter',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to create your wellness chapter.",
-        variant: "destructive"
+        title: "Unable to create chapter",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setCreating(false);

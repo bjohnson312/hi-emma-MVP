@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
 import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight, Mic } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { logErrorSilently } from "@/lib/silent-error-handler";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 interface OnboardingFlowProps {
   userId: string;
@@ -43,6 +46,7 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
   const [isLoading, setIsLoading] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [isTestingPronunciation, setIsTestingPronunciation] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     loadOnboardingStatus();
@@ -94,6 +98,7 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
 
   const loadOnboardingStatus = async () => {
     try {
+      setHasError(false);
       const status = await backend.onboarding.getStatus({ user_id: userId });
       if (status.onboarding_completed) {
         onComplete(status.preferences?.first_name || "");
@@ -108,7 +113,13 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
         }
       }
     } catch (error) {
-      console.error("Failed to load onboarding status:", error);
+      await logErrorSilently(error, {
+        componentName: 'OnboardingFlow',
+        errorType: 'api_failure',
+        apiEndpoint: '/onboarding/status',
+        severity: 'medium',
+      });
+      setHasError(true);
     }
   };
 
@@ -273,8 +284,13 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
         setTextInput("");
       }
     } catch (error) {
-      console.error("Failed to update onboarding step:", error);
-      setEmmaMessage("Oops! Something went wrong. Let's try that again.");
+      await logErrorSilently(error, {
+        componentName: 'OnboardingFlow',
+        errorType: 'api_failure',
+        apiEndpoint: '/onboarding/update-step',
+        severity: 'medium',
+      });
+      setEmmaMessage("Let's try that again.");
       setIsLoading(false);
     }
   };
@@ -286,6 +302,25 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
   };
 
   const currentQuestion = questions[currentStep];
+
+  if (hasError) {
+    return (
+      <div className="w-full flex items-start justify-center p-4 pt-8 md:pt-16">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border border-white/40">
+            <div className="p-8">
+              <EmptyState
+                title="Unable to load onboarding"
+                description="We're having trouble loading your onboarding progress"
+                onRetry={loadOnboardingStatus}
+                icon={<Sparkles className="h-16 w-16" />}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex items-start justify-center p-4 pt-8 md:pt-16">

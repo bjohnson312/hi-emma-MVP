@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { NutritionChatMessage } from "~backend/wellness/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 interface NutritionChatOnboardingProps {
   userId: string;
@@ -18,6 +21,7 @@ export default function NutritionChatOnboarding({ userId, onComplete }: Nutritio
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [completed, setCompleted] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -32,6 +36,7 @@ export default function NutritionChatOnboarding({ userId, onComplete }: Nutritio
   const startChat = async () => {
     try {
       setInitializing(true);
+      setHasError(false);
       const response = await backend.wellness.startNutritionChat({ user_id: userId });
       setSessionId(response.session_id);
       setMessages([{
@@ -40,12 +45,13 @@ export default function NutritionChatOnboarding({ userId, onComplete }: Nutritio
         timestamp: new Date()
       }]);
     } catch (error) {
-      console.error("Failed to start nutrition chat:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start nutrition chat",
-        variant: "destructive"
+      await logErrorSilently(error, {
+        componentName: 'NutritionChatOnboarding',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/start-nutrition-chat',
+        severity: 'low',
       });
+      setHasError(true);
     } finally {
       setInitializing(false);
     }
@@ -86,11 +92,16 @@ export default function NutritionChatOnboarding({ userId, onComplete }: Nutritio
         }, 2000);
       }
     } catch (error) {
-      console.error("Failed to send message:", error);
+      await logErrorSilently(error, {
+        componentName: 'NutritionChatOnboarding',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/send-chat-message',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
+        title: "Unable to send message",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -106,8 +117,21 @@ export default function NutritionChatOnboarding({ userId, onComplete }: Nutritio
 
   if (initializing) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 text-[#4e8f71] animate-spin" />
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <LoadingSkeleton lines={5} />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Unable to start nutrition chat"
+          description="We're having trouble starting your nutrition consultation"
+          onRetry={startChat}
+          icon={<span className="text-4xl">🥗</span>}
+        />
       </div>
     );
   }
