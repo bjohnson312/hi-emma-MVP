@@ -3,6 +3,9 @@ import { CheckCircle2, Circle, Clock, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { TodayTask } from "~backend/care_plans/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 interface TodayCareTasksProps {
   userId: string;
@@ -21,6 +24,7 @@ export default function TodayCareTasks({ userId }: TodayCareTasksProps) {
   const [completedCount, setCompletedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -28,13 +32,20 @@ export default function TodayCareTasks({ userId }: TodayCareTasksProps) {
 
   async function loadTasks() {
     setLoading(true);
+    setHasError(false);
     try {
       const response = await backend.care_plans.getTodayTasks({ user_id: userId });
       setTasks(response.tasks);
       setCompletedCount(response.completed_count);
       setTotalCount(response.total_count);
     } catch (error) {
-      console.error("Failed to load tasks:", error);
+      await logErrorSilently(error, {
+        componentName: 'TodayCareTasks',
+        errorType: 'api_failure',
+        apiEndpoint: '/care_plans/today-tasks',
+        severity: 'low',
+      });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -63,11 +74,16 @@ export default function TodayCareTasks({ userId }: TodayCareTasksProps) {
         });
       }
     } catch (error) {
-      console.error("Failed to mark task complete:", error);
+      await logErrorSilently(error, {
+        componentName: 'TodayCareTasks',
+        errorType: 'api_failure',
+        apiEndpoint: '/care_plans/mark-complete',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to mark task complete.",
-        variant: "destructive"
+        title: "Unable to update task",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   }
@@ -75,9 +91,20 @@ export default function TodayCareTasks({ userId }: TodayCareTasksProps) {
   if (loading) {
     return (
       <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
-        <div className="text-center py-8 text-[#323e48]/60">
-          Loading tasks...
-        </div>
+        <LoadingSkeleton lines={5} />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Unable to load tasks"
+          description="We're having trouble loading your care tasks"
+          onRetry={loadTasks}
+          icon={<Clock className="h-16 w-16" />}
+        />
       </div>
     );
   }

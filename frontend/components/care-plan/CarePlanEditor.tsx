@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { CarePlanTask, TaskType } from "~backend/care_plans/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface CarePlanEditorProps {
   userId: string;
@@ -67,7 +68,7 @@ export default function CarePlanEditor({
       toast({
         title: "Name Required",
         description: "Please enter a name for your care plan.",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -77,7 +78,7 @@ export default function CarePlanEditor({
       toast({
         title: "Tasks Required",
         description: "Please add at least one task.",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -106,11 +107,16 @@ export default function CarePlanEditor({
 
       onSaved();
     } catch (error) {
-      console.error("Failed to save care plan:", error);
+      await logErrorSilently(error, {
+        componentName: 'CarePlanEditor',
+        errorType: 'api_failure',
+        apiEndpoint: '/care_plans/create',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to save care plan.",
-        variant: "destructive"
+        title: "Unable to save plan",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setSaving(false);

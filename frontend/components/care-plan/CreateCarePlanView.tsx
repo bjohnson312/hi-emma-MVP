@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { PresetTemplate } from "~backend/care_plans/presets";
 import type { CarePlanTask } from "~backend/care_plans/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface CreateCarePlanViewProps {
   userId: string;
@@ -31,7 +32,7 @@ export default function CreateCarePlanView({
       toast({
         title: "Input Required",
         description: "Please describe your condition or goal.",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -49,11 +50,16 @@ export default function CreateCarePlanView({
 
       onEditPlan(tasksWithDefaults, `${aiInput} Care Plan`);
     } catch (error) {
-      console.error("AI generation failed:", error);
+      await logErrorSilently(error, {
+        componentName: 'CreateCarePlanView',
+        errorType: 'api_failure',
+        apiEndpoint: '/care_plans/generate-ai',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to generate care plan. Please try again.",
-        variant: "destructive"
+        title: "Unable to generate plan",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -67,11 +73,16 @@ export default function CreateCarePlanView({
       setPresets(response.presets);
       setMode("template");
     } catch (error) {
-      console.error("Failed to load presets:", error);
+      await logErrorSilently(error, {
+        componentName: 'CreateCarePlanView',
+        errorType: 'api_failure',
+        apiEndpoint: '/care_plans/presets',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to load templates.",
-        variant: "destructive"
+        title: "Unable to load templates",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
