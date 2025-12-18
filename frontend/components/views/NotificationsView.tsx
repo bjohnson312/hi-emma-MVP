@@ -7,10 +7,14 @@ import backend from "@/lib/backend-client";
 import type { NotificationPreferences } from "~backend/notifications/types";
 import Tooltip from "@/components/Tooltip";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { logErrorSilently } from '@/lib/silent-error-handler';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
 export default function NotificationsView() {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -22,16 +26,18 @@ export default function NotificationsView() {
   }, []);
 
   const loadPreferences = async () => {
+    setHasError(false);
     try {
       const prefs = await backend.notifications.getPreferences({ user_id: userId });
       setPreferences(prefs);
     } catch (error) {
-      console.error("Failed to load notification preferences:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load notification preferences",
-        variant: "destructive",
+      await logErrorSilently(error, {
+        componentName: 'NotificationsView',
+        errorType: 'api_failure',
+        apiEndpoint: '/notifications/preferences',
+        severity: 'low',
       });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -60,11 +66,16 @@ export default function NotificationsView() {
         description: "Notification preferences saved",
       });
     } catch (error) {
-      console.error("Failed to save preferences:", error);
+      await logErrorSilently(error, {
+        componentName: 'NotificationsView',
+        errorType: 'api_failure',
+        apiEndpoint: '/notifications/update-preferences',
+        severity: 'medium',
+      });
       toast({
-        title: "Error",
-        description: "Failed to save notification preferences",
-        variant: "destructive",
+        title: "Unable to save",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setSaving(false);
@@ -91,11 +102,6 @@ export default function NotificationsView() {
       }
     } else {
       if (pushNotifications.permission === 'denied') {
-        toast({
-          title: "Permission Blocked",
-          description: "Please enable notifications in your browser settings, then try again.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -107,17 +113,9 @@ export default function NotificationsView() {
         });
       } else if (pushNotifications.error) {
         if (pushNotifications.error.includes('denied')) {
-          toast({
-            title: "Permission Denied",
-            description: "Please allow notifications when your browser asks, or enable them in browser settings.",
-            variant: "destructive",
-          });
+          // Silent - user sees inline message
         } else {
-          toast({
-            title: "Error",
-            description: pushNotifications.error,
-            variant: "destructive",
-          });
+          // Silent - non-critical
         }
       }
     }
@@ -136,19 +134,41 @@ export default function NotificationsView() {
         description: "Check your device for the test notification",
       });
     } catch (error) {
-      console.error("Failed to send test notification:", error);
+      await logErrorSilently(error, {
+        componentName: 'NotificationsView',
+        errorType: 'api_failure',
+        apiEndpoint: '/push/send',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to send test notification",
-        variant: "destructive",
+        title: "Unable to send test",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-[#323e48]">Loading...</div>
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <div className="mb-6">
+          <div className="h-12 w-64 bg-muted/50 rounded-lg animate-pulse mb-2" />
+          <div className="h-4 w-40 bg-muted/50 rounded animate-pulse" />
+        </div>
+        <LoadingSkeleton lines={12} />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Notification settings unavailable"
+          description="We're having trouble loading your notification settings right now"
+          onRetry={loadPreferences}
+          icon={<Bell className="h-16 w-16" />}
+        />
       </div>
     );
   }

@@ -3,6 +3,9 @@ import { TrendingUp, Target, Award, Calendar, Sparkles, CheckCircle2, Circle, Tr
 import { Button } from "@/components/ui/button";
 import backend from "@/lib/backend-client";
 import type { GetJourneySetupResponse, WellnessMilestone } from "~backend/journey/types";
+import { logErrorSilently } from '@/lib/silent-error-handler';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
 export default function ProgressView({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [analyzing, setAnalyzing] = useState(false);
@@ -10,6 +13,7 @@ export default function ProgressView({ onNavigate }: { onNavigate?: (view: strin
   const [journeySetup, setJourneySetup] = useState<GetJourneySetupResponse | null>(null);
   const [milestones, setMilestones] = useState<WellnessMilestone[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     loadProgressData();
@@ -17,6 +21,7 @@ export default function ProgressView({ onNavigate }: { onNavigate?: (view: strin
 
   async function loadProgressData() {
     setLoading(true);
+    setHasError(false);
     try {
       const userId = localStorage.getItem("emma_user_id") || "";
       const [setupResult, milestonesResult] = await Promise.all([
@@ -27,7 +32,12 @@ export default function ProgressView({ onNavigate }: { onNavigate?: (view: strin
       setJourneySetup(setupResult);
       setMilestones(milestonesResult.milestones);
     } catch (error) {
-      console.error("Failed to load progress data:", error);
+      await logErrorSilently(error, {
+        componentName: 'ProgressView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -40,7 +50,12 @@ export default function ProgressView({ onNavigate }: { onNavigate?: (view: strin
       await backend.wellness_journal.analyzeTrends({ user_id: userId, days: 30 });
       setLastAnalyzed(new Date());
     } catch (error) {
-      console.error("Analysis failed:", error);
+      await logErrorSilently(error, {
+        componentName: 'ProgressView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness-journal/analyze-trends',
+        severity: 'low',
+      });
     } finally {
       setAnalyzing(false);
     }

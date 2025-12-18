@@ -9,6 +9,9 @@ import { NutritionSetupFlow } from "../NutritionSetupFlow";
 import FoodImageUpload from "../FoodImageUpload";
 import NutritionChatWithEmma from "../NutritionChatWithEmma";
 import WeeklyMealPlanView from "./WeeklyMealPlanView";
+import { logErrorSilently } from '@/lib/silent-error-handler';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingSkeleton, CardSkeleton } from '@/components/ui/loading-skeleton';
 
 interface DietNutritionViewProps {
   userId: string;
@@ -33,6 +36,7 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const [description, setDescription] = useState("");
   const [waterIntake, setWaterIntake] = useState("");
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,12 +46,20 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
   const loadData = async () => {
     try {
       setLoading(true);
+      setHasError(false);
       await Promise.all([
         loadTodayMeals(),
         loadNutritionPlan(),
         loadSetupProgress(),
         loadNutritionStats()
       ]);
+    } catch (error) {
+      await logErrorSilently(error, {
+        componentName: 'DietNutritionView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -64,7 +76,12 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       });
       setTodayLogs(response.logs);
     } catch (error) {
-      console.error("Failed to load meals:", error);
+      await logErrorSilently(error, {
+        componentName: 'DietNutritionView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/meal-logs',
+        severity: 'low',
+      });
     }
   };
 
@@ -73,7 +90,12 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       const response = await backend.wellness.getNutritionPlan({ user_id: userId });
       setNutritionPlan(response.plan || null);
     } catch (error) {
-      console.error("Failed to load nutrition plan:", error);
+      await logErrorSilently(error, {
+        componentName: 'DietNutritionView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/nutrition-plan',
+        severity: 'low',
+      });
     }
   };
 
@@ -85,7 +107,12 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
         setShowSetupFlow(true);
       }
     } catch (error) {
-      console.error("Failed to load setup progress:", error);
+      await logErrorSilently(error, {
+        componentName: 'DietNutritionView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/nutrition-setup-progress',
+        severity: 'low',
+      });
     }
   };
 
@@ -94,16 +121,21 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
       const stats = await backend.wellness.getNutritionStats({ user_id: userId });
       setNutritionStats(stats);
     } catch (error) {
-      console.error("Failed to load nutrition stats:", error);
+      await logErrorSilently(error, {
+        componentName: 'DietNutritionView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/nutrition-stats',
+        severity: 'low',
+      });
     }
   };
 
   const logMeal = async () => {
     if (!description.trim()) {
       toast({
-        title: "Error",
+        title: "Add description",
         description: "Please describe what you ate",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -218,8 +250,32 @@ export default function DietNutritionView({ userId }: DietNutritionViewProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-[#4e8f71]">Loading...</div>
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+          <div className="mb-6">
+            <div className="h-12 w-64 bg-muted/50 rounded-lg animate-pulse mb-2" />
+            <div className="h-4 w-40 bg-muted/50 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="h-20 bg-muted/50 rounded-xl animate-pulse" />
+            <div className="h-20 bg-muted/50 rounded-xl animate-pulse" />
+            <div className="h-20 bg-muted/50 rounded-xl animate-pulse" />
+          </div>
+          <LoadingSkeleton lines={8} />
+        </div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Nutrition tracking unavailable"
+          description="We're having trouble loading your nutrition data right now"
+          onRetry={loadData}
+          icon={<Apple className="h-16 w-16" />}
+        />
       </div>
     );
   }

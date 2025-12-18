@@ -23,27 +23,36 @@ export const getErrorStats = api(
       SELECT COUNT(*) as count FROM client_errors
     `;
     
-    const severityCounts = await db.query<{ severity: string; count: number }>`
+    const severityCounts: Array<{ severity: string; count: number }> = [];
+    for await (const row of db.query<{ severity: string; count: number }>`
       SELECT severity, COUNT(*) as count
       FROM client_errors
       GROUP BY severity
-    `;
+    `) {
+      severityCounts.push(row);
+    }
     
-    const typeCounts = await db.query<{ error_type: string; count: number }>`
+    const typeCounts: Array<{ error_type: string; count: number }> = [];
+    for await (const row of db.query<{ error_type: string; count: number }>`
       SELECT error_type, COUNT(*) as count
       FROM client_errors
       GROUP BY error_type
       ORDER BY count DESC
       LIMIT 10
-    `;
+    `) {
+      typeCounts.push(row);
+    }
     
-    const componentCounts = await db.query<{ component_name: string; count: number }>`
+    const componentCounts: Array<{ component_name: string; count: number }> = [];
+    for await (const row of db.query<{ component_name: string; count: number }>`
       SELECT component_name, COUNT(*) as count
       FROM client_errors
       GROUP BY component_name
       ORDER BY count DESC
       LIMIT 10
-    `;
+    `) {
+      componentCounts.push(row);
+    }
     
     const recentResult = await db.queryRow<{ count: number }>`
       SELECT COUNT(*) as count
@@ -64,7 +73,7 @@ export const getErrorStats = api(
       critical: 0
     };
     
-    severityCounts?.forEach(row => {
+    severityCounts.forEach(row => {
       if (row.severity in bySeverity) {
         bySeverity[row.severity as keyof typeof bySeverity] = row.count;
       }
@@ -73,8 +82,8 @@ export const getErrorStats = api(
     return {
       total_errors: totalResult?.count || 0,
       by_severity: bySeverity,
-      by_type: typeCounts || [],
-      by_component: componentCounts || [],
+      by_type: typeCounts,
+      by_component: componentCounts,
       recent_errors: recentResult?.count || 0,
       resolved_count: resolvedResult?.count || 0,
       unresolved_count: (totalResult?.count || 0) - (resolvedResult?.count || 0)

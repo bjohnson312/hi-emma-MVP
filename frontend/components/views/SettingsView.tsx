@@ -8,6 +8,7 @@ import Tooltip from "@/components/Tooltip";
 import { useState, useEffect, useRef } from "react";
 import backend from "~backend/client";
 import { clerkClient } from "@/lib/clerk-client";
+import { logErrorSilently } from '@/lib/silent-error-handler';
 
 interface SettingsViewProps {
   userId: string;
@@ -59,7 +60,12 @@ export default function SettingsView({ userId, designVersion, onDesignChange, on
           setEmail(user.email_addresses[0].email_address);
         }
       } catch (error) {
-        console.error("Failed to load profile:", error);
+        await logErrorSilently(error, {
+          componentName: 'SettingsView',
+          errorType: 'api_failure',
+          apiEndpoint: '/profile/get',
+          severity: 'low',
+        });
       } finally {
         setIsLoading(false);
       }
