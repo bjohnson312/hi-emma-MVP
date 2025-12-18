@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import backend from "@/lib/backend-client";
 import { Button } from "@/components/ui/button";
 import { Brain, Heart, Activity, Home, Briefcase, Star, Sparkles } from "lucide-react";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface MemoryDetail {
   key: string;
@@ -53,7 +54,12 @@ export default function MemoriesView({ userId }: MemoriesViewProps) {
       const response = await backend.conversation.getMemorySummary({ userId });
       setMemories(response.memories);
     } catch (error) {
-      console.error("Failed to load memories:", error);
+      await logErrorSilently(error, {
+        componentName: 'MemoriesView',
+        errorType: 'api_failure',
+        apiEndpoint: '/conversation/memory-summary',
+        severity: 'low',
+      });
     } finally {
       setLoading(false);
     }

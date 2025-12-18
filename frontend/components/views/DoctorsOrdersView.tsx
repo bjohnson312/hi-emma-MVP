@@ -8,6 +8,7 @@ import CarePlanEditor from "../care-plan/CarePlanEditor";
 import TodayCareTasks from "../care-plan/TodayCareTasks";
 import StayActiveTab from "../care-plan/StayActiveTab";
 import type { CarePlanWithTasks, CarePlanTask } from "~backend/care_plans/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface DoctorsOrdersViewProps {
   userId: string;
@@ -34,7 +35,12 @@ export default function DoctorsOrdersView({ userId }: DoctorsOrdersViewProps) {
       const response = await backend.care_plans.getUserPlan({ user_id: userId });
       setCarePlan(response.plan);
     } catch (error) {
-      console.error("Failed to load care plan:", error);
+      await logErrorSilently(error, {
+        componentName: 'DoctorsOrdersView',
+        errorType: 'api_failure',
+        apiEndpoint: '/care_plans/get-user-plan',
+        severity: 'low',
+      });
     } finally {
       setLoading(false);
     }

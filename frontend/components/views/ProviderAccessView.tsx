@@ -6,6 +6,7 @@ import backend from "@/lib/backend-client";
 import type { ProviderAccessItem } from "~backend/patient_sharing/list_provider_access";
 import type { ProviderNoteForPatient } from "~backend/patient_sharing/get_provider_notes";
 import { UserPlus, Shield, Calendar, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 export interface ProviderAccessViewProps {
   userId: string;
@@ -35,11 +36,15 @@ export function ProviderAccessView({ userId }: ProviderAccessViewProps) {
       setProviders(providersData.providers);
       setNotes(notesData.notes);
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'ProviderAccessView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error loading data",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to load data",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     } finally {
       setLoading(false);
@@ -66,11 +71,16 @@ export function ProviderAccessView({ userId }: ProviderAccessViewProps) {
       setShowGrantForm(false);
       loadData();
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'ProviderAccessView',
+        errorType: 'api_failure',
+        apiEndpoint: '/patient_sharing/grant-access',
+        severity: 'low',
+      });
       toast({
-        title: "Error granting access",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to grant access",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     }
   };
@@ -90,14 +100,19 @@ export function ProviderAccessView({ userId }: ProviderAccessViewProps) {
 
       loadData();
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'ProviderAccessView',
+        errorType: 'api_failure',
+        apiEndpoint: '/patient_sharing/revoke-access',
+        severity: 'low',
+      });
       toast({
-        title: "Error revoking access",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to revoke access",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     }
-  };
+  };;
 
   if (loading) {
     return (

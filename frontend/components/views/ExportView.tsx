@@ -6,6 +6,7 @@ import backend from "@/lib/backend-client";
 import type { DataCategory, ShareInfo } from "~backend/journal/types";
 import { useToast } from "@/components/ui/use-toast";
 import Tooltip from "@/components/Tooltip";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 export default function ExportView() {
   const { toast } = useToast();
@@ -46,7 +47,12 @@ export default function ExportView() {
       const result = await backend.journal.listShares({ user_id: userId });
       setShares(result.shares);
     } catch (error) {
-      console.error("Failed to load shares:", error);
+      await logErrorSilently(error, {
+        componentName: 'ExportView',
+        errorType: 'api_failure',
+        apiEndpoint: '/journal/list-shares',
+        severity: 'low',
+      });
     }
   }
 
@@ -82,11 +88,16 @@ export default function ExportView() {
         description: "Your wellness data has been exported to JSON.",
       });
     } catch (error) {
-      console.error("Export failed:", error);
+      await logErrorSilently(error, {
+        componentName: 'ExportView',
+        errorType: 'api_failure',
+        apiEndpoint: '/journal/export',
+        severity: 'low',
+      });
       toast({
-        title: "Export Failed",
-        description: "Failed to generate export. Please try again.",
-        variant: "destructive"
+        title: "Unable to export",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -119,11 +130,16 @@ export default function ExportView() {
         description: "Your wellness report has been generated.",
       });
     } catch (error) {
-      console.error("PDF generation failed:", error);
+      await logErrorSilently(error, {
+        componentName: 'ExportView',
+        errorType: 'api_failure',
+        apiEndpoint: '/journal/generate-pdf',
+        severity: 'low',
+      });
       toast({
-        title: "Report Failed",
-        description: "Failed to generate report. Please try again.",
-        variant: "destructive"
+        title: "Unable to generate report",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -135,7 +151,7 @@ export default function ExportView() {
       toast({
         title: "No Categories Selected",
         description: "Please select at least one data category to share.",
-        variant: "destructive"
+        variant: "default"
       });
       return;
     }
@@ -164,11 +180,16 @@ export default function ExportView() {
 
       await loadShares();
     } catch (error) {
-      console.error("Share creation failed:", error);
+      await logErrorSilently(error, {
+        componentName: 'ExportView',
+        errorType: 'api_failure',
+        apiEndpoint: '/journal/create-share',
+        severity: 'low',
+      });
       toast({
-        title: "Share Failed",
-        description: "Failed to create shareable link. Please try again.",
-        variant: "destructive"
+        title: "Unable to create share link",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -189,11 +210,16 @@ export default function ExportView() {
 
       await loadShares();
     } catch (error) {
-      console.error("Revoke failed:", error);
+      await logErrorSilently(error, {
+        componentName: 'ExportView',
+        errorType: 'api_failure',
+        apiEndpoint: '/journal/revoke-share',
+        severity: 'low',
+      });
       toast({
-        title: "Revoke Failed",
-        description: "Failed to revoke share. Please try again.",
-        variant: "destructive"
+        title: "Unable to revoke share",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   }

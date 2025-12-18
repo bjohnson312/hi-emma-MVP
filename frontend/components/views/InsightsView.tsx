@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import backend from "@/lib/backend-client";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, CheckCircle, Award, Lightbulb } from "lucide-react";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface UserInsight {
   id: number;
@@ -51,7 +52,11 @@ export function InsightsView() {
       setInsights(insightsRes.insights);
       setRecommendations(recsRes.recommendations);
     } catch (error) {
-      console.error("Failed to load insights:", error);
+      await logErrorSilently(error, {
+        componentName: 'InsightsView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
     } finally {
       setLoading(false);
     }
@@ -63,7 +68,12 @@ export function InsightsView() {
       await backend.profile.acknowledgeInsight({ user_id: userId, insight_id: insightId });
       await loadData();
     } catch (error) {
-      console.error("Failed to acknowledge insight:", error);
+      await logErrorSilently(error, {
+        componentName: 'InsightsView',
+        errorType: 'api_failure',
+        apiEndpoint: '/profile/acknowledge-insight',
+        severity: 'low',
+      });
     }
   };
 

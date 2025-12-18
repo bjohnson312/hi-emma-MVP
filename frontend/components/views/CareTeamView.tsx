@@ -7,6 +7,7 @@ import { CareTeamSetupFlow } from "../CareTeamSetupFlow";
 import { CareTeamList } from "../CareTeamList";
 import { Users, UserPlus, CheckCircle, AlertCircle, ArrowRight, Info } from "lucide-react";
 import { demoStorage } from "@/lib/demo-storage";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface CareTeamViewProps {
   userId?: string;
@@ -42,11 +43,15 @@ export function CareTeamView({ userId }: CareTeamViewProps) {
         setShowSetupFlow(true);
       }
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'CareTeamView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error loading care team",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to load care team",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     } finally {
       setLoading(false);

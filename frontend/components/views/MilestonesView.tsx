@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import backend from "@/lib/backend-client";
 import { Award, Trophy, Star, Calendar } from "lucide-react";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface UserMilestone {
   id: number;
@@ -26,7 +27,12 @@ export function MilestonesView() {
       const response = await backend.profile.getMilestones({ user_id: userId, limit: 50 });
       setMilestones(response.milestones);
     } catch (error) {
-      console.error("Failed to load milestones:", error);
+      await logErrorSilently(error, {
+        componentName: 'MilestonesView',
+        errorType: 'api_failure',
+        apiEndpoint: '/profile/milestones',
+        severity: 'low',
+      });
     } finally {
       setLoading(false);
     }
