@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { Smile, TrendingUp, MessageCircle } from "lucide-react";
+import { Smile, TrendingUp, MessageCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { MoodLog } from "~backend/wellness/types";
 import ConversationalCheckIn from "../ConversationalCheckIn";
+import { logErrorSilently } from '@/lib/silent-error-handler';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
 interface MoodViewProps {
   userId: string;
@@ -28,6 +31,7 @@ const moodOptions: MoodOption[] = [
 export default function MoodView({ userId }: MoodViewProps) {
   const [moodHistory, setMoodHistory] = useState<MoodLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [showChat, setShowChat] = useState(false);
@@ -40,6 +44,7 @@ export default function MoodView({ userId }: MoodViewProps) {
   const loadMoodHistory = async () => {
     try {
       setLoading(true);
+      setHasError(false);
       const response = await backend.wellness.getMoodLogs({
         user_id: userId,
         limit: 7
@@ -56,12 +61,13 @@ export default function MoodView({ userId }: MoodViewProps) {
         setNotes(today.notes || "");
       }
     } catch (error) {
-      console.error("Failed to load mood history:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load mood history",
-        variant: "destructive"
+      await logErrorSilently(error, {
+        componentName: 'MoodView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/mood-logs',
+        severity: 'low',
       });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -83,11 +89,16 @@ export default function MoodView({ userId }: MoodViewProps) {
       
       loadMoodHistory();
     } catch (error) {
-      console.error("Failed to log mood:", error);
+      await logErrorSilently(error, {
+        componentName: 'MoodView',
+        errorType: 'api_failure',
+        apiEndpoint: '/wellness/log-mood',
+        severity: 'medium',
+      });
       toast({
-        title: "Error",
-        description: "Failed to log mood",
-        variant: "destructive"
+        title: "Unable to save",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   };
@@ -136,8 +147,25 @@ export default function MoodView({ userId }: MoodViewProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-[#4e8f71]">Loading...</div>
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <div className="mb-6">
+          <div className="h-12 w-48 bg-muted/50 rounded-lg animate-pulse mb-2" />
+          <div className="h-4 w-32 bg-muted/50 rounded animate-pulse" />
+        </div>
+        <LoadingSkeleton lines={8} />
+      </div>
+    );
+  }
+  
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Mood tracking unavailable"
+          description="We're having trouble loading your mood history right now"
+          onRetry={loadMoodHistory}
+          icon={<Heart className="h-16 w-16" />}
+        />
       </div>
     );
   }

@@ -27,6 +27,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { clerkClient } from "./lib/clerk-client";
 import { isMobilePhoneDevice } from "@/lib/device-detection";
+import { setCurrentUserId } from './lib/silent-error-handler';
 import AdminPortalApp from "./AdminPortalApp";
 import ProviderPortalApp from "./ProviderPortalApp";
 import backend from "@/lib/backend-client";
@@ -125,6 +126,7 @@ export default function App() {
         setIsAuthenticated(true);
         setUserId(storedUserId);
         setUserEmail(storedEmail || "");
+        setCurrentUserId(storedUserId);
         await checkOnboardingStatus(storedUserId);
       }
     };
@@ -154,6 +156,8 @@ export default function App() {
     localStorage.setItem("emma_user_id", userId);
     localStorage.setItem("emma_user_email", email);
     localStorage.setItem("emma_authenticated", "true");
+    
+    setCurrentUserId(userId);
 
     try {
       await backend.admin_portal.logAccess({ userId, action: "login" });
