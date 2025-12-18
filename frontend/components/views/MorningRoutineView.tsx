@@ -8,6 +8,9 @@ import type { RoutineTemplate, MorningRoutinePreference, MorningRoutineActivity 
 import type { GetJourneySetupResponse } from "~backend/journey/types";
 import ConversationalCheckIn from "../ConversationalCheckIn";
 import MorningRoutineJournal from "../MorningRoutineJournal";
+import { logErrorSilently } from '@/lib/silent-error-handler';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingSkeleton, CardSkeleton } from '@/components/ui/loading-skeleton';
 
 interface MorningRoutineViewProps {
   userId: string;
@@ -36,6 +39,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   const [completedToday, setCompletedToday] = useState<string[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedActivities, setEditedActivities] = useState<MorningRoutineActivity[]>([]);
   const [routineName, setRoutineName] = useState("");
@@ -49,6 +53,7 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
 
   async function loadData() {
     setLoading(true);
+    setHasError(false);
     try {
       const [templatesRes, preferenceRes, todayRes, morningSetupRes, statsRes] = await Promise.all([
         backend.morning.getRoutineTemplates().catch(() => ({ templates: [] })),
@@ -87,7 +92,12 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         setShowSetupBanner(true);
       }
     } catch (error) {
-      console.error("Failed to load:", error);
+      await logErrorSilently(error, {
+        componentName: 'MorningRoutineView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -119,11 +129,16 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         description: `Your "${template.name}" routine is ready.`,
       });
     } catch (error) {
-      console.error("Failed to save:", error);
+      await logErrorSilently(error, {
+        componentName: 'MorningRoutineView',
+        errorType: 'api_failure',
+        apiEndpoint: '/morning/create-routine-preference',
+        severity: 'medium',
+      });
       toast({
-        title: "Error",
-        description: "Failed to save routine.",
-        variant: "destructive"
+        title: "Unable to save",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   }
@@ -214,11 +229,16 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         description: `"${activity.name}" has been removed from your routine.`,
       });
     } catch (error) {
-      console.error('Failed to remove activity:', error);
+      await logErrorSilently(error, {
+        componentName: 'MorningRoutineView',
+        errorType: 'api_failure',
+        apiEndpoint: '/morning/create-routine-preference',
+        severity: 'medium',
+      });
       toast({
-        title: "Error",
-        description: "Failed to remove activity.",
-        variant: "destructive"
+        title: "Unable to remove",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
   }
@@ -226,9 +246,9 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
   async function saveEdit() {
     if (!routine || editedActivities.length === 0) {
       toast({
-        title: "Error",
-        description: "Please add at least one activity.",
-        variant: "destructive"
+        title: "Add an activity",
+        description: "Please add at least one activity to save.",
+        variant: "default"
       });
       return;
     }
@@ -254,13 +274,51 @@ export default function MorningRoutineView({ userId }: MorningRoutineViewProps) 
         description: "Your changes have been saved.",
       });
     } catch (error) {
-      console.error("Failed to save:", error);
+      await logErrorSilently(error, {
+        componentName: 'MorningRoutineView',
+        errorType: 'api_failure',
+        apiEndpoint: '/morning/create-routine-preference',
+        severity: 'medium',
+      });
       toast({
-        title: "Error",
-        description: "Failed to save changes.",
-        variant: "destructive"
+        title: "Unable to save",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+          <div className="mb-6">
+            <div className="h-12 w-64 bg-muted/50 rounded-lg animate-pulse mb-2" />
+            <div className="h-4 w-40 bg-muted/50 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
+            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
+            <div className="h-24 bg-muted/50 rounded-2xl animate-pulse" />
+          </div>
+          <LoadingSkeleton lines={8} />
+        </div>
+        <CardSkeleton count={3} />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Morning routine unavailable"
+          description="We're having trouble loading your morning routine right now"
+          onRetry={loadData}
+          icon={<Sun className="h-16 w-16" />}
+        />
+      </div>
+    );
   }
 
   if (showChat) {

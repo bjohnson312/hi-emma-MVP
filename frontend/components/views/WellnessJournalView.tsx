@@ -8,6 +8,9 @@ import type { GetJourneySetupResponse } from "~backend/journey/types";
 import { useToast } from "@/components/ui/use-toast";
 import WellnessJournalOnboarding from "../WellnessJournalOnboarding";
 import ChapterInsightsPanel from "../ChapterInsightsPanel";
+import { logErrorSilently } from '@/lib/silent-error-handler';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingSkeleton, CardSkeleton } from '@/components/ui/loading-skeleton';
 
 interface WellnessJournalViewProps {
   userId: string;
@@ -30,6 +33,7 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
   const [entries, setEntries] = useState<WellnessJournalEntry[]>([]);
   const [stats, setStats] = useState<JournalStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [filter, setFilter] = useState<"all" | "daily_summary" | "event" | "insight">("all");
   const [generatingSummary, setGeneratingSummary] = useState(false);
@@ -55,6 +59,7 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
 
   async function loadJournalData() {
     setLoading(true);
+    setHasError(false);
     try {
       const [chaptersResult, statsResult, entriesResult, setupResult] = await Promise.all([
         backend.wellness_journal.getChapters({
@@ -89,12 +94,12 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
         setSelectedChapter(chaptersResult.chapters[0].id);
       }
     } catch (error) {
-      console.error("Failed to load journal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load wellness journal.",
-        variant: "destructive"
+      await logErrorSilently(error, {
+        componentName: 'WellnessJournalView',
+        errorType: 'api_failure',
+        severity: 'low',
       });
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -421,6 +426,34 @@ export default function WellnessJournalView({ userId, onNavigate }: WellnessJour
       default:
         return "from-[#4e8f71]/10 to-[#364d89]/10 border-[#4e8f71]/20";
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+          <div className="mb-6">
+            <div className="h-12 w-64 bg-muted/50 rounded-lg animate-pulse mb-2" />
+            <div className="h-4 w-48 bg-muted/50 rounded animate-pulse" />
+          </div>
+          <LoadingSkeleton lines={10} />
+        </div>
+        <CardSkeleton count={4} />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white/40">
+        <EmptyState
+          title="Wellness journal unavailable"
+          description="We're having trouble loading your wellness journal right now"
+          onRetry={loadJournalData}
+          icon={<BookOpen className="h-16 w-16" />}
+        />
+      </div>
+    );
   }
 
   if (showOnboarding && viewMode === "chapters") {
