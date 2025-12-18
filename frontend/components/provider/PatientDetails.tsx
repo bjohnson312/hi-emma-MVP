@@ -6,6 +6,7 @@ import backend from "@/lib/backend-client";
 import type { PatientWellnessData } from "~backend/provider_portal/types";
 import type { ProviderNote, Message } from "~backend/provider_portal/types";
 import { ArrowLeft, FileText, MessageSquare, Activity, TrendingUp } from "lucide-react";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface PatientDetailsProps {
   token: string;
@@ -49,11 +50,15 @@ export function PatientDetails({ token, patientId, onBack }: PatientDetailsProps
       setNotes(notesData.notes);
       setMessages(messagesData.messages);
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'PatientDetails',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error loading patient data",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to load patient data",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     } finally {
       setLoading(false);

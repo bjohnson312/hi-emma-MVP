@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { PatientListItem } from "~backend/provider_portal/list_patients";
 import { Users, Search, Calendar, Activity } from "lucide-react";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface PatientListProps {
   token: string;
@@ -28,11 +29,16 @@ export function PatientList({ token, onSelectPatient }: PatientListProps) {
       });
       setPatients(data.patients);
     } catch (error: any) {
-      console.error(error);
+      await logErrorSilently(error, {
+        componentName: 'PatientList',
+        errorType: 'api_failure',
+        apiEndpoint: '/provider_portal/list-patients',
+        severity: 'low',
+      });
       toast({
-        title: "Error loading patients",
-        description: error.message,
-        variant: "destructive",
+        title: "Unable to load patients",
+        description: "Please try again in a moment",
+        variant: "default",
       });
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { PatientListItem } from "~backend/patients/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 export default function PatientManagementView() {
   const { toast } = useToast();
@@ -29,11 +30,16 @@ export default function PatientManagementView() {
       });
       setPatients(response.patients);
     } catch (error) {
-      console.error("Failed to load patients:", error);
+      await logErrorSilently(error, {
+        componentName: 'PatientManagementView',
+        errorType: 'api_failure',
+        apiEndpoint: '/patients/list',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to load patients.",
-        variant: "destructive"
+        title: "Unable to load patients",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);

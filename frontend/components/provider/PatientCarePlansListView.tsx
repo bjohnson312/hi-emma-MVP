@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import backend from "@/lib/backend-client";
 import type { PatientWithPlan } from "~backend/care_plans/list_patients_with_plans";
 import type { CarePlanWithTasks } from "~backend/care_plans/types";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 interface Props {
   onBack: () => void;
@@ -34,11 +35,15 @@ export default function PatientCarePlansListView({ onBack, onEditPlan }: Props) 
       const response = await backend.care_plans.listPatientsWithPlans({ token });
       setPatients(response.patients);
     } catch (error) {
-      console.error("Failed to load patients with care plans:", error);
+      await logErrorSilently(error, {
+        componentName: 'PatientCarePlansListView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to load patients with care plans.",
-        variant: "destructive"
+        title: "Unable to load patients",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);

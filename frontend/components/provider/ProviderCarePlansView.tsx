@@ -8,6 +8,7 @@ import type { CarePlanTask, TaskType, CarePlanWithTasks } from "~backend/care_pl
 import type { PresetTemplate } from "~backend/care_plans/presets";
 import type { PatientListItem } from "~backend/patients/types";
 import PatientCarePlansListView from "./PatientCarePlansListView";
+import { logErrorSilently } from "@/lib/silent-error-handler";
 
 type ViewMode = "home" | "create-select" | "ai-generate" | "template-select" | "editor" | "assign" | "patient-list" | "edit-patient-plan";
 
@@ -50,11 +51,15 @@ export default function ProviderCarePlansView() {
       setPatients(response.patients);
       setPatientsLoaded(true);
     } catch (error) {
-      console.error("Failed to load patients:", error);
+      await logErrorSilently(error, {
+        componentName: 'ProviderCarePlansView',
+        errorType: 'api_failure',
+        severity: 'low',
+      });
       toast({
-        title: "Error",
-        description: "Failed to load patient list.",
-        variant: "destructive"
+        title: "Unable to load patients",
+        description: "Please try again in a moment",
+        variant: "default"
       });
     } finally {
       setLoading(false);
