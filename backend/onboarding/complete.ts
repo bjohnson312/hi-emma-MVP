@@ -6,7 +6,7 @@ export const complete = api(
   { method: "POST", path: "/onboarding/complete", expose: true, auth: false },
   async (req: CompleteOnboardingRequest): Promise<CompleteOnboardingResponse> => {
     const prefs = await db.queryRow<OnboardingPreferences>`
-      SELECT id, user_id, first_name, name_pronunciation, reason_for_joining, current_feeling, 
+      SELECT id, user_id, first_name, reason_for_joining, current_feeling, 
              preferred_check_in_time, reminder_preference, onboarding_completed, 
              onboarding_step, created_at, updated_at
       FROM onboarding_preferences
@@ -33,13 +33,24 @@ export const complete = api(
       WHERE user_id = ${req.user_id}
     `;
 
-    await db.exec`
-      UPDATE user_profiles
-      SET onboarding_completed = TRUE, updated_at = NOW()
-      WHERE user_id = ${req.user_id}
+    const firstName = prefs.first_name || "there";
+
+    const profileExists = await db.queryRow<{ id: number }>`
+      SELECT id FROM user_profiles WHERE user_id = ${req.user_id}
     `;
 
-    const firstName = prefs.first_name || "there";
+    if (profileExists) {
+      await db.exec`
+        UPDATE user_profiles
+        SET onboarding_completed = TRUE, updated_at = NOW()
+        WHERE user_id = ${req.user_id}
+      `;
+    } else {
+      await db.exec`
+        INSERT INTO user_profiles (user_id, name, onboarding_completed)
+        VALUES (${req.user_id}, ${firstName}, TRUE)
+      `;
+    }
 
     await mapOnboardingDataToUserProfile(req.user_id, prefs);
     await createInitialMoodLog(req.user_id, prefs);
@@ -134,8 +145,8 @@ async function updateNotificationPreferences(userId: string, prefs: OnboardingPr
     : prefs.reminder_preference === 'both' ? 'both' 
     : 'browser';
 
-  let morningTime = '08:00';
-  let eveningTime = '20:00';
+  const morningTime = '08:00:00';
+  const eveningTime = '20:00:00';
   let morningEnabled = false;
   let eveningEnabled = false;
 
@@ -156,25 +167,24 @@ async function updateNotificationPreferences(userId: string, prefs: OnboardingPr
   `;
 
   if (existingPrefs) {
-    await db.exec`
+    await db.rawQuery(`
       UPDATE notification_preferences
-      SET morning_checkin_enabled = ${morningEnabled},
-          morning_checkin_time = ${morningTime},
-          evening_reflection_enabled = ${eveningEnabled},
-          evening_reflection_time = ${eveningTime},
-          notification_method = ${notificationMethod},
+      SET morning_checkin_enabled = $1,
+          morning_checkin_time = $2::time,
+          evening_reflection_enabled = $3,
+          evening_reflection_time = $4::time,
+          notification_method = $5,
           updated_at = NOW()
-      WHERE user_id = ${userId}
-    `;
+      WHERE user_id = $6
+    `, morningEnabled, morningTime, eveningEnabled, eveningTime, notificationMethod, userId);
   } else {
-    await db.exec`
+    await db.rawQuery(`
       INSERT INTO notification_preferences 
         (user_id, morning_checkin_enabled, morning_checkin_time, 
          evening_reflection_enabled, evening_reflection_time, notification_method)
       VALUES 
-        (${userId}, ${morningEnabled}, ${morningTime}, 
-         ${eveningEnabled}, ${eveningTime}, ${notificationMethod})
-    `;
+        ($1, $2, $3::time, $4, $5::time, $6)
+    `, userId, morningEnabled, morningTime, eveningEnabled, eveningTime, notificationMethod);
   }
 }
 

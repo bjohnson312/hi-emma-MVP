@@ -2,7 +2,6 @@ export interface OnboardingPreferences {
   id: number;
   user_id: string;
   first_name?: string;
-  name_pronunciation?: string | null;
   reason_for_joining?: string;
   current_feeling?: string;
   preferred_check_in_time?: string;
