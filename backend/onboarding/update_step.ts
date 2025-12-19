@@ -69,6 +69,15 @@ export const updateStep = api(
         RETURNING first_name
       `;
       firstName = result?.first_name || firstName;
+
+      if (req.phone_number && (req.reminder_preference === 'sms' || req.reminder_preference === 'both')) {
+        await db.exec`
+          INSERT INTO notification_preferences (user_id, phone_number)
+          VALUES (${req.user_id}, ${req.phone_number})
+          ON CONFLICT (user_id) 
+          DO UPDATE SET phone_number = ${req.phone_number}, updated_at = NOW()
+        `;
+      }
     } else {
       await db.exec`
         UPDATE onboarding_preferences

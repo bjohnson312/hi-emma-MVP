@@ -32,6 +32,7 @@ export interface UpdateOnboardingStepRequest {
   current_feeling?: string;
   preferred_check_in_time?: string;
   reminder_preference?: string;
+  phone_number?: string;
 }
 
 export interface UpdateOnboardingStepResponse {

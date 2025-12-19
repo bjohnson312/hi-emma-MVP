@@ -1,4 +1,4 @@
-import { Settings, User, Mail, Link, Mic, Smartphone } from "lucide-react";
+import { Settings, User, Mail, Link, Mic, Smartphone, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
@@ -33,6 +33,7 @@ export default function SettingsView({ userId, designVersion, onDesignChange, on
   const [name, setName] = useState("");
   const [namePronunciation, setNamePronunciation] = useState("");
   const [email, setEmail] = useState("");
+  const [wellnessGoals, setWellnessGoals] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const nameDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -53,6 +54,7 @@ export default function SettingsView({ userId, designVersion, onDesignChange, on
         if (response.profile) {
           setName(response.profile.name || "");
           setNamePronunciation(response.profile.name_pronunciation || "");
+          setWellnessGoals(response.profile.wellness_goals || []);
         }
         
         const user = await clerkClient.getCurrentUser();
@@ -202,6 +204,27 @@ export default function SettingsView({ userId, designVersion, onDesignChange, on
                   Email cannot be changed here. Managed by your account.
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-[#323e48] mb-3">Wellness Goals</h3>
+            <div className="bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 rounded-2xl p-4">
+              <label className="flex items-center gap-2 text-sm font-medium text-[#323e48] mb-2">
+                <Target className="w-4 h-4" />
+                What brought you to Hi, Emma
+              </label>
+              {wellnessGoals.length > 0 ? (
+                <div className="space-y-2">
+                  {wellnessGoals.map((goal, index) => (
+                    <div key={index} className="bg-white/90 rounded-xl p-3 border border-[#4e8f71]/20">
+                      <p className="text-sm text-[#323e48]">{goal}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">No wellness goals set yet</p>
+              )}
             </div>
           </div>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import backend from "@/lib/backend-client";
-import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight, Mic } from "lucide-react";
+import { Sparkles, Heart, Coffee, Moon, Bell, MessageSquare, Loader2, Volume2, VolumeX, ChevronDown, ChevronRight, Mic, Phone } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { logErrorSilently } from "@/lib/silent-error-handler";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -47,6 +48,8 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
   const [textInput, setTextInput] = useState("");
   const [isTestingPronunciation, setIsTestingPronunciation] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [showPhonePrompt, setShowPhonePrompt] = useState(false);
 
   useEffect(() => {
     loadOnboardingStatus();
@@ -258,6 +261,12 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
         case 4:
           updateData.reminder_preference = answer;
           setReminderPreference(answer);
+          
+          if (answer === 'sms' || answer === 'both') {
+            setIsLoading(false);
+            setShowPhonePrompt(true);
+            return;
+          }
           break;
       }
 
@@ -580,6 +589,102 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
             )}
           </div>
         </div>
+
+        {showPhonePrompt && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-white/40">
+              <div className="mb-4">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#4e8f71]/20 to-[#364d89]/20 flex items-center justify-center">
+                  <Phone className="w-8 h-8 text-[#4e8f71]" />
+                </div>
+                <h3 className="text-xl font-bold text-[#323e48] text-center mb-2">
+                  What's your phone number?
+                </h3>
+                <p className="text-sm text-gray-600 text-center">
+                  We'll use this to send you {reminderPreference === 'sms' ? 'SMS' : 'voice and SMS'} reminders
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <Input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+1234567890"
+                  className="w-full px-4 py-3 text-lg border-2 border-[#4e8f71]/30 rounded-2xl focus:outline-none focus:border-[#6656cb] transition-colors bg-white"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500">
+                  Include country code (e.g., +1 for US)
+                </p>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => {
+                      setShowPhonePrompt(false);
+                      setPhoneNumber("");
+                      setIsLoading(false);
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Skip
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      setShowPhonePrompt(false);
+                      setIsLoading(true);
+                      
+                      const updateData: any = {
+                        user_id: userId,
+                        step: 5,
+                        reminder_preference: reminderPreference,
+                        phone_number: phoneNumber || undefined
+                      };
+
+                      try {
+                        const response = await backend.onboarding.updateStep(updateData);
+                        
+                        if (response.onboarding_completed) {
+                          if (isMobilePhone) {
+                            setIsLoading(false);
+                            setCurrentStep(5);
+                          } else {
+                            try {
+                              const completionResponse = await backend.onboarding.complete({ user_id: userId });
+                              setIsLoading(false);
+                              onComplete(firstName || "User", completionResponse.welcome_message);
+                            } catch (completeError) {
+                              console.error("Failed to complete onboarding:", completeError);
+                              setIsLoading(false);
+                              onComplete(firstName || "User", "Welcome! Let's get started with your wellness journey.");
+                            }
+                          }
+                        } else {
+                          setIsLoading(false);
+                          setCurrentStep(response.current_step);
+                        }
+                      } catch (error) {
+                        await logErrorSilently(error, {
+                          componentName: 'OnboardingFlow',
+                          errorType: 'api_failure',
+                          apiEndpoint: '/onboarding/update-step',
+                          severity: 'medium',
+                        });
+                        setEmmaMessage("Let's try that again.");
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={!phoneNumber.trim()}
+                    className="flex-1 bg-gradient-to-r from-[#4e8f71] via-[#364d89] to-[#6656cb] hover:opacity-90 text-white"
+                  >
+                    {isLoading ? "Saving..." : "Continue"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
