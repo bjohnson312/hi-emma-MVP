@@ -305,9 +305,31 @@ export default function NutritionChatWithEmma({
               key={index}
               className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div className="flex items-start gap-2">
+              <div className="max-w-[80%]">
+                {message.sender === "emma" && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#4e8f71] to-[#364d89] flex items-center justify-center shadow-md">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-xs text-[#4e8f71] font-medium">Emma</span>
+                    
+                    {index === messages.length - 1 && !loading && (
+                      <Tooltip content="Replay message" side="right">
+                        <Button
+                          onClick={() => speak(message.text)}
+                          size="sm"
+                          variant="ghost"
+                          className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-6 h-6 p-0 flex items-center justify-center ml-auto"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </div>
+                )}
+                
                 <div
-                  className={`max-w-[80%] rounded-2xl p-4 ${
+                  className={`rounded-2xl p-4 ${
                     message.sender === "user"
                       ? "bg-gradient-to-r from-[#4e8f71] to-[#364d89] text-white"
                       : "bg-gradient-to-r from-[#4e8f71]/10 to-[#364d89]/10 text-[#323e48]"
@@ -322,17 +344,10 @@ export default function NutritionChatWithEmma({
                   </p>
                 </div>
                 
-                {message.sender === "emma" && index === messages.length - 1 && !loading && (
-                  <Tooltip content="Replay message" side="right">
-                    <Button
-                      onClick={() => speak(message.text)}
-                      size="sm"
-                      variant="ghost"
-                      className="text-[#4e8f71] hover:bg-[#4e8f71]/10 rounded-full w-8 h-8 p-0 flex items-center justify-center"
-                    >
-                      <Volume2 className="w-4 h-4" />
-                    </Button>
-                  </Tooltip>
+                {message.sender === "user" && (
+                  <div className="flex justify-end mt-1">
+                    <span className="text-xs text-[#4e8f71]/60">You</span>
+                  </div>
                 )}
               </div>
             </div>
