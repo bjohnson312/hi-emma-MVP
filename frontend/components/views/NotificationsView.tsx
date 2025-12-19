@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Clock, Sun, Moon, Phone, Smartphone } from "lucide-react";
+import { Bell, Clock, Sun, Moon, Phone, Smartphone, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +16,7 @@ export default function NotificationsView() {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showBlockedHelp, setShowBlockedHelp] = useState(false);
   const { toast } = useToast();
 
   const userId = "user_1";
@@ -258,18 +259,29 @@ export default function NotificationsView() {
                 </label>
               </div>
               {pushNotifications.permission === 'denied' && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
-                  <p className="text-xs text-red-700 font-medium mb-2">
-                    🚫 Notifications Blocked
-                  </p>
-                  <p className="text-xs text-red-600 mb-2">
-                    To enable push notifications, you need to allow them in your browser settings:
-                  </p>
-                  <ul className="text-xs text-red-600 list-disc list-inside space-y-1">
-                    <li>Chrome: Click the lock icon in the address bar → Site settings → Notifications → Allow</li>
-                    <li>Firefox: Click the lock icon → Permissions → Receive notifications → Allow</li>
-                    <li>Safari: Safari menu → Settings for This Website → Notifications → Allow</li>
-                  </ul>
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowBlockedHelp(!showBlockedHelp)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 hover:bg-amber-100 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>🔕</span>
+                      <span className="font-medium">Notifications are blocked</span>
+                    </span>
+                    {showBlockedHelp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                  {showBlockedHelp && (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-700 mb-2">
+                        To enable push notifications, update your browser settings:
+                      </p>
+                      <ul className="text-xs text-amber-600 list-disc list-inside space-y-1">
+                        <li>Chrome: Click the lock icon in the address bar → Site settings → Notifications → Allow</li>
+                        <li>Firefox: Click the lock icon → Permissions → Receive notifications → Allow</li>
+                        <li>Safari: Safari menu → Settings for This Website → Notifications → Allow</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
               {(pushNotifications.isSubscribed || pushNotifications.permission === 'granted') && (

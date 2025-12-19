@@ -263,8 +263,20 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
           setReminderPreference(answer);
           
           if (answer === 'sms' || answer === 'both') {
-            setIsLoading(false);
-            setShowPhonePrompt(true);
+            try {
+              await backend.onboarding.updateStep(updateData);
+              setIsLoading(false);
+              setShowPhonePrompt(true);
+            } catch (error) {
+              await logErrorSilently(error, {
+                componentName: 'OnboardingFlow',
+                errorType: 'api_failure',
+                apiEndpoint: '/onboarding/update-step',
+                severity: 'medium',
+              });
+              setEmmaMessage("Let's try that again.");
+              setIsLoading(false);
+            }
             return;
           }
           break;
@@ -620,10 +632,46 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
 
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       setShowPhonePrompt(false);
                       setPhoneNumber("");
-                      setIsLoading(false);
+                      setIsLoading(true);
+                      
+                      try {
+                        const response = await backend.onboarding.updateStep({
+                          user_id: userId,
+                          step: 5
+                        });
+                        
+                        if (response.onboarding_completed) {
+                          if (isMobilePhone) {
+                            setIsLoading(false);
+                            setCurrentStep(5);
+                          } else {
+                            try {
+                              const completionResponse = await backend.onboarding.complete({ user_id: userId });
+                              setIsLoading(false);
+                              onComplete(firstName || "User", completionResponse.welcome_message);
+                            } catch (completeError) {
+                              console.error("Failed to complete onboarding:", completeError);
+                              setIsLoading(false);
+                              onComplete(firstName || "User", "Welcome! Let's get started with your wellness journey.");
+                            }
+                          }
+                        } else {
+                          setIsLoading(false);
+                          setCurrentStep(response.current_step);
+                        }
+                      } catch (error) {
+                        await logErrorSilently(error, {
+                          componentName: 'OnboardingFlow',
+                          errorType: 'api_failure',
+                          apiEndpoint: '/onboarding/update-step',
+                          severity: 'medium',
+                        });
+                        setEmmaMessage("Let's try that again.");
+                        setIsLoading(false);
+                      }
                     }}
                     variant="outline"
                     className="flex-1"
@@ -638,7 +686,6 @@ export default function OnboardingFlow({ userId, isMobilePhone, onComplete }: On
                       const updateData: any = {
                         user_id: userId,
                         step: 5,
-                        reminder_preference: reminderPreference,
                         phone_number: phoneNumber || undefined
                       };
 

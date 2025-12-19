@@ -61,7 +61,7 @@ export const updateStep = api(
         RETURNING first_name
       `;
       firstName = result?.first_name || firstName;
-    } else if (req.step === 5 && req.reminder_preference) {
+    } else if (req.step === 4 && req.reminder_preference) {
       const result = await db.queryRow<{ first_name: string | null }>`
         UPDATE onboarding_preferences
         SET onboarding_step = ${req.step}, reminder_preference = ${req.reminder_preference}, updated_at = NOW()
@@ -69,15 +69,25 @@ export const updateStep = api(
         RETURNING first_name
       `;
       firstName = result?.first_name || firstName;
+    } else if (req.step === 5 && req.phone_number) {
+      await db.exec`
+        UPDATE onboarding_preferences
+        SET onboarding_step = ${req.step}, updated_at = NOW()
+        WHERE user_id = ${req.user_id}
+      `;
 
-      if (req.phone_number && (req.reminder_preference === 'sms' || req.reminder_preference === 'both')) {
-        await db.exec`
-          INSERT INTO notification_preferences (user_id, phone_number)
-          VALUES (${req.user_id}, ${req.phone_number})
-          ON CONFLICT (user_id) 
-          DO UPDATE SET phone_number = ${req.phone_number}, updated_at = NOW()
-        `;
-      }
+      await db.exec`
+        INSERT INTO notification_preferences (user_id, phone_number)
+        VALUES (${req.user_id}, ${req.phone_number})
+        ON CONFLICT (user_id) 
+        DO UPDATE SET phone_number = ${req.phone_number}, updated_at = NOW()
+      `;
+    } else if (req.step === 5) {
+      await db.exec`
+        UPDATE onboarding_preferences
+        SET onboarding_step = ${req.step}, updated_at = NOW()
+        WHERE user_id = ${req.user_id}
+      `;
     } else {
       await db.exec`
         UPDATE onboarding_preferences
