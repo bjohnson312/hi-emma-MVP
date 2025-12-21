@@ -310,7 +310,7 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex gap-4 mb-8">
+        <div className="flex flex-wrap gap-4 mb-8">
           <Button
             onClick={() => setActiveTab("overview")}
             className={activeTab === "overview" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
