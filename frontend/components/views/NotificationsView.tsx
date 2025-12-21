@@ -11,15 +11,17 @@ import { logErrorSilently } from '@/lib/silent-error-handler';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
-export default function NotificationsView() {
+interface NotificationsViewProps {
+  userId: string;
+}
+
+export default function NotificationsView({ userId }: NotificationsViewProps) {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showBlockedHelp, setShowBlockedHelp] = useState(false);
   const { toast } = useToast();
-
-  const userId = "user_1";
   const pushNotifications = usePushNotifications(userId);
 
   useEffect(() => {

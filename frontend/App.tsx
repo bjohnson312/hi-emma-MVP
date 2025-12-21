@@ -376,7 +376,7 @@ export default function App() {
       case "care-team":
         return <CareTeamView userId={userId} />;
       case "notifications":
-        return <NotificationsView />;
+        return <NotificationsView userId={userId} />;
       case "settings":
         return <SettingsView 
           userId={userId}
