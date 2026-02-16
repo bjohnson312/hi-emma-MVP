@@ -29,7 +29,7 @@ export const sendScheduledCampaignsHandler = api(
     }
     
     const now = new Date();
-    const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
     
     const campaignsDueNow = await db.queryRow<{ count: number }>`
       SELECT COUNT(*) as count
@@ -37,7 +37,7 @@ export const sendScheduledCampaignsHandler = api(
       WHERE is_active = true
         AND next_run_at IS NOT NULL
         AND next_run_at <= ${now}
-        AND next_run_at > ${twoMinutesAgo}
+        AND next_run_at > ${tenMinutesAgo}
     `;
     
     if (!campaignsDueNow || campaignsDueNow.count === 0) {
@@ -64,7 +64,7 @@ export const sendScheduledCampaignsHandler = api(
       WHERE is_active = true
         AND next_run_at IS NOT NULL
         AND next_run_at <= ${now}
-        AND next_run_at > ${twoMinutesAgo}
+        AND next_run_at > ${tenMinutesAgo}
     `) {
       campaigns.push(campaign);
     }
