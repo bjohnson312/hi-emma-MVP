@@ -9,15 +9,17 @@ export const listUsers = api(
     
     for await (const row of db.query`
       SELECT 
-        id::text,
-        email,
-        name,
-        created_at,
-        last_login,
-        COALESCE(is_active, true) as is_active,
-        COALESCE(login_count, 0) as login_count
-      FROM users
-      ORDER BY created_at DESC
+        u.id::text,
+        u.email,
+        u.name,
+        u.created_at,
+        u.last_login,
+        COALESCE(u.is_active, true) as is_active,
+        COALESCE(u.login_count, 0) as login_count,
+        np.phone_number
+      FROM users u
+      LEFT JOIN notification_preferences np ON u.id = np.user_id
+      ORDER BY u.created_at DESC
     `) {
       users.push({
         id: row.id as string,
@@ -27,6 +29,7 @@ export const listUsers = api(
         last_login: row.last_login as Date | undefined,
         is_active: row.is_active as boolean,
         login_count: row.login_count as number,
+        phone_number: row.phone_number as string | null | undefined,
       });
     }
 

@@ -6,6 +6,7 @@ interface User {
   last_login?: Date;
   is_active: boolean;
   login_count?: number;
+  phone_number?: string | null;
 }
 
 interface UserTableProps {
@@ -27,6 +28,7 @@ export function UserTable({ users, onDeactivate, onReactivate, onResetPassword }
           <tr className="bg-gray-100 border-b">
             <th className="text-left p-3 font-semibold text-sm">Email</th>
             <th className="text-left p-3 font-semibold text-sm">Name</th>
+            <th className="text-left p-3 font-semibold text-sm">Phone Number</th>
             <th className="text-left p-3 font-semibold text-sm">Created</th>
             <th className="text-left p-3 font-semibold text-sm">Last Login</th>
             <th className="text-left p-3 font-semibold text-sm">Total Logins</th>
@@ -39,6 +41,9 @@ export function UserTable({ users, onDeactivate, onReactivate, onResetPassword }
             <tr key={user.id} className="border-b hover:bg-gray-50">
               <td className="p-3 text-sm">{user.email}</td>
               <td className="p-3 text-sm">{user.name}</td>
+              <td className="p-3 text-sm font-mono">
+                {user.phone_number || <span className="text-gray-400 italic">No phone</span>}
+              </td>
               <td className="p-3 text-sm">
                 {new Date(user.created_at).toLocaleDateString()}
               </td>

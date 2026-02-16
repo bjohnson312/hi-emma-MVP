@@ -6,6 +6,7 @@ export interface User {
   last_login?: Date;
   is_active: boolean;
   login_count?: number;
+  phone_number?: string | null;
 }
 
 export interface UserListResponse {
