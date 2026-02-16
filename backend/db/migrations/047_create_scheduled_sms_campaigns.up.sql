@@ -32,4 +32,4 @@ CREATE TABLE scheduled_sms_campaign_sends (
 );
 
 CREATE INDEX idx_campaigns_active ON scheduled_sms_campaigns(is_active) WHERE is_active = true;
-CREATE INDEX idx_campaign_sends_lookup ON scheduled_sms_campaign_sends(campaign_id, user_id, DATE(sent_at));
+CREATE INDEX idx_campaign_sends_lookup ON scheduled_sms_campaign_sends(campaign_id, user_id, sent_at);

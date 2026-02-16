@@ -71,12 +71,18 @@ export const sendScheduledCampaignsHandler = api(
       
       for (const user of users) {
         try {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          
           const alreadySent = await db.queryRow<{ count: number }>`
             SELECT COUNT(*) as count
             FROM scheduled_sms_campaign_sends
             WHERE campaign_id = ${campaign.id}
               AND user_id = ${user.id}
-              AND DATE(sent_at) = CURRENT_DATE
+              AND sent_at >= ${today}
+              AND sent_at < ${tomorrow}
           `;
           
           if (alreadySent && alreadySent.count > 0) {
