@@ -43,29 +43,22 @@ export const sendScheduledCampaignsHandler = api(
         continue;
       }
       
+      if (!campaign.target_user_ids || campaign.target_user_ids.length === 0) {
+        console.warn(`Campaign ${campaign.id} has no target users, skipping`);
+        skipped++;
+        continue;
+      }
+      
       const users = [];
-      if (campaign.target_user_ids && campaign.target_user_ids.length > 0) {
-        for await (const user of db.query<{ id: string; phone_number: string | null }>`
-          SELECT u.id, np.phone_number
-          FROM users u
-          LEFT JOIN notification_preferences np ON u.id = np.user_id
-          WHERE u.id = ANY(${campaign.target_user_ids})
-            AND np.phone_number IS NOT NULL
-        `) {
-          if (user.phone_number) {
-            users.push({ id: user.id, phone_number: user.phone_number });
-          }
-        }
-      } else {
-        for await (const user of db.query<{ id: string; phone_number: string | null }>`
-          SELECT u.id, np.phone_number
-          FROM users u
-          LEFT JOIN notification_preferences np ON u.id = np.user_id
-          WHERE np.phone_number IS NOT NULL
-        `) {
-          if (user.phone_number) {
-            users.push({ id: user.id, phone_number: user.phone_number });
-          }
+      for await (const user of db.query<{ id: string; phone_number: string | null }>`
+        SELECT u.id, np.phone_number
+        FROM users u
+        LEFT JOIN notification_preferences np ON u.id = np.user_id
+        WHERE u.id = ANY(${campaign.target_user_ids})
+          AND np.phone_number IS NOT NULL
+      `) {
+        if (user.phone_number) {
+          users.push({ id: user.id, phone_number: user.phone_number });
         }
       }
       

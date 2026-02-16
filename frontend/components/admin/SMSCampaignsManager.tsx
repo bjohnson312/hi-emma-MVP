@@ -1,29 +1,51 @@
 import { useState, useEffect } from "react";
-import { Plus, Power, Trash2, BarChart3, Clock, Users } from "lucide-react";
+import { Plus, Power, Trash2, BarChart3, Clock, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { SMSCampaign, CampaignStats } from "~backend/sms_campaigns/types";
 
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
 export default function SMSCampaignsManager() {
   const [campaigns, setCampaigns] = useState<SMSCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedStats, setSelectedStats] = useState<CampaignStats | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     template_name: '',
     message_body: '',
     schedule_time: '09:00',
+    target_user_ids: [] as string[],
   });
   
   const { toast } = useToast();
   
   useEffect(() => {
     loadCampaigns();
+    loadUsers();
   }, []);
+  
+  const loadUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const response = await backend.admin_portal.listUsers();
+      setUsers(response.users.map(u => ({ id: u.id, email: u.email, name: u.name })));
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
   
   const loadCampaigns = async () => {
     try {
@@ -43,13 +65,22 @@ export default function SMSCampaignsManager() {
   };
   
   const handleCreate = async () => {
+    if (formData.target_user_ids.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select at least one user to send to',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const response = await backend.sms_campaigns.createCampaign(formData);
       
       if (response.success) {
         toast({ title: 'Success', description: 'Campaign created' });
         setShowCreateForm(false);
-        setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00' });
+        setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', target_user_ids: [] });
         loadCampaigns();
       } else {
         toast({
@@ -66,6 +97,29 @@ export default function SMSCampaignsManager() {
         variant: 'destructive',
       });
     }
+  };
+  
+  const toggleUserSelection = (userId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      target_user_ids: prev.target_user_ids.includes(userId)
+        ? prev.target_user_ids.filter(id => id !== userId)
+        : [...prev.target_user_ids, userId]
+    }));
+  };
+  
+  const selectAllUsers = () => {
+    setFormData(prev => ({
+      ...prev,
+      target_user_ids: users.map(u => u.id)
+    }));
+  };
+  
+  const clearAllUsers = () => {
+    setFormData(prev => ({
+      ...prev,
+      target_user_ids: []
+    }));
   };
   
   const handleToggle = async (id: number, is_active: boolean) => {
@@ -155,6 +209,7 @@ export default function SMSCampaignsManager() {
                   template_name: template.name.toLowerCase().replace(/\s+/g, '_'),
                   message_body: template.message,
                   schedule_time: template.time,
+                  target_user_ids: formData.target_user_ids,
                 })}
                 className="p-4 border rounded-lg hover:bg-gray-50 text-left"
               >
@@ -209,14 +264,76 @@ export default function SMSCampaignsManager() {
               </p>
             </div>
             
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium">
+                  Select Users to Send To <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllUsers}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAllUsers}
+                    className="text-xs text-gray-600 hover:text-gray-800"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+              
+              {loadingUsers ? (
+                <div className="text-sm text-gray-500 p-4 border rounded-lg">
+                  Loading users...
+                </div>
+              ) : users.length === 0 ? (
+                <div className="text-sm text-gray-500 p-4 border rounded-lg">
+                  No users found
+                </div>
+              ) : (
+                <div className="border rounded-lg max-h-64 overflow-y-auto">
+                  {users.map((user) => (
+                    <label
+                      key={user.id}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.target_user_ids.includes(user.id)}
+                        onChange={() => toggleUserSelection(user.id)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{user.name || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{user.email}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+              
+              <div className="mt-2 text-sm text-gray-600">
+                {formData.target_user_ids.length} user{formData.target_user_ids.length !== 1 ? 's' : ''} selected
+              </div>
+            </div>
+            
             <div className="flex gap-2">
-              <Button onClick={handleCreate} className="flex-1">
+              <Button 
+                onClick={handleCreate} 
+                className="flex-1"
+                disabled={formData.target_user_ids.length === 0}
+              >
                 Create Campaign
               </Button>
               <Button
                 onClick={() => {
                   setShowCreateForm(false);
-                  setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00' });
+                  setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', target_user_ids: [] });
                 }}
                 variant="outline"
               >

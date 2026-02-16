@@ -7,6 +7,13 @@ export const createCampaign = api(
   async (req: CreateCampaignRequest): Promise<CreateCampaignResponse> => {
     const { name, template_name, message_body, schedule_time, timezone, target_user_ids } = req;
     
+    if (!target_user_ids || target_user_ids.length === 0) {
+      return { 
+        success: false, 
+        error: 'At least one user must be selected to send the campaign to' 
+      };
+    }
+    
     const scheduleTimeFull = `${schedule_time}:00`;
     
     try {
@@ -19,7 +26,7 @@ export const createCampaign = api(
           ${message_body},
           ${scheduleTimeFull},
           ${timezone || 'America/New_York'},
-          ${target_user_ids || null}
+          ${target_user_ids}
         )
         RETURNING *
       `;
