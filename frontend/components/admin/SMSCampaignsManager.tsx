@@ -10,6 +10,7 @@ interface User {
   id: string;
   email: string;
   name: string;
+  phone_number?: string | null;
 }
 
 export default function SMSCampaignsManager() {
@@ -39,7 +40,12 @@ export default function SMSCampaignsManager() {
     try {
       setLoadingUsers(true);
       const response = await backend.admin_portal.listUsers();
-      setUsers(response.users.map(u => ({ id: u.id, email: u.email, name: u.name })));
+      setUsers(response.users.map(u => ({ 
+        id: u.id, 
+        email: u.email, 
+        name: u.name,
+        phone_number: u.phone_number 
+      })));
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
@@ -311,6 +317,16 @@ export default function SMSCampaignsManager() {
                       <div className="flex-1">
                         <div className="font-medium text-sm">{user.name || 'N/A'}</div>
                         <div className="text-xs text-gray-500">{user.email}</div>
+                        {user.phone_number && (
+                          <div className="text-xs text-blue-600 font-mono mt-0.5">
+                            📱 {user.phone_number}
+                          </div>
+                        )}
+                        {!user.phone_number && (
+                          <div className="text-xs text-red-500 italic mt-0.5">
+                            ⚠️ No phone number
+                          </div>
+                        )}
                       </div>
                     </label>
                   ))}
