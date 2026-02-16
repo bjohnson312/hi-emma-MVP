@@ -455,16 +455,33 @@ export default function SMSCampaignsManager() {
             Automated daily SMS messages sent to users
           </p>
         </div>
-        <Button 
-          onClick={() => {
-            if (editingCampaign) cancelEdit();
-            setShowCreateForm(!showCreateForm);
-          }}
-          disabled={!!editingCampaign}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Campaign
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={async () => {
+              try {
+                await backend.sms_campaigns.sendScheduledCampaignsHandler();
+                toast({ title: 'Success', description: 'Cron job executed manually' });
+              } catch (error) {
+                console.error('Failed to run cron:', error);
+                toast({ title: 'Error', description: 'Failed to execute cron job', variant: 'destructive' });
+              }
+            }}
+            variant="outline"
+          >
+            <Power className="w-4 h-4 mr-2" />
+            Run Cron Now
+          </Button>
+          <Button 
+            onClick={() => {
+              if (editingCampaign) cancelEdit();
+              setShowCreateForm(!showCreateForm);
+            }}
+            disabled={!!editingCampaign}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Campaign
+          </Button>
+        </div>
       </div>
       
       {(editingCampaign || showCreateForm) && renderCampaignForm()}
