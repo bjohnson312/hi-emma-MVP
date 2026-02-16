@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS scheduled_sms_campaign_sends CASCADE;
+DROP TABLE IF EXISTS scheduled_sms_campaigns CASCADE;
+
 CREATE TABLE scheduled_sms_campaigns (
   id BIGSERIAL PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
