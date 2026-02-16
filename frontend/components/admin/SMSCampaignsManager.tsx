@@ -21,6 +21,7 @@ export default function SMSCampaignsManager() {
   const [selectedStats, setSelectedStats] = useState<CampaignStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [autoSendEnabled, setAutoSendEnabled] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -36,6 +37,7 @@ export default function SMSCampaignsManager() {
   useEffect(() => {
     loadCampaigns();
     loadUsers();
+    loadAutoSendStatus();
   }, []);
   
   const loadUsers = async () => {
@@ -52,6 +54,36 @@ export default function SMSCampaignsManager() {
       console.error('Failed to load users:', error);
     } finally {
       setLoadingUsers(false);
+    }
+  };
+  
+  const loadAutoSendStatus = async () => {
+    try {
+      const response = await backend.sms_campaigns.getAutoSendStatus();
+      setAutoSendEnabled(response.enabled);
+    } catch (error) {
+      console.error('Failed to load auto-send status:', error);
+    }
+  };
+  
+  const toggleAutoSend = async () => {
+    try {
+      const newStatus = !autoSendEnabled;
+      await backend.sms_campaigns.setAutoSendStatus({ enabled: newStatus });
+      setAutoSendEnabled(newStatus);
+      toast({ 
+        title: newStatus ? 'Auto-Send Enabled' : 'Auto-Send Disabled',
+        description: newStatus 
+          ? 'SMS campaigns will be sent automatically' 
+          : 'SMS campaigns will not be sent automatically'
+      });
+    } catch (error) {
+      console.error('Failed to toggle auto-send:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update auto-send status',
+        variant: 'destructive',
+      });
     }
   };
   
@@ -457,19 +489,27 @@ export default function SMSCampaignsManager() {
         </div>
         <div className="flex gap-3">
           <Button 
+            onClick={toggleAutoSend}
+            variant={autoSendEnabled ? "default" : "outline"}
+            className={autoSendEnabled ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            <Power className="w-4 h-4 mr-2" />
+            Auto-Send: {autoSendEnabled ? 'ON' : 'OFF'}
+          </Button>
+          <Button 
             onClick={async () => {
               try {
                 await backend.sms_campaigns.sendScheduledCampaignsHandler();
-                toast({ title: 'Success', description: 'Cron job executed manually' });
+                toast({ title: 'Success', description: 'SMS sends executed' });
               } catch (error) {
-                console.error('Failed to run cron:', error);
-                toast({ title: 'Error', description: 'Failed to execute cron job', variant: 'destructive' });
+                console.error('Failed to run SMS sends:', error);
+                toast({ title: 'Error', description: 'Failed to execute SMS sends', variant: 'destructive' });
               }
             }}
             variant="outline"
           >
             <Power className="w-4 h-4 mr-2" />
-            Run Cron Now
+            Run SMS Sends
           </Button>
           <Button 
             onClick={() => {

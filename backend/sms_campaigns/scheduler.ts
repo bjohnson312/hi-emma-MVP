@@ -8,8 +8,16 @@ const twilioMessagingServiceSid = secret("TwilioMessagingServiceSID");
 const twilioPhoneNumber = secret("TwilioPhoneNumber");
 
 export const sendScheduledCampaignsHandler = api(
-  { expose: false, method: "POST", path: "/internal/send-scheduled-campaigns" },
+  { expose: true, method: "POST", path: "/internal/send-scheduled-campaigns", auth: false },
   async (): Promise<{ sent: number; skipped: number; errors: number; reason?: string }> => {
+    const autoSendEnabled = await db.queryRow<{ value: string }>`
+      SELECT value FROM admin_settings WHERE key = 'auto_send_sms_campaigns'
+    `;
+    
+    if (autoSendEnabled?.value !== 'true') {
+      return { sent: 0, skipped: 0, errors: 0, reason: 'auto_send_disabled' };
+    }
+    
     const activeCampaignCount = await db.queryRow<{ count: number }>`
       SELECT COUNT(*) as count 
       FROM scheduled_sms_campaigns 
