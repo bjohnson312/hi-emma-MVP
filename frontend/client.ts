@@ -1700,8 +1700,11 @@ export namespace push {
  */
 import { createCampaign as api_sms_campaigns_create_campaign_createCampaign } from "~backend/sms_campaigns/create_campaign";
 import { deleteCampaign as api_sms_campaigns_delete_campaign_deleteCampaign } from "~backend/sms_campaigns/delete_campaign";
+import { getAutoSendStatus as api_sms_campaigns_get_auto_send_status_getAutoSendStatus } from "~backend/sms_campaigns/get_auto_send_status";
 import { getCampaignStats as api_sms_campaigns_get_campaign_stats_getCampaignStats } from "~backend/sms_campaigns/get_campaign_stats";
 import { listCampaigns as api_sms_campaigns_list_campaigns_listCampaigns } from "~backend/sms_campaigns/list_campaigns";
+import { sendScheduledCampaignsHandler as api_sms_campaigns_scheduler_sendScheduledCampaignsHandler } from "~backend/sms_campaigns/scheduler";
+import { setAutoSendStatus as api_sms_campaigns_set_auto_send_status_setAutoSendStatus } from "~backend/sms_campaigns/set_auto_send_status";
 import { toggleCampaign as api_sms_campaigns_toggle_campaign_toggleCampaign } from "~backend/sms_campaigns/toggle_campaign";
 import { updateCampaign as api_sms_campaigns_update_campaign_updateCampaign } from "~backend/sms_campaigns/update_campaign";
 
@@ -1714,8 +1717,11 @@ export namespace sms_campaigns {
             this.baseClient = baseClient
             this.createCampaign = this.createCampaign.bind(this)
             this.deleteCampaign = this.deleteCampaign.bind(this)
+            this.getAutoSendStatus = this.getAutoSendStatus.bind(this)
             this.getCampaignStats = this.getCampaignStats.bind(this)
             this.listCampaigns = this.listCampaigns.bind(this)
+            this.sendScheduledCampaignsHandler = this.sendScheduledCampaignsHandler.bind(this)
+            this.setAutoSendStatus = this.setAutoSendStatus.bind(this)
             this.toggleCampaign = this.toggleCampaign.bind(this)
             this.updateCampaign = this.updateCampaign.bind(this)
         }
@@ -1732,6 +1738,12 @@ export namespace sms_campaigns {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_delete_campaign_deleteCampaign>
         }
 
+        public async getAutoSendStatus(): Promise<ResponseType<typeof api_sms_campaigns_get_auto_send_status_getAutoSendStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/sms-campaigns/auto-send-status`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_get_auto_send_status_getAutoSendStatus>
+        }
+
         public async getCampaignStats(params: RequestType<typeof api_sms_campaigns_get_campaign_stats_getCampaignStats>): Promise<ResponseType<typeof api_sms_campaigns_get_campaign_stats_getCampaignStats>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/sms-campaigns/stats`, {method: "POST", body: JSON.stringify(params)})
@@ -1742,6 +1754,18 @@ export namespace sms_campaigns {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/sms-campaigns/list`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_list_campaigns_listCampaigns>
+        }
+
+        public async sendScheduledCampaignsHandler(): Promise<ResponseType<typeof api_sms_campaigns_scheduler_sendScheduledCampaignsHandler>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/internal/send-scheduled-campaigns`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_scheduler_sendScheduledCampaignsHandler>
+        }
+
+        public async setAutoSendStatus(params: RequestType<typeof api_sms_campaigns_set_auto_send_status_setAutoSendStatus>): Promise<ResponseType<typeof api_sms_campaigns_set_auto_send_status_setAutoSendStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/sms-campaigns/auto-send-status`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_set_auto_send_status_setAutoSendStatus>
         }
 
         public async toggleCampaign(params: RequestType<typeof api_sms_campaigns_toggle_campaign_toggleCampaign>): Promise<ResponseType<typeof api_sms_campaigns_toggle_campaign_toggleCampaign>> {
