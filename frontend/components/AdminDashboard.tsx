@@ -11,6 +11,7 @@ import { SimpleBarChart } from "./admin/SimpleBarChart";
 import { UserTable } from "./admin/UserTable";
 import { AccessStatsSection } from "./admin/AccessStatsSection";
 import MessagesView from "./admin/MessagesView";
+import SMSCampaignsManager from "./admin/SMSCampaignsManager";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -18,7 +19,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages" | "campaigns">("overview");
   const [users, setUsers] = useState<UserListResponse | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStatsResponse | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
@@ -339,6 +340,13 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
             <Mail className="w-4 h-4 mr-2" />
             Messages
           </Button>
+          <Button
+            onClick={() => setActiveTab("campaigns")}
+            className={activeTab === "campaigns" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
+          >
+            <MessageSquare className="w-4 h-4 mr-2" />
+            SMS Campaigns
+          </Button>
         </div>
 
         {activeTab === "overview" && (
@@ -636,6 +644,10 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
 
         {activeTab === "messages" && (
           <MessagesView />
+        )}
+
+        {activeTab === "campaigns" && (
+          <SMSCampaignsManager />
         )}
       </div>
     </div>
