@@ -10,6 +10,7 @@ export interface SMSCampaign {
   is_active: boolean;
   target_user_ids?: string[] | null;
   created_by?: string | null;
+  next_run_at?: Date | null;
 }
 
 export interface CreateCampaignRequest {

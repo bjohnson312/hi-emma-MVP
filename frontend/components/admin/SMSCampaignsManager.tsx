@@ -27,6 +27,7 @@ export default function SMSCampaignsManager() {
     template_name: '',
     message_body: '',
     schedule_time: '09:00',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     target_user_ids: [] as string[],
   });
   
@@ -82,12 +83,15 @@ export default function SMSCampaignsManager() {
     }
     
     try {
-      const response = await backend.sms_campaigns.createCampaign(formData);
+      const response = await backend.sms_campaigns.createCampaign({
+        ...formData,
+        timezone: formData.timezone || 'America/New_York'
+      });
       
       if (response.success) {
         toast({ title: 'Success', description: 'Campaign created' });
         setShowCreateForm(false);
-        setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', target_user_ids: [] });
+        setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, target_user_ids: [] });
         loadCampaigns();
       } else {
         toast({
@@ -113,6 +117,7 @@ export default function SMSCampaignsManager() {
       template_name: campaign.template_name,
       message_body: campaign.message_body,
       schedule_time: campaign.schedule_time.slice(0, 5),
+      timezone: campaign.timezone || 'America/New_York',
       target_user_ids: campaign.target_user_ids || [],
     });
     setShowCreateForm(false);
@@ -142,7 +147,7 @@ export default function SMSCampaignsManager() {
       if (response.success) {
         toast({ title: 'Success', description: 'Campaign updated' });
         setEditingCampaign(null);
-        setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', target_user_ids: [] });
+        setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, target_user_ids: [] });
         loadCampaigns();
       } else {
         toast({
@@ -163,7 +168,7 @@ export default function SMSCampaignsManager() {
   
   const cancelEdit = () => {
     setEditingCampaign(null);
-    setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', target_user_ids: [] });
+    setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, target_user_ids: [] });
   };
   
   const toggleUserSelection = (userId: string) => {
@@ -320,6 +325,22 @@ export default function SMSCampaignsManager() {
           </div>
           
           <div>
+            <label className="block text-sm font-medium mb-1">Timezone</label>
+            <select
+              value={formData.timezone}
+              onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+              className="w-full border rounded-lg p-2 bg-white"
+            >
+              <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value="America/Anchorage">Alaska Time (AKT)</option>
+              <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+            </select>
+          </div>
+          
+          <div>
             <label className="block text-sm font-medium mb-1">Message</label>
             <textarea
               value={formData.message_body}
@@ -412,7 +433,7 @@ export default function SMSCampaignsManager() {
             <Button
               onClick={isEditMode ? cancelEdit : () => {
                 setShowCreateForm(false);
-                setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', target_user_ids: [] });
+                setFormData({ name: '', template_name: '', message_body: '', schedule_time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, target_user_ids: [] });
               }}
               variant="outline"
             >
@@ -478,7 +499,7 @@ export default function SMSCampaignsManager() {
                     <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        Daily at {campaign.schedule_time.slice(0, 5)}
+                        Daily at {campaign.schedule_time.slice(0, 5)} ({campaign.timezone})
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />

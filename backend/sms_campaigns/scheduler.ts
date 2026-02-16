@@ -9,9 +9,32 @@ const twilioPhoneNumber = secret("TwilioPhoneNumber");
 
 export const sendScheduledCampaignsHandler = api(
   { expose: false, method: "POST", path: "/internal/send-scheduled-campaigns" },
-  async (): Promise<{ sent: number; skipped: number; errors: number }> => {
+  async (): Promise<{ sent: number; skipped: number; errors: number; reason?: string }> => {
+    const activeCampaignCount = await db.queryRow<{ count: number }>`
+      SELECT COUNT(*) as count 
+      FROM scheduled_sms_campaigns 
+      WHERE is_active = true
+    `;
+    
+    if (!activeCampaignCount || activeCampaignCount.count === 0) {
+      return { sent: 0, skipped: 0, errors: 0, reason: 'no_active_campaigns' };
+    }
+    
     const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:00`;
+    const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+    
+    const campaignsDueNow = await db.queryRow<{ count: number }>`
+      SELECT COUNT(*) as count
+      FROM scheduled_sms_campaigns
+      WHERE is_active = true
+        AND next_run_at IS NOT NULL
+        AND next_run_at <= ${now}
+        AND next_run_at > ${twoMinutesAgo}
+    `;
+    
+    if (!campaignsDueNow || campaignsDueNow.count === 0) {
+      return { sent: 0, skipped: 0, errors: 0, reason: 'no_campaigns_due' };
+    }
     
     let sent = 0;
     let skipped = 0;
@@ -24,25 +47,21 @@ export const sendScheduledCampaignsHandler = api(
       template_name: string;
       message_body: string;
       schedule_time: string;
+      timezone: string;
       target_user_ids: string[] | null;
+      next_run_at: Date;
     }>`
-      SELECT id, name, template_name, message_body, schedule_time, target_user_ids
+      SELECT id, name, template_name, message_body, schedule_time, timezone, target_user_ids, next_run_at
       FROM scheduled_sms_campaigns
       WHERE is_active = true
+        AND next_run_at IS NOT NULL
+        AND next_run_at <= ${now}
+        AND next_run_at > ${twoMinutesAgo}
     `) {
       campaigns.push(campaign);
     }
     
     for (const campaign of campaigns) {
-      const scheduleHour = parseInt(campaign.schedule_time.split(':')[0]);
-      const scheduleMinute = parseInt(campaign.schedule_time.split(':')[1]);
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      
-      if (currentHour !== scheduleHour || Math.abs(currentMinute - scheduleMinute) > 7) {
-        continue;
-      }
-      
       if (!campaign.target_user_ids || campaign.target_user_ids.length === 0) {
         console.warn(`Campaign ${campaign.id} has no target users, skipping`);
         skipped++;
@@ -140,6 +159,15 @@ export const sendScheduledCampaignsHandler = api(
           errors++;
         }
       }
+      
+      const nextRun = new Date(campaign.next_run_at);
+      nextRun.setDate(nextRun.getDate() + 1);
+      
+      await db.exec`
+        UPDATE scheduled_sms_campaigns
+        SET next_run_at = ${nextRun}
+        WHERE id = ${campaign.id}
+      `;
     }
     
     return { sent, skipped, errors };
@@ -150,7 +178,7 @@ const sendScheduledCampaigns = new CronJob(
   "send-scheduled-sms-campaigns",
   {
     title: "Send Scheduled SMS Campaigns",
-    every: "15m",
+    every: "1m",
     endpoint: sendScheduledCampaignsHandler,
   }
 );
