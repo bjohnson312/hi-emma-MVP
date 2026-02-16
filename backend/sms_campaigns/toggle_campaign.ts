@@ -2,30 +2,6 @@ import { api } from "encore.dev/api";
 import db from "../db";
 import type { ToggleCampaignRequest, ToggleCampaignResponse, SMSCampaign } from "./types";
 
-function calculateNextRunAt(scheduleTime: string, timezone: string): Date {
-  const now = new Date();
-  
-  const todayInTz = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-  
-  const [hours, minutes] = scheduleTime.split(':').map(Number);
-  
-  const scheduledToday = new Date(todayInTz);
-  scheduledToday.setHours(hours, minutes, 0, 0);
-  
-  const scheduledTodayUTC = new Date(scheduledToday.toLocaleString('en-US', { timeZone: 'UTC' }));
-  const scheduledTodayLocal = new Date(scheduledToday.toLocaleString('en-US', { timeZone: timezone }));
-  const offset = scheduledTodayUTC.getTime() - scheduledTodayLocal.getTime();
-  const scheduledTodayActual = new Date(scheduledToday.getTime() - offset);
-  
-  if (scheduledTodayActual > now) {
-    return scheduledTodayActual;
-  } else {
-    const scheduledTomorrow = new Date(scheduledTodayActual);
-    scheduledTomorrow.setDate(scheduledTomorrow.getDate() + 1);
-    return scheduledTomorrow;
-  }
-}
-
 export const toggleCampaign = api(
   { expose: true, method: "POST", path: "/sms-campaigns/toggle", auth: false },
   async (req: ToggleCampaignRequest): Promise<ToggleCampaignResponse> => {
@@ -42,11 +18,17 @@ export const toggleCampaign = api(
       
       let nextRunAt: Date | null = null;
       if (is_active) {
-        const scheduleTimeStr = existingCampaign.schedule_time.toString();
-        const timeMatch = scheduleTimeStr.match(/(\d{2}):(\d{2})/);
-        if (timeMatch) {
-          const scheduleTime = `${timeMatch[1]}:${timeMatch[2]}`;
-          nextRunAt = calculateNextRunAt(scheduleTime, existingCampaign.timezone);
+        const nextRunAtResult = await db.queryRow<{ next_run_at: Date }>`
+          SELECT 
+            CASE 
+              WHEN (CURRENT_DATE + ${existingCampaign.schedule_time}::TIME) AT TIME ZONE ${existingCampaign.timezone} > NOW()
+              THEN (CURRENT_DATE + ${existingCampaign.schedule_time}::TIME) AT TIME ZONE ${existingCampaign.timezone}
+              ELSE ((CURRENT_DATE + INTERVAL '1 day') + ${existingCampaign.schedule_time}::TIME) AT TIME ZONE ${existingCampaign.timezone}
+            END as next_run_at
+        `;
+        
+        if (nextRunAtResult) {
+          nextRunAt = nextRunAtResult.next_run_at;
         }
       }
       
