@@ -5,9 +5,9 @@ import type { UpdateCampaignRequest, UpdateCampaignResponse, SMSCampaign } from 
 export const updateCampaign = api(
   { expose: true, method: "POST", path: "/sms-campaigns/update", auth: false },
   async (req: UpdateCampaignRequest): Promise<UpdateCampaignResponse> => {
-    const { id, name, message_body, schedule_time, is_active, target_user_ids } = req;
+    const { id, name, message_body, schedule_time, timezone, is_active, target_user_ids } = req;
     
-    if (name === undefined && message_body === undefined && schedule_time === undefined && is_active === undefined && target_user_ids === undefined) {
+    if (name === undefined && message_body === undefined && schedule_time === undefined && timezone === undefined && is_active === undefined && target_user_ids === undefined) {
       return { success: false, error: 'No fields to update' };
     }
     
@@ -21,6 +21,9 @@ export const updateCampaign = api(
       if (schedule_time !== undefined) {
         const scheduleTimeFull = `${schedule_time}:00`;
         await db.exec`UPDATE scheduled_sms_campaigns SET schedule_time = ${scheduleTimeFull}, updated_at = NOW() WHERE id = ${id}`;
+      }
+      if (timezone !== undefined) {
+        await db.exec`UPDATE scheduled_sms_campaigns SET timezone = ${timezone}, updated_at = NOW() WHERE id = ${id}`;
       }
       if (is_active !== undefined) {
         await db.exec`UPDATE scheduled_sms_campaigns SET is_active = ${is_active}, updated_at = NOW() WHERE id = ${id}`;

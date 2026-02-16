@@ -141,6 +141,7 @@ export default function SMSCampaignsManager() {
         name: formData.name,
         message_body: formData.message_body,
         schedule_time: formData.schedule_time,
+        timezone: formData.timezone,
         target_user_ids: formData.target_user_ids,
       });
       

@@ -38,6 +38,7 @@ export interface UpdateCampaignRequest {
   name?: string;
   message_body?: string;
   schedule_time?: string;
+  timezone?: string;
   is_active?: boolean;
   target_user_ids?: string[];
 }
