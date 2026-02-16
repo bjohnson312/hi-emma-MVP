@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Calendar, Clock, Users, RefreshCw } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Users, RefreshCw, BarChart3, Edit, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
-import type { UpcomingSend } from "~backend/sms_campaigns/types";
+import type { UpcomingSend, CampaignStats } from "~backend/sms_campaigns/types";
 
 interface UpcomingSendsViewProps {
   onBack: () => void;
+  onEdit: (campaignId: number) => void;
+  onViewStats: (campaignId: number) => void;
+  onToggle: (campaignId: number, isActive: boolean) => void;
+  onDelete: (campaignId: number) => void;
 }
 
-export default function UpcomingSendsView({ onBack }: UpcomingSendsViewProps) {
+export default function UpcomingSendsView({ onBack, onEdit, onViewStats, onToggle, onDelete }: UpcomingSendsViewProps) {
   const [upcomingSends, setUpcomingSends] = useState<UpcomingSend[]>([]);
   const [loading, setLoading] = useState(false);
   const [timePeriod, setTimePeriod] = useState<'1h' | '6h' | '24h' | '7d' | '30d' | 'all'>('24h');
@@ -139,7 +143,7 @@ export default function UpcomingSendsView({ onBack }: UpcomingSendsViewProps) {
             
             {upcomingSends.map((send) => (
               <div key={send.id} className="border border-blue-100 rounded-lg p-5 bg-gradient-to-r from-blue-50 to-white hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">{send.name}</h3>
@@ -173,6 +177,47 @@ export default function UpcomingSendsView({ onBack }: UpcomingSendsViewProps) {
                         </div>
                       </div>
                     </div>
+                  </div>
+                  
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      onClick={() => onViewStats(send.id)}
+                      variant="outline"
+                      size="sm"
+                      title="View Stats"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                    </Button>
+                    
+                    <Button
+                      onClick={() => {
+                        onBack();
+                        onEdit(send.id);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      title="Edit Campaign"
+                    >
+                      <Edit className="w-4 h-4 text-blue-600" />
+                    </Button>
+                    
+                    <Button
+                      onClick={() => onToggle(send.id, false)}
+                      variant="outline"
+                      size="sm"
+                      title="Pause Campaign"
+                    >
+                      <Power className="w-4 h-4 text-green-600" />
+                    </Button>
+                    
+                    <Button
+                      onClick={() => onDelete(send.id)}
+                      variant="outline"
+                      size="sm"
+                      title="Delete Campaign"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
                   </div>
                 </div>
               </div>

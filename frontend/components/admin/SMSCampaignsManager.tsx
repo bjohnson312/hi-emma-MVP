@@ -159,16 +159,48 @@ export default function SMSCampaignsManager() {
     }
   };
   
-  const handleEdit = (campaign: SMSCampaign) => {
-    setEditingCampaign(campaign);
-    setFormData({
-      name: campaign.name,
-      template_name: campaign.template_name,
-      message_body: campaign.message_body,
-      schedule_time: campaign.schedule_time.slice(0, 5),
-      timezone: campaign.timezone || 'America/New_York',
-      target_user_ids: campaign.target_user_ids || [],
-    });
+  const handleEdit = async (campaignId: number) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (!campaign) {
+      try {
+        const response = await backend.sms_campaigns.listCampaigns();
+        const foundCampaign = response.campaigns.find(c => c.id === campaignId);
+        if (!foundCampaign) {
+          toast({
+            title: 'Error',
+            description: 'Campaign not found',
+            variant: 'destructive',
+          });
+          return;
+        }
+        setEditingCampaign(foundCampaign);
+        setFormData({
+          name: foundCampaign.name,
+          template_name: foundCampaign.template_name,
+          message_body: foundCampaign.message_body,
+          schedule_time: foundCampaign.schedule_time.slice(0, 5),
+          timezone: foundCampaign.timezone || 'America/New_York',
+          target_user_ids: foundCampaign.target_user_ids || [],
+        });
+      } catch (error) {
+        console.error('Failed to load campaign:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load campaign',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      setEditingCampaign(campaign);
+      setFormData({
+        name: campaign.name,
+        template_name: campaign.template_name,
+        message_body: campaign.message_body,
+        schedule_time: campaign.schedule_time.slice(0, 5),
+        timezone: campaign.timezone || 'America/New_York',
+        target_user_ids: campaign.target_user_ids || [],
+      });
+    }
     setShowCreateForm(false);
   };
   
@@ -496,7 +528,72 @@ export default function SMSCampaignsManager() {
   };
   
   if (showUpcomingView) {
-    return <UpcomingSendsView onBack={() => setShowUpcomingView(false)} />;
+    return (
+      <>
+        <UpcomingSendsView 
+          onBack={() => setShowUpcomingView(false)}
+          onEdit={handleEdit}
+          onViewStats={loadStats}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+        />
+        
+        {selectedStats && (
+          <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Campaign Statistics</h3>
+              <Button onClick={() => setSelectedStats(null)} variant="outline" size="sm">
+                Close
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="text-sm text-blue-600 font-medium">Total Sends</div>
+                <div className="text-2xl font-bold text-blue-900 mt-1">
+                  {selectedStats.total_sends}
+                </div>
+              </div>
+              
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="text-sm text-green-600 font-medium">Sent Today</div>
+                <div className="text-2xl font-bold text-green-900 mt-1">
+                  {selectedStats.sends_today}
+                </div>
+              </div>
+              
+              <div className="bg-purple-50 rounded-lg p-4">
+                <div className="text-sm text-purple-600 font-medium">Last Sent</div>
+                <div className="text-sm font-medium text-purple-900 mt-1">
+                  {selectedStats.last_sent_at 
+                    ? new Date(selectedStats.last_sent_at).toLocaleString()
+                    : 'Never'}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-3">Recent Sends</h4>
+              <div className="space-y-2">
+                {selectedStats.recent_sends.slice(0, 10).map((send, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
+                    <span className="font-mono">{send.phone_number}</span>
+                    <span className="text-gray-500">
+                      {new Date(send.sent_at).toLocaleString()}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      send.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {send.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
   
   return (
@@ -652,7 +749,7 @@ export default function SMSCampaignsManager() {
                     </Button>
                     
                     <Button
-                      onClick={() => handleEdit(campaign)}
+                      onClick={() => handleEdit(campaign.id)}
                       variant="outline"
                       size="sm"
                       title="Edit Campaign"
