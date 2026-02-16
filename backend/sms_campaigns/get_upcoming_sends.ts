@@ -30,18 +30,11 @@ export const getUpcomingSends = api(
       let estimatedRecipients = 0;
       
       if (row.target_user_ids && row.target_user_ids.length > 0) {
-        const countResult = await db.queryRow<{ count: number }>`
-          SELECT COUNT(*) as count
-          FROM users
-          WHERE clerk_user_id = ANY(${row.target_user_ids}::text[])
-            AND phone_number IS NOT NULL
-        `;
-        estimatedRecipients = countResult?.count || 0;
+        estimatedRecipients = row.target_user_ids.length;
       } else {
         const countResult = await db.queryRow<{ count: number }>`
           SELECT COUNT(*) as count
           FROM users
-          WHERE phone_number IS NOT NULL
         `;
         estimatedRecipients = countResult?.count || 0;
       }
