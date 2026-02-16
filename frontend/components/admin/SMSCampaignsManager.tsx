@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { SMSCampaign, CampaignStats, UpcomingSend } from "~backend/sms_campaigns/types";
+import UpcomingSendsView from "./UpcomingSendsView";
 
 interface User {
   id: string;
@@ -24,6 +25,7 @@ export default function SMSCampaignsManager() {
   const [autoSendEnabled, setAutoSendEnabled] = useState(true);
   const [upcomingSends, setUpcomingSends] = useState<UpcomingSend[]>([]);
   const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+  const [showUpcomingView, setShowUpcomingView] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -493,6 +495,10 @@ export default function SMSCampaignsManager() {
     );
   };
   
+  if (showUpcomingView) {
+    return <UpcomingSendsView onBack={() => setShowUpcomingView(false)} />;
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -503,6 +509,14 @@ export default function SMSCampaignsManager() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button 
+            onClick={() => setShowUpcomingView(true)}
+            variant="outline"
+            className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            Upcoming Sends
+          </Button>
           <Button 
             onClick={toggleAutoSend}
             variant={autoSendEnabled ? "default" : "outline"}
