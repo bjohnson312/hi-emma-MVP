@@ -1702,6 +1702,7 @@ import { createCampaign as api_sms_campaigns_create_campaign_createCampaign } fr
 import { deleteCampaign as api_sms_campaigns_delete_campaign_deleteCampaign } from "~backend/sms_campaigns/delete_campaign";
 import { getAutoSendStatus as api_sms_campaigns_get_auto_send_status_getAutoSendStatus } from "~backend/sms_campaigns/get_auto_send_status";
 import { getCampaignStats as api_sms_campaigns_get_campaign_stats_getCampaignStats } from "~backend/sms_campaigns/get_campaign_stats";
+import { getUpcomingSends as api_sms_campaigns_get_upcoming_sends_getUpcomingSends } from "~backend/sms_campaigns/get_upcoming_sends";
 import { listCampaigns as api_sms_campaigns_list_campaigns_listCampaigns } from "~backend/sms_campaigns/list_campaigns";
 import { sendScheduledCampaignsHandler as api_sms_campaigns_scheduler_sendScheduledCampaignsHandler } from "~backend/sms_campaigns/scheduler";
 import { setAutoSendStatus as api_sms_campaigns_set_auto_send_status_setAutoSendStatus } from "~backend/sms_campaigns/set_auto_send_status";
@@ -1719,6 +1720,7 @@ export namespace sms_campaigns {
             this.deleteCampaign = this.deleteCampaign.bind(this)
             this.getAutoSendStatus = this.getAutoSendStatus.bind(this)
             this.getCampaignStats = this.getCampaignStats.bind(this)
+            this.getUpcomingSends = this.getUpcomingSends.bind(this)
             this.listCampaigns = this.listCampaigns.bind(this)
             this.sendScheduledCampaignsHandler = this.sendScheduledCampaignsHandler.bind(this)
             this.setAutoSendStatus = this.setAutoSendStatus.bind(this)
@@ -1748,6 +1750,12 @@ export namespace sms_campaigns {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/sms-campaigns/stats`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_get_campaign_stats_getCampaignStats>
+        }
+
+        public async getUpcomingSends(): Promise<ResponseType<typeof api_sms_campaigns_get_upcoming_sends_getUpcomingSends>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/sms-campaigns/upcoming-sends`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sms_campaigns_get_upcoming_sends_getUpcomingSends>
         }
 
         public async listCampaigns(): Promise<ResponseType<typeof api_sms_campaigns_list_campaigns_listCampaigns>> {
