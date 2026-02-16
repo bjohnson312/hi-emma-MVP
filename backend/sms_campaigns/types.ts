@@ -90,3 +90,17 @@ export interface GetCampaignStatsRequest {
 export interface GetCampaignStatsResponse {
   stats: CampaignStats;
 }
+
+export interface UpcomingSend {
+  id: number;
+  name: string;
+  message_body: string;
+  next_run_at: Date;
+  estimated_recipients: number;
+  time_until_send: string;
+  target_group: string;
+}
+
+export interface GetUpcomingSendsResponse {
+  upcoming_sends: UpcomingSend[];
+}

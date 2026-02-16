@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Plus, Power, Trash2, BarChart3, Clock, Users, X, Edit } from "lucide-react";
+import { Plus, Power, Trash2, BarChart3, Clock, Users, X, Edit, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
-import type { SMSCampaign, CampaignStats } from "~backend/sms_campaigns/types";
+import type { SMSCampaign, CampaignStats, UpcomingSend } from "~backend/sms_campaigns/types";
 
 interface User {
   id: string;
@@ -22,6 +22,8 @@ export default function SMSCampaignsManager() {
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [autoSendEnabled, setAutoSendEnabled] = useState(true);
+  const [upcomingSends, setUpcomingSends] = useState<UpcomingSend[]>([]);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +40,7 @@ export default function SMSCampaignsManager() {
     loadCampaigns();
     loadUsers();
     loadAutoSendStatus();
+    loadUpcomingSends();
   }, []);
   
   const loadUsers = async () => {
@@ -63,6 +66,18 @@ export default function SMSCampaignsManager() {
       setAutoSendEnabled(response.enabled);
     } catch (error) {
       console.error('Failed to load auto-send status:', error);
+    }
+  };
+  
+  const loadUpcomingSends = async () => {
+    try {
+      setLoadingUpcoming(true);
+      const response = await backend.sms_campaigns.getUpcomingSends();
+      setUpcomingSends(response.upcoming_sends);
+    } catch (error) {
+      console.error('Failed to load upcoming sends:', error);
+    } finally {
+      setLoadingUpcoming(false);
     }
   };
   
@@ -525,6 +540,52 @@ export default function SMSCampaignsManager() {
       </div>
       
       {(editingCampaign || showCreateForm) && renderCampaignForm()}
+      
+      {upcomingSends.length > 0 && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-md p-6 border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-blue-900">Upcoming Scheduled Sends</h3>
+            </div>
+            <Button onClick={loadUpcomingSends} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
+          
+          {loadingUpcoming ? (
+            <div className="text-center text-gray-500 py-4">Loading...</div>
+          ) : (
+            <div className="space-y-3">
+              {upcomingSends.map((send) => (
+                <div key={send.id} className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900">{send.name}</h4>
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                          {send.time_until_send}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{send.message_body}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(send.next_run_at).toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          ~{send.estimated_recipients} recipients ({send.target_group})
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="bg-white rounded-lg shadow">
         {loading ? (
