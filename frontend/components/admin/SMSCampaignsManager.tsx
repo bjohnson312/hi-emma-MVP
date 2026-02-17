@@ -690,6 +690,44 @@ export default function SMSCampaignsManager() {
                         </div>
                       </div>
                     </div>
+                    
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        onClick={() => loadStats(send.id)}
+                        variant="outline"
+                        size="sm"
+                        title="View Stats"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleEdit(send.id)}
+                        variant="outline"
+                        size="sm"
+                        title="Edit Campaign"
+                      >
+                        <Edit className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleToggle(send.id, false)}
+                        variant="outline"
+                        size="sm"
+                        title="Pause Campaign"
+                      >
+                        <Power className="w-4 h-4 text-green-600" />
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleDelete(send.id)}
+                        variant="outline"
+                        size="sm"
+                        title="Delete Campaign"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
