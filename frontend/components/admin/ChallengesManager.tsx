@@ -163,14 +163,23 @@ export default function ChallengesManager() {
   };
 
   const openEditForm = (challenge: Challenge) => {
-    setEditingChallenge(challenge);
+    const rawMessages = challenge.day_messages;
+    const parsedMessages: DayMessage[] = Array.isArray(rawMessages)
+      ? rawMessages.map(d => ({ ...d }))
+      : typeof rawMessages === "string"
+        ? JSON.parse(rawMessages)
+        : [];
+    const sendTime = typeof challenge.send_time === "string"
+      ? challenge.send_time.slice(0, 5)
+      : "09:00";
     setEditFormData({
-      name: challenge.name,
+      name: challenge.name || "",
       description: challenge.description || "",
-      send_time: challenge.send_time.slice(0, 5),
-      timezone: challenge.timezone,
-      day_messages: challenge.day_messages.map(d => ({ ...d })),
+      send_time: sendTime,
+      timezone: challenge.timezone || "America/Chicago",
+      day_messages: parsedMessages,
     });
+    setEditingChallenge(challenge);
   };
 
   const handleUpdate = async () => {
