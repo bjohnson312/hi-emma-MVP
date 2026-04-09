@@ -168,14 +168,22 @@ export const sendScheduledCampaignsHandler = api(
         }
       }
       
-      const nextRun = new Date(campaign.next_run_at);
-      nextRun.setDate(nextRun.getDate() + 1);
-      
-      await db.exec`
-        UPDATE scheduled_sms_campaigns
-        SET next_run_at = ${nextRun}
-        WHERE id = ${campaign.id}
+      const nextRunResult = await db.queryRow<{ next_run_at: Date }>`
+        SELECT
+          CASE
+            WHEN (CURRENT_DATE + ${campaign.schedule_time}::TIME) AT TIME ZONE ${campaign.timezone} > NOW()
+            THEN (CURRENT_DATE + ${campaign.schedule_time}::TIME) AT TIME ZONE ${campaign.timezone}
+            ELSE ((CURRENT_DATE + INTERVAL '1 day') + ${campaign.schedule_time}::TIME) AT TIME ZONE ${campaign.timezone}
+          END as next_run_at
       `;
+
+      if (nextRunResult) {
+        await db.exec`
+          UPDATE scheduled_sms_campaigns
+          SET next_run_at = ${nextRunResult.next_run_at}
+          WHERE id = ${campaign.id}
+        `;
+      }
     }
     
     return { sent, skipped, errors };
