@@ -12,6 +12,7 @@ import { UserTable } from "./admin/UserTable";
 import { AccessStatsSection } from "./admin/AccessStatsSection";
 import MessagesView from "./admin/MessagesView";
 import SMSCampaignsManager from "./admin/SMSCampaignsManager";
+import ChallengesManager from "./admin/ChallengesManager";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -19,7 +20,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages" | "campaigns">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages" | "campaigns" | "challenges">("overview");
   const [users, setUsers] = useState<UserListResponse | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStatsResponse | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
@@ -347,6 +348,13 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
             <MessageSquare className="w-4 h-4 mr-2" />
             SMS Campaigns
           </Button>
+          <Button
+            onClick={() => setActiveTab("challenges")}
+            className={activeTab === "challenges" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            Challenges
+          </Button>
         </div>
 
         {activeTab === "overview" && (
@@ -648,6 +656,12 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
 
         {activeTab === "campaigns" && (
           <SMSCampaignsManager />
+        )}
+
+        {activeTab === "challenges" && (
+          <div className="bg-white rounded-xl p-6">
+            <ChallengesManager />
+          </div>
         )}
       </div>
     </div>
