@@ -652,6 +652,7 @@ import { enrollUsers as api_challenges_enroll_users_enrollUsers } from "~backend
 import { getChallengeProgress as api_challenges_get_progress_getChallengeProgress } from "~backend/challenges/get_progress";
 import { listChallenges as api_challenges_list_challenges_listChallenges } from "~backend/challenges/list_challenges";
 import { sendChallengeDaysHandler as api_challenges_scheduler_sendChallengeDaysHandler } from "~backend/challenges/scheduler";
+import { sendDayNow as api_challenges_send_day_now_sendDayNow } from "~backend/challenges/send_day_now";
 import { unenrollUser as api_challenges_unenroll_user_unenrollUser } from "~backend/challenges/unenroll_user";
 import { updateChallenge as api_challenges_update_challenge_updateChallenge } from "~backend/challenges/update_challenge";
 
@@ -669,6 +670,7 @@ export namespace challenges {
             this.getChallengeProgress = this.getChallengeProgress.bind(this)
             this.listChallenges = this.listChallenges.bind(this)
             this.sendChallengeDaysHandler = this.sendChallengeDaysHandler.bind(this)
+            this.sendDayNow = this.sendDayNow.bind(this)
             this.unenrollUser = this.unenrollUser.bind(this)
             this.updateChallenge = this.updateChallenge.bind(this)
         }
@@ -713,6 +715,12 @@ export namespace challenges {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/internal/send-challenge-days`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_challenges_scheduler_sendChallengeDaysHandler>
+        }
+
+        public async sendDayNow(params: RequestType<typeof api_challenges_send_day_now_sendDayNow>): Promise<ResponseType<typeof api_challenges_send_day_now_sendDayNow>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/challenges/send-day-now`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_challenges_send_day_now_sendDayNow>
         }
 
         public async unenrollUser(params: RequestType<typeof api_challenges_unenroll_user_unenrollUser>): Promise<ResponseType<typeof api_challenges_unenroll_user_unenrollUser>> {

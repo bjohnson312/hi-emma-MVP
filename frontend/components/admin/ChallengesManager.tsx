@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Users, ChevronDown, ChevronRight, Power, X, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronRight, Power, X, RefreshCw, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -42,6 +42,14 @@ export default function ChallengesManager() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    description: "",
+    send_time: "09:00",
+    timezone: "America/Chicago",
+    day_messages: [] as DayMessage[],
+  });
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [progressMap, setProgressMap] = useState<Record<number, ProgressState>>({});
   const [loadingProgress, setLoadingProgress] = useState<Record<number, boolean>>({});
@@ -154,6 +162,52 @@ export default function ChallengesManager() {
     }
   };
 
+  const openEditForm = (challenge: Challenge) => {
+    setEditingChallenge(challenge);
+    setEditFormData({
+      name: challenge.name,
+      description: challenge.description || "",
+      send_time: challenge.send_time.slice(0, 5),
+      timezone: challenge.timezone,
+      day_messages: challenge.day_messages.map(d => ({ ...d })),
+    });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingChallenge) return;
+    if (!editFormData.name.trim()) {
+      toast({ title: "Validation Error", description: "Challenge name is required", variant: "destructive" });
+      return;
+    }
+    try {
+      const res = await backend.challenges.updateChallenge({
+        id: editingChallenge.id,
+        name: editFormData.name.trim(),
+        description: editFormData.description.trim() || undefined,
+        send_time: editFormData.send_time,
+        timezone: editFormData.timezone,
+        day_messages: editFormData.day_messages.filter(d => d.message.trim()),
+      });
+      if (res.success) {
+        toast({ title: "Challenge Updated" });
+        setEditingChallenge(null);
+        loadChallenges();
+      } else {
+        toast({ title: "Error", description: res.error || "Failed to update challenge", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Failed to update challenge:", err);
+      toast({ title: "Error", description: "Failed to update challenge", variant: "destructive" });
+    }
+  };
+
+  const updateEditDayMessage = (day: number, message: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      day_messages: prev.day_messages.map(d => d.day === day ? { ...d, message } : d),
+    }));
+  };
+
   const handleToggleActive = async (id: number, isActive: boolean) => {
     try {
       await backend.challenges.updateChallenge({ id, is_active: !isActive });
@@ -256,6 +310,86 @@ export default function ChallengesManager() {
           </Button>
         </div>
       </div>
+
+      {editingChallenge && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Edit Challenge</h3>
+                <Button variant="outline" size="sm" onClick={() => setEditingChallenge(null)}>
+                  <X className="w-4 h-4 mr-1" /> Cancel
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Challenge Name *</label>
+                  <Input
+                    value={editFormData.name}
+                    onChange={e => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <Input
+                    value={editFormData.description}
+                    onChange={e => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Optional description"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Send Time</label>
+                  <Input
+                    type="time"
+                    value={editFormData.send_time}
+                    onChange={e => setEditFormData(prev => ({ ...prev, send_time: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Timezone</label>
+                  <select
+                    value={editFormData.timezone}
+                    onChange={e => setEditFormData(prev => ({ ...prev, timezone: e.target.value }))}
+                    className="w-full border rounded-lg p-2 bg-white"
+                  >
+                    {TIMEZONES.map(tz => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Day Messages</label>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {editFormData.day_messages.map(d => (
+                    <div key={d.day} className="flex gap-3 items-start">
+                      <div className="flex-shrink-0 w-14 pt-2">
+                        <span className="text-sm font-semibold text-gray-600">Day {d.day}</span>
+                      </div>
+                      <div className="flex-1">
+                        <textarea
+                          value={d.message}
+                          onChange={e => updateEditDayMessage(d.day, e.target.value)}
+                          rows={2}
+                          className="w-full border rounded-lg p-2 text-sm resize-none"
+                        />
+                        <div className="text-xs text-gray-400 text-right">{d.message.length} chars</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button onClick={handleUpdate} className="flex-1">Save Changes</Button>
+                <Button variant="outline" onClick={() => setEditingChallenge(null)}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCreateForm && (
         <div className="bg-white rounded-lg shadow border p-6 space-y-5">
@@ -441,6 +575,14 @@ export default function ChallengesManager() {
                       </div>
 
                       <div className="flex items-center gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditForm(challenge)}
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4 text-gray-500" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
