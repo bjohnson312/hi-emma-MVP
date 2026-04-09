@@ -649,7 +649,9 @@ import { correlateRepliesHandler as api_challenges_correlate_replies_correlateRe
 import { createChallenge as api_challenges_create_challenge_createChallenge } from "~backend/challenges/create_challenge";
 import { deleteChallenge as api_challenges_delete_challenge_deleteChallenge } from "~backend/challenges/delete_challenge";
 import { enrollUsers as api_challenges_enroll_users_enrollUsers } from "~backend/challenges/enroll_users";
+import { forceSend as api_challenges_force_send_forceSend } from "~backend/challenges/force_send";
 import { getChallengeProgress as api_challenges_get_progress_getChallengeProgress } from "~backend/challenges/get_progress";
+import { getSendLog as api_challenges_get_send_log_getSendLog } from "~backend/challenges/get_send_log";
 import { listChallenges as api_challenges_list_challenges_listChallenges } from "~backend/challenges/list_challenges";
 import { sendChallengeDaysHandler as api_challenges_scheduler_sendChallengeDaysHandler } from "~backend/challenges/scheduler";
 import { sendDayNow as api_challenges_send_day_now_sendDayNow } from "~backend/challenges/send_day_now";
@@ -667,7 +669,9 @@ export namespace challenges {
             this.createChallenge = this.createChallenge.bind(this)
             this.deleteChallenge = this.deleteChallenge.bind(this)
             this.enrollUsers = this.enrollUsers.bind(this)
+            this.forceSend = this.forceSend.bind(this)
             this.getChallengeProgress = this.getChallengeProgress.bind(this)
+            this.getSendLog = this.getSendLog.bind(this)
             this.listChallenges = this.listChallenges.bind(this)
             this.sendChallengeDaysHandler = this.sendChallengeDaysHandler.bind(this)
             this.sendDayNow = this.sendDayNow.bind(this)
@@ -699,10 +703,22 @@ export namespace challenges {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_challenges_enroll_users_enrollUsers>
         }
 
+        public async forceSend(params: RequestType<typeof api_challenges_force_send_forceSend>): Promise<ResponseType<typeof api_challenges_force_send_forceSend>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/challenges/force-send`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_challenges_force_send_forceSend>
+        }
+
         public async getChallengeProgress(params: { id: number }): Promise<ResponseType<typeof api_challenges_get_progress_getChallengeProgress>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/challenges/${encodeURIComponent(params.id)}/progress`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_challenges_get_progress_getChallengeProgress>
+        }
+
+        public async getSendLog(): Promise<ResponseType<typeof api_challenges_get_send_log_getSendLog>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/challenges/send-log`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_challenges_get_send_log_getSendLog>
         }
 
         public async listChallenges(): Promise<ResponseType<typeof api_challenges_list_challenges_listChallenges>> {
