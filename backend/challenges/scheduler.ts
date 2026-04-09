@@ -1,7 +1,76 @@
 import { CronJob } from "encore.dev/cron";
 import { api } from "encore.dev/api";
+import { secret } from "encore.dev/config";
 import db from "../db";
 import { sendSMS } from "../notifications/sms";
+import { buildMemoryContext } from "../conversation/memory";
+
+const OpenAIKey = secret("OpenAIKey");
+
+async function personalizeMessage(
+  templateMessage: string,
+  dayNumber: number,
+  totalDays: number,
+  userId: string,
+  recentReplies: { day: number; reply: string }[]
+): Promise<string> {
+  const openaiKey = OpenAIKey?.();
+  if (!openaiKey) return templateMessage;
+
+  const memoryContext = await buildMemoryContext(userId);
+
+  const repliesContext = recentReplies.length > 0
+    ? `\n\nThe user's recent replies to previous challenge messages:\n${recentReplies.map(r => `- Day ${r.day}: "${r.reply}"`).join("\n")}`
+    : "";
+
+  const prompt = `You are Emma, a warm and personal wellness companion sending a daily SMS challenge message.
+
+Today is Day ${dayNumber} of ${totalDays} in the wellness challenge.
+
+Template message to personalize:
+"${templateMessage}"
+${memoryContext}${repliesContext}
+
+Rewrite the template message to feel personal and relevant to THIS specific user based on what you know about them. Keep it:
+- SMS-appropriate length (under 320 characters)
+- Warm, encouraging, conversational — like a friend who knows them
+- True to the Day ${dayNumber} theme and goal from the template
+- If they replied to a previous day, briefly acknowledge their progress
+- Do NOT invent facts not in the context. If you have no personal info, keep close to the template.
+
+Reply with ONLY the final SMS message text, nothing else.`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are Emma, a wellness companion. Respond with only the SMS message text." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("[Challenge Scheduler] OpenAI error:", await response.text());
+      return templateMessage;
+    }
+
+    const data: any = await response.json();
+    const personalized = data.choices?.[0]?.message?.content?.trim();
+    return personalized || templateMessage;
+  } catch (err) {
+    console.error("[Challenge Scheduler] Failed to personalize message:", err);
+    return templateMessage;
+  }
+}
 
 export const sendChallengeDaysHandler = api(
   { expose: true, method: "POST", path: "/internal/send-challenge-days", auth: false },
@@ -81,20 +150,40 @@ export const sendChallengeDaysHandler = api(
           continue;
         }
 
+        const recentReplies: { day: number; reply: string }[] = [];
+        for await (const r of db.query<{ day_number: number; reply_body: string }>`
+          SELECT day_number, reply_body
+          FROM challenge_sends
+          WHERE enrollment_id = ${enrollment.id}
+            AND reply_body IS NOT NULL
+          ORDER BY day_number DESC
+          LIMIT 3
+        `) {
+          recentReplies.push({ day: r.day_number, reply: r.reply_body });
+        }
+
+        const messageBody = await personalizeMessage(
+          dayEntry.message,
+          nextDay,
+          totalDays,
+          enrollment.user_id,
+          recentReplies
+        );
+
         let messageId: number | undefined;
         let externalId: string | undefined;
         let sendStatus: "sent" | "failed" = "sent";
         let sendError: string | undefined;
 
         try {
-          const result = await sendSMS(enrollment.phone_number, dayEntry.message);
+          const result = await sendSMS(enrollment.phone_number, messageBody);
           externalId = result.sid;
 
           const msgRow = await db.queryRow<{ id: number }>`
             INSERT INTO messages (channel, direction, "to", "from", body, status, external_id, user_id, metadata)
             VALUES (
               'sms', 'outbound', ${enrollment.phone_number}, 'emma',
-              ${dayEntry.message}, 'sent', ${externalId}, ${enrollment.user_id},
+              ${messageBody}, 'sent', ${externalId}, ${enrollment.user_id},
               ${JSON.stringify({ challenge_id: challenge.id, challenge_name: challenge.name, day_number: nextDay })}
             )
             RETURNING id
@@ -114,7 +203,7 @@ export const sendChallengeDaysHandler = api(
               day_number, message_body, sent_at, message_id, external_id, status, error
             ) VALUES (
               ${challenge.id}, ${enrollment.id}, ${enrollment.user_id}, ${enrollment.phone_number},
-              ${nextDay}, ${dayEntry.message}, NOW(), ${messageId ?? null}, ${externalId ?? null},
+              ${nextDay}, ${messageBody}, NOW(), ${messageId ?? null}, ${externalId ?? null},
               ${sendStatus}, ${sendError ?? null}
             )
             ON CONFLICT (enrollment_id, day_number) DO NOTHING
