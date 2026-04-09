@@ -1,12 +1,44 @@
+import { useState } from "react";
+import { Send } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import backend from "~backend/client";
 import type { UserProgress } from "~backend/challenges/types";
 
 interface Props {
+  challengeId: number;
   enrollments: UserProgress[];
   totalDays: number;
   userNames: Record<string, string>;
+  onSent?: () => void;
 }
 
-export default function ChallengeProgressGrid({ enrollments, totalDays, userNames }: Props) {
+export default function ChallengeProgressGrid({ challengeId, enrollments, totalDays, userNames, onSent }: Props) {
+  const [sending, setSending] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+
+  const handleSendDay = async (enrollmentId: number, dayNumber: number) => {
+    const key = `${enrollmentId}-${dayNumber}`;
+    setSending(prev => ({ ...prev, [key]: true }));
+    try {
+      const res = await backend.challenges.sendDayNow({
+        challenge_id: challengeId,
+        enrollment_id: enrollmentId,
+        day_number: dayNumber,
+      });
+      if (res.success) {
+        toast({ title: `Day ${dayNumber} sent!`, description: res.message_body?.slice(0, 80) + "..." });
+        onSent?.();
+      } else {
+        toast({ title: "Send failed", description: res.error, variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Failed to send day:", err);
+      toast({ title: "Error", description: "Failed to send", variant: "destructive" });
+    } finally {
+      setSending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
   if (enrollments.length === 0) {
     return (
       <div className="text-center text-gray-500 py-8">
@@ -48,11 +80,28 @@ export default function ChallengeProgressGrid({ enrollments, totalDays, userName
                 {Array.from({ length: totalDays }, (_, i) => {
                   const day = i + 1;
                   const send = enrollment.sends.find(s => s.day_number === day);
+                  const key = `${enrollment.enrollment_id}-${day}`;
+                  const isSending = sending[key];
 
-                  if (!send || send.status === "pending") {
+                  if (!send || send.status === "pending" || send.status === "not_reached") {
+                    const isNextDay = day === enrollment.current_day + 1;
                     return (
                       <td key={day} className="px-2 py-2 text-center">
-                        <span title="Not sent yet" className="inline-block w-8 h-8 rounded-full bg-gray-100 border border-gray-200" />
+                        {isNextDay && enrollment.is_active ? (
+                          <button
+                            onClick={() => handleSendDay(enrollment.enrollment_id, day)}
+                            disabled={isSending}
+                            title={`Send Day ${day} now`}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 border border-indigo-300 text-indigo-600 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                          >
+                            {isSending
+                              ? <span className="text-xs animate-pulse">…</span>
+                              : <Send className="w-3 h-3" />
+                            }
+                          </button>
+                        ) : (
+                          <span title="Not sent yet" className="inline-block w-8 h-8 rounded-full bg-gray-100 border border-gray-200" />
+                        )}
                       </td>
                     );
                   }
@@ -60,12 +109,14 @@ export default function ChallengeProgressGrid({ enrollments, totalDays, userName
                   if (send.status === "failed") {
                     return (
                       <td key={day} className="px-2 py-2 text-center">
-                        <span
-                          title="Send failed"
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 border border-red-300 text-red-600 text-xs font-bold"
+                        <button
+                          onClick={() => handleSendDay(enrollment.enrollment_id, day)}
+                          disabled={isSending}
+                          title="Send failed — click to retry"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 border border-red-300 text-red-600 text-xs font-bold hover:bg-red-200 transition-colors"
                         >
-                          ✕
-                        </span>
+                          {isSending ? "…" : "✕"}
+                        </button>
                       </td>
                     );
                   }
@@ -123,6 +174,10 @@ export default function ChallengeProgressGrid({ enrollments, totalDays, userName
           Not sent
         </div>
         <div className="flex items-center gap-1.5">
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-50 border border-indigo-300 text-indigo-500 text-xs">→</span>
+          Send now (next day)
+        </div>
+        <div className="flex items-center gap-1.5">
           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 border border-blue-300 text-blue-600 text-xs">📤</span>
           Sent (no reply)
         </div>
@@ -132,7 +187,7 @@ export default function ChallengeProgressGrid({ enrollments, totalDays, userName
         </div>
         <div className="flex items-center gap-1.5">
           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 border border-red-300 text-red-600 text-xs">✕</span>
-          Failed
+          Failed (click retry)
         </div>
       </div>
     </div>

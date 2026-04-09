@@ -637,9 +637,11 @@ export default function ChallengesManager() {
                       {progress && !loadingProgress[challenge.id] && (
                         <>
                           <ChallengeProgressGrid
+                            challengeId={challenge.id}
                             enrollments={progress.enrollments}
                             totalDays={progress.total_days}
                             userNames={userNameMap}
+                            onSent={() => loadProgress(challenge.id)}
                           />
 
                           {progress.enrollments.length > 0 && (
