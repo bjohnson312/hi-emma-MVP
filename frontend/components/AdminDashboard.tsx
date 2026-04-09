@@ -5,7 +5,7 @@ import type { SystemInfoResponse } from "~backend/admin_portal/admin_types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "./ui/use-toast";
-import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX, Heart, UserPlus, Utensils, Mail } from "lucide-react";
+import { LogOut, Users, Activity, TrendingUp, Book, Calendar, MessageSquare, Code, Clock, Download, UserX, Heart, UserPlus, Utensils, Mail, Brain } from "lucide-react";
 import { SimpleLineChart } from "./admin/SimpleLineChart";
 import { SimpleBarChart } from "./admin/SimpleBarChart";
 import { UserTable } from "./admin/UserTable";
@@ -13,6 +13,7 @@ import { AccessStatsSection } from "./admin/AccessStatsSection";
 import MessagesView from "./admin/MessagesView";
 import SMSCampaignsManager from "./admin/SMSCampaignsManager";
 import ChallengesManager from "./admin/ChallengesManager";
+import UserMemoryView from "./admin/UserMemoryView";
 
 interface AdminDashboardProps {
   adminToken: string;
@@ -20,7 +21,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages" | "campaigns" | "challenges">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "usage" | "messages" | "campaigns" | "challenges" | "memories">("overview");
   const [users, setUsers] = useState<UserListResponse | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStatsResponse | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
@@ -355,6 +356,13 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
             <Calendar className="w-4 h-4 mr-2" />
             Challenges
           </Button>
+          <Button
+            onClick={() => setActiveTab("memories")}
+            className={activeTab === "memories" ? "bg-purple-600" : "bg-white/10 hover:bg-white/20"}
+          >
+            <Brain className="w-4 h-4 mr-2" />
+            Memories
+          </Button>
         </div>
 
         {activeTab === "overview" && (
@@ -662,6 +670,10 @@ export default function AdminDashboard({ adminToken, onLogout }: AdminDashboardP
           <div className="bg-white rounded-xl p-6">
             <ChallengesManager />
           </div>
+        )}
+
+        {activeTab === "memories" && (
+          <UserMemoryView users={users?.users || []} />
         )}
       </div>
     </div>
