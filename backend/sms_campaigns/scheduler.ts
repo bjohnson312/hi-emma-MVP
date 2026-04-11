@@ -30,6 +30,19 @@ export const sendScheduledCampaignsHandler = api(
     
     const now = new Date();
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+
+    await db.exec`
+      UPDATE scheduled_sms_campaigns
+      SET next_run_at =
+        CASE
+          WHEN (CURRENT_DATE + schedule_time) AT TIME ZONE timezone > NOW()
+          THEN (CURRENT_DATE + schedule_time) AT TIME ZONE timezone
+          ELSE ((CURRENT_DATE + INTERVAL '1 day') + schedule_time) AT TIME ZONE timezone
+        END
+      WHERE is_active = true
+        AND next_run_at IS NOT NULL
+        AND next_run_at < NOW() - INTERVAL '10 minutes'
+    `;
     
     const campaignsDueNow = await db.queryRow<{ count: number }>`
       SELECT COUNT(*) as count
