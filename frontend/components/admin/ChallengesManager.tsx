@@ -351,8 +351,7 @@ export default function ChallengesManager() {
         <ChallengeSendLog userNames={userNameMap} />
       )}
 
-      {activeTab === "challenges" && (
-      <>
+      {activeTab === "challenges" && <>
 
       {editingChallenge && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -706,8 +705,7 @@ export default function ChallengesManager() {
           </div>
         )}
       </div>
-      </>
-      )}
+      </>}
     </div>
   );
 }
