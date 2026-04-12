@@ -10,17 +10,31 @@ interface Props {
 
 type Tab = "upcoming" | "sent" | "missed";
 
-function kindBadge(entry: SendLogEntry) {
+function parseDateLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatScheduledDateTime(entry: SendLogEntry): string {
+  if (!entry.scheduled_date || !entry.send_time) return "—";
+  const [year, month, day] = entry.scheduled_date.split("-").map(Number);
+  const [hour, minute] = entry.send_time.split(":").map(Number);
+  const date = new Date(year, month - 1, day);
+  const dateStr = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const h = hour % 12 || 12;
+  const ampm = hour < 12 ? "AM" : "PM";
+  const m = minute.toString().padStart(2, "0");
+  const tz = (entry.timezone ?? "").replace("America/", "").replace(/_/g, " ");
+  return `${dateStr} at ${h}:${m} ${ampm} ${tz}`;
+}
+
+function KindBadge({ entry, isPastDue }: { entry: SendLogEntry; isPastDue: boolean }) {
   if (entry.kind === "upcoming") {
-    const scheduledDate = new Date(entry.scheduled_date + "T00:00:00");
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const isPast = scheduledDate < today;
-    if (isPast) {
+    if (isPastDue) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
           <AlertTriangle className="w-3 h-3" />
-          Missed
+          Past due
         </span>
       );
     }
@@ -91,7 +105,7 @@ export default function ChallengeSendLog({ userNames }: Props) {
       if (res.success) {
         toast({
           title: res.was_resend ? `Day ${entry.day_number} resent` : `Day ${entry.day_number} sent`,
-          description: res.message_body?.slice(0, 100) + (res.message_body && res.message_body.length > 100 ? "…" : ""),
+          description: (res.message_body?.slice(0, 100) ?? "") + (res.message_body && res.message_body.length > 100 ? "…" : ""),
         });
         await load();
       } else {
@@ -109,18 +123,14 @@ export default function ChallengeSendLog({ userNames }: Props) {
   today.setHours(0, 0, 0, 0);
 
   const upcoming = entries.filter(e => e.kind === "upcoming");
-  const pastDue = upcoming.filter(e => new Date(e.scheduled_date + "T00:00:00") < today);
+  const pastDue = upcoming.filter(e => e.scheduled_date && parseDateLocal(e.scheduled_date) < today);
   const trulySent = entries.filter(e => e.kind === "sent");
   const failed = entries.filter(e => e.kind === "missed");
 
-  const tabEntries: Record<Tab, SendLogEntry[]> = {
-    upcoming,
-    sent: trulySent,
-    missed: failed,
-  };
+  const tabEntries: Record<Tab, SendLogEntry[]> = { upcoming, sent: trulySent, missed: failed };
 
   const tabLabels: Record<Tab, string> = {
-    upcoming: `Upcoming (${upcoming.length}${pastDue.length > 0 ? `, ${pastDue.length} past due` : ""})`,
+    upcoming: `Upcoming (${upcoming.length})`,
     sent: `Sent (${trulySent.length})`,
     missed: `Failed (${failed.length})`,
   };
@@ -153,11 +163,13 @@ export default function ChallengeSendLog({ userNames }: Props) {
               tab === t
                 ? "border-indigo-600 text-indigo-700"
                 : "border-transparent text-gray-500 hover:text-gray-700"
-            } ${t === "upcoming" && pastDue.length > 0 ? "text-amber-700" : ""}`}
+            }`}
           >
             {tabLabels[t]}
             {t === "upcoming" && pastDue.length > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">!</span>
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+                {pastDue.length} past due
+              </span>
             )}
           </button>
         ))}
@@ -169,9 +181,7 @@ export default function ChallengeSendLog({ userNames }: Props) {
 
       {!loading && visibleEntries.length === 0 && (
         <div className="py-12 text-center text-gray-400 text-sm">
-          {tab === "upcoming" ? "No upcoming sends — all enrolled users are complete or no active challenges." :
-           tab === "sent" ? "No sends recorded yet." :
-           "No failed sends."}
+          {tab === "upcoming" ? "No upcoming sends." : tab === "sent" ? "No sends recorded yet." : "No failed sends."}
         </div>
       )}
 
@@ -182,39 +192,33 @@ export default function ChallengeSendLog({ userNames }: Props) {
             const isSending = sending[key];
             const isExpanded = expanded[key];
             const userName = userNames[entry.user_id] || entry.phone_number;
-            const scheduledDate = new Date(entry.scheduled_date + "T00:00:00");
-            const isPastDue = entry.kind === "upcoming" && scheduledDate < today;
+            const isPastDue = entry.kind === "upcoming" && !!entry.scheduled_date && parseDateLocal(entry.scheduled_date) < today;
 
             return (
-              <div key={key} className={`${isPastDue ? "bg-amber-50" : ""}`}>
+              <div key={key} className={isPastDue ? "bg-amber-50" : ""}>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      {kindBadge(entry)}
-                      {isPastDue && (
-                        <span className="text-xs text-amber-600 font-medium">Past due!</span>
-                      )}
+                      <KindBadge entry={entry} isPastDue={isPastDue} />
                       <span className="text-sm font-medium text-gray-900 truncate">{userName}</span>
                       <span className="text-xs text-gray-400">{entry.phone_number}</span>
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      <span className="text-xs text-gray-500">{entry.challenge_name}</span>
-                      <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs font-medium text-gray-600">
-                        Day {entry.day_number} / {entry.total_days}
-                      </span>
-                      <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs text-gray-500">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap text-xs text-gray-500">
+                      <span>{entry.challenge_name}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="font-medium text-gray-700">Day {entry.day_number} / {entry.total_days}</span>
+                      <span className="text-gray-300">·</span>
+                      <span>
                         {entry.kind === "upcoming"
-                          ? `Scheduled ${scheduledDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+                          ? `Scheduled ${formatScheduledDateTime(entry)}`
                           : entry.sent_at
                             ? `Sent ${new Date(entry.sent_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
                             : ""}
                       </span>
                       {entry.reply_body && (
                         <>
-                          <span className="text-xs text-gray-400">·</span>
-                          <span className="text-xs text-green-600">Replied</span>
+                          <span className="text-gray-300">·</span>
+                          <span className="text-green-600">Replied</span>
                         </>
                       )}
                     </div>
@@ -240,10 +244,7 @@ export default function ChallengeSendLog({ userNames }: Props) {
                         title={`Send Day ${entry.day_number} now`}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg transition-colors"
                       >
-                        {isSending
-                          ? <RefreshCw className="w-3 h-3 animate-spin" />
-                          : <Send className="w-3 h-3" />
-                        }
+                        {isSending ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                         Send now
                       </button>
                     )}
@@ -259,10 +260,7 @@ export default function ChallengeSendLog({ userNames }: Props) {
                             : "text-gray-700 bg-white border border-gray-200 hover:bg-gray-50"
                         }`}
                       >
-                        {isSending
-                          ? <RefreshCw className="w-3 h-3 animate-spin" />
-                          : <RotateCcw className="w-3 h-3" />
-                        }
+                        {isSending ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
                         {entry.kind === "missed" ? "Retry" : "Resend"}
                       </button>
                     )}

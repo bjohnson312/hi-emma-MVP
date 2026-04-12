@@ -11,6 +11,8 @@ export interface SendLogEntry {
   day_number: number;
   total_days: number;
   scheduled_date: string;
+  send_time: string;
+  timezone: string;
   sent_at: Date | null;
   status: string | null;
   error: string | null;
@@ -29,7 +31,6 @@ export const getSendLog = api(
   async (): Promise<GetSendLogResponse> => {
     const entries: SendLogEntry[] = [];
 
-    const sent: SendLogEntry[] = [];
     for await (const row of db.query<{
       challenge_id: number;
       challenge_name: string;
@@ -38,6 +39,9 @@ export const getSendLog = api(
       phone_number: string;
       day_number: number;
       total_days: number;
+      scheduled_date: string;
+      send_time: string;
+      timezone: string;
       sent_at: Date;
       status: string;
       error: string | null;
@@ -45,7 +49,6 @@ export const getSendLog = api(
       replied_at: Date | null;
       message_body: string;
       external_id: string | null;
-      start_date: string;
     }>`
       SELECT
         cs.challenge_id,
@@ -60,24 +63,23 @@ export const getSendLog = api(
             ELSE (c.day_messages #>> '{}')::jsonb
           END
         ) AS total_days,
+        (ce.start_date + ((cs.day_number - 1) * INTERVAL '1 day'))::date::text AS scheduled_date,
+        c.send_time::text AS send_time,
+        c.timezone,
         cs.sent_at,
         cs.status,
         cs.error,
         cs.reply_body,
         cs.replied_at,
         cs.message_body,
-        cs.external_id,
-        ce.start_date::text AS start_date
+        cs.external_id
       FROM challenge_sends cs
       JOIN challenges c ON c.id = cs.challenge_id
       JOIN challenge_enrollments ce ON ce.id = cs.enrollment_id
       ORDER BY cs.sent_at DESC
       LIMIT 25
     `) {
-      const scheduledDate = new Date(row.start_date);
-      scheduledDate.setDate(scheduledDate.getDate() + row.day_number - 1);
-
-      sent.push({
+      entries.push({
         kind: row.status === "failed" ? "missed" : "sent",
         challenge_id: row.challenge_id,
         challenge_name: row.challenge_name,
@@ -86,7 +88,9 @@ export const getSendLog = api(
         phone_number: row.phone_number,
         day_number: row.day_number,
         total_days: row.total_days,
-        scheduled_date: scheduledDate.toISOString().slice(0, 10),
+        scheduled_date: row.scheduled_date,
+        send_time: row.send_time.slice(0, 5),
+        timezone: row.timezone,
         sent_at: row.sent_at,
         status: row.status,
         error: row.error,
@@ -97,9 +101,6 @@ export const getSendLog = api(
       });
     }
 
-    entries.push(...sent);
-
-    const upcoming: SendLogEntry[] = [];
     for await (const row of db.query<{
       challenge_id: number;
       challenge_name: string;
@@ -108,9 +109,9 @@ export const getSendLog = api(
       phone_number: string;
       next_day: number;
       total_days: number;
+      scheduled_date: string;
       send_time: string;
       timezone: string;
-      start_date: string;
     }>`
       SELECT
         c.id AS challenge_id,
@@ -125,9 +126,9 @@ export const getSendLog = api(
             ELSE (c.day_messages #>> '{}')::jsonb
           END
         ) AS total_days,
+        (ce.start_date + (ce.current_day * INTERVAL '1 day'))::date::text AS scheduled_date,
         c.send_time::text AS send_time,
-        c.timezone,
-        ce.start_date::text AS start_date
+        c.timezone
       FROM challenge_enrollments ce
       JOIN challenges c ON c.id = ce.challenge_id
       WHERE ce.is_active = true
@@ -141,10 +142,7 @@ export const getSendLog = api(
       ORDER BY ce.current_day ASC, ce.id ASC
       LIMIT 25
     `) {
-      const scheduledDate = new Date(row.start_date);
-      scheduledDate.setDate(scheduledDate.getDate() + row.next_day - 1);
-
-      upcoming.push({
+      entries.push({
         kind: "upcoming",
         challenge_id: row.challenge_id,
         challenge_name: row.challenge_name,
@@ -153,7 +151,9 @@ export const getSendLog = api(
         phone_number: row.phone_number,
         day_number: row.next_day,
         total_days: row.total_days,
-        scheduled_date: scheduledDate.toISOString().slice(0, 10),
+        scheduled_date: row.scheduled_date,
+        send_time: row.send_time.slice(0, 5),
+        timezone: row.timezone,
         sent_at: null,
         status: null,
         error: null,
@@ -163,8 +163,6 @@ export const getSendLog = api(
         external_id: null,
       });
     }
-
-    entries.push(...upcoming);
 
     return { entries };
   }
