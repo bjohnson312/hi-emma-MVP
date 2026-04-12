@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Users, ChevronDown, ChevronRight, Power, X, RefreshCw, Pencil } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronRight, Power, X, RefreshCw, Pencil, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import backend from "~backend/client";
 import type { Challenge, DayMessage, UserProgress } from "~backend/challenges/types";
 import ChallengeProgressGrid from "./ChallengeProgressGrid";
+import ChallengeSendLog from "./ChallengeSendLog";
 
 const DEFAULT_7_DAY_MESSAGES: DayMessage[] = [
   { day: 1, message: "Day 1 of your 7-Day Wellness Challenge! 🌟 Emma here. Today, start with one small healthy habit — drink a glass of water before anything else. Reply YES when you've done it!" },
@@ -50,6 +51,7 @@ export default function ChallengesManager() {
     timezone: "America/Chicago",
     day_messages: [] as DayMessage[],
   });
+  const [activeTab, setActiveTab] = useState<"challenges" | "sendlog">("challenges");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [progressMap, setProgressMap] = useState<Record<number, ProgressState>>({});
   const [loadingProgress, setLoadingProgress] = useState<Record<number, boolean>>({});
@@ -319,6 +321,38 @@ export default function ChallengesManager() {
           </Button>
         </div>
       </div>
+
+      <div className="flex gap-1 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab("challenges")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === "challenges"
+              ? "border-indigo-600 text-indigo-700"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Challenges
+        </button>
+        <button
+          onClick={() => setActiveTab("sendlog")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === "sendlog"
+              ? "border-indigo-600 text-indigo-700"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <List className="w-4 h-4" />
+          Send Log
+        </button>
+      </div>
+
+      {activeTab === "sendlog" && (
+        <ChallengeSendLog userNames={userNameMap} />
+      )}
+
+      {activeTab === "challenges" && (
+      <>
 
       {editingChallenge && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -672,6 +706,8 @@ export default function ChallengesManager() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

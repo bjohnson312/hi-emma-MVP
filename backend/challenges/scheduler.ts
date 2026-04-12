@@ -76,7 +76,6 @@ export const sendChallengeDaysHandler = api(
   { expose: true, method: "POST", path: "/internal/send-challenge-days", auth: false },
   async (): Promise<{ sent: number; skipped: number; errors: number; reason?: string }> => {
     const now = new Date();
-    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
     let sent = 0;
     let skipped = 0;
@@ -98,15 +97,22 @@ export const sendChallengeDaysHandler = api(
           ? JSON.parse(challenge.day_messages)
           : challenge.day_messages;
 
-      if (!dayMessages || dayMessages.length === 0) continue;
-      const totalDays = dayMessages.length;
+      const parsed: { day: number; message: string }[] = Array.isArray(dayMessages)
+        ? dayMessages
+        : typeof dayMessages === "string"
+          ? JSON.parse(dayMessages)
+          : [];
+
+      if (!parsed || parsed.length === 0) continue;
+      const totalDays = parsed.length;
 
       const sendTimeFull = `${challenge.send_time}:00`.slice(0, 8);
 
       const windowCheck = await db.queryRow<{ in_window: boolean }>`
         SELECT (
-          (CURRENT_DATE + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone}
-          BETWEEN ${tenMinutesAgo} AND ${now}
+          (CURRENT_DATE + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone} <= ${now}
+          AND
+          ((CURRENT_DATE + INTERVAL '1 day') + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone} > ${now}
         ) AS in_window
       `;
 
@@ -144,7 +150,7 @@ export const sendChallengeDaysHandler = api(
           continue;
         }
 
-        const dayEntry = dayMessages.find(d => d.day === nextDay);
+        const dayEntry = parsed.find(d => d.day === nextDay);
         if (!dayEntry) {
           skipped++;
           continue;
