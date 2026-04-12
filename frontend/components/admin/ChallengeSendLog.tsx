@@ -10,22 +10,31 @@ interface Props {
 
 type Tab = "upcoming" | "sent" | "missed";
 
-function parseDateLocal(dateStr: string): Date {
+function parseDateLocal(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) return dateStr;
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
+function toDateString(dateStr: string | Date): string {
+  if (dateStr instanceof Date) {
+    return dateStr.toISOString().slice(0, 10);
+  }
+  return dateStr;
+}
+
 function formatScheduledDateTime(entry: SendLogEntry): string {
   if (!entry.scheduled_date || !entry.send_time) return "—";
-  const [year, month, day] = entry.scheduled_date.split("-").map(Number);
+  const iso = toDateString(entry.scheduled_date as string | Date);
+  const [year, month, day] = iso.split("-").map(Number);
   const [hour, minute] = entry.send_time.split(":").map(Number);
   const date = new Date(year, month - 1, day);
-  const dateStr = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const formatted = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const h = hour % 12 || 12;
   const ampm = hour < 12 ? "AM" : "PM";
   const m = minute.toString().padStart(2, "0");
   const tz = (entry.timezone ?? "").replace("America/", "").replace(/_/g, " ");
-  return `${dateStr} at ${h}:${m} ${ampm} ${tz}`;
+  return `${formatted} at ${h}:${m} ${ampm} ${tz}`;
 }
 
 function KindBadge({ entry, isPastDue }: { entry: SendLogEntry; isPastDue: boolean }) {
@@ -123,7 +132,7 @@ export default function ChallengeSendLog({ userNames }: Props) {
   today.setHours(0, 0, 0, 0);
 
   const upcoming = entries.filter(e => e.kind === "upcoming");
-  const pastDue = upcoming.filter(e => e.scheduled_date && parseDateLocal(e.scheduled_date) < today);
+  const pastDue = upcoming.filter(e => e.scheduled_date && parseDateLocal(e.scheduled_date as string | Date) < today);
   const trulySent = entries.filter(e => e.kind === "sent");
   const failed = entries.filter(e => e.kind === "missed");
 
@@ -192,7 +201,7 @@ export default function ChallengeSendLog({ userNames }: Props) {
             const isSending = sending[key];
             const isExpanded = expanded[key];
             const userName = userNames[entry.user_id] || entry.phone_number;
-            const isPastDue = entry.kind === "upcoming" && !!entry.scheduled_date && parseDateLocal(entry.scheduled_date) < today;
+            const isPastDue = entry.kind === "upcoming" && !!entry.scheduled_date && parseDateLocal(entry.scheduled_date as string | Date) < today;
 
             return (
               <div key={key} className={isPastDue ? "bg-amber-50" : ""}>
