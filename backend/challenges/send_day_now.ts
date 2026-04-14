@@ -81,12 +81,14 @@ export const sendDayNow = api(
     `;
     if (!challenge) return { success: false, error: "Challenge not found" };
 
-    const dayMessages: { day: number; message: string }[] =
+    let dayMessages: { day: number; message: string }[] =
       typeof challenge.day_messages === "string"
         ? JSON.parse(challenge.day_messages)
         : challenge.day_messages;
 
-    const dayEntry = dayMessages.find(d => d.day === req.day_number);
+    if (typeof dayMessages === "string") dayMessages = JSON.parse(dayMessages);
+
+    const dayEntry = (dayMessages as { day: number; message: string }[]).find(d => d.day === req.day_number);
     if (!dayEntry) return { success: false, error: `No message for day ${req.day_number}` };
 
     const alreadySent = await db.queryRow<{ status: string }>`

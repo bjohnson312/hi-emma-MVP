@@ -7,44 +7,28 @@ const twilioMessagingServiceSid = secret("TwilioMessagingServiceSID");
 const twilioPhoneNumber = secret("TwilioPhoneNumber");
 
 export async function sendSMS(to: string, body: string): Promise<{ sid: string }> {
-  let accountSid: string;
-  let authToken: string;
-  
-  try {
-    accountSid = twilioAccountSid();
-    authToken = twilioAuthToken();
-    
-    if (!accountSid || !authToken) {
-      throw new Error("Twilio credentials not configured");
-    }
-  } catch (err) {
-    console.warn("Twilio credentials not configured. SMS not sent to:", to);
-    throw new Error("Twilio not configured. Please add TwilioAccountSID and TwilioAuthToken to Settings.");
+  const accountSid = twilioAccountSid();
+  const authToken = twilioAuthToken();
+
+  if (!accountSid || !authToken) {
+    throw new Error("TwilioAccountSID or TwilioAuthToken secret is empty.");
   }
-  
+
   const client = twilio(accountSid, authToken);
-  
-  const messageOptions: any = {
-    to,
-    body
-  };
-  
-  try {
-    const serviceSid = twilioMessagingServiceSid();
-    if (serviceSid) {
-      messageOptions.messagingServiceSid = serviceSid;
-    } else {
-      messageOptions.from = twilioPhoneNumber();
+
+  const messageOptions: any = { to, body };
+
+  const serviceSid = twilioMessagingServiceSid();
+  if (serviceSid) {
+    messageOptions.messagingServiceSid = serviceSid;
+  } else {
+    const fromNumber = twilioPhoneNumber();
+    if (!fromNumber) {
+      throw new Error("Neither TwilioMessagingServiceSID nor TwilioPhoneNumber is configured.");
     }
-  } catch {
-    try {
-      messageOptions.from = twilioPhoneNumber();
-    } catch {
-      throw new Error("Neither TwilioMessagingServiceSID nor TwilioPhoneNumber configured");
-    }
+    messageOptions.from = fromNumber;
   }
-  
+
   const twilioMessage = await client.messages.create(messageOptions);
-  
   return { sid: twilioMessage.sid };
 }
