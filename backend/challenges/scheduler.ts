@@ -139,13 +139,13 @@ export const sendChallengeDaysHandler = api(
           continue;
         }
 
-        const alreadySent = await db.queryRow<{ count: number }>`
-          SELECT COUNT(*) as count
+        const alreadySent = await db.queryRow<{ status: string }>`
+          SELECT status
           FROM challenge_sends
           WHERE enrollment_id = ${enrollment.id} AND day_number = ${nextDay}
         `;
 
-        if (alreadySent && alreadySent.count > 0) {
+        if (alreadySent && alreadySent.status === 'sent') {
           skipped++;
           continue;
         }
@@ -212,7 +212,13 @@ export const sendChallengeDaysHandler = api(
               ${nextDay}, ${messageBody}, NOW(), ${messageId ?? null}, ${externalId ?? null},
               ${sendStatus}, ${sendError ?? null}
             )
-            ON CONFLICT (enrollment_id, day_number) DO NOTHING
+            ON CONFLICT (enrollment_id, day_number) DO UPDATE SET
+              message_body = EXCLUDED.message_body,
+              sent_at = EXCLUDED.sent_at,
+              message_id = EXCLUDED.message_id,
+              external_id = EXCLUDED.external_id,
+              status = EXCLUDED.status,
+              error = EXCLUDED.error
           `;
 
           if (sendStatus === "sent") {
