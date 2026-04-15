@@ -110,9 +110,9 @@ export const sendChallengeDaysHandler = api(
 
       const windowCheck = await db.queryRow<{ in_window: boolean }>`
         SELECT (
-          (CURRENT_DATE + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone} <= ${now}
+          ((NOW() AT TIME ZONE ${challenge.timezone})::date + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone} <= ${now}
           AND
-          ((CURRENT_DATE + INTERVAL '1 day') + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone} > ${now}
+          ((NOW() AT TIME ZONE ${challenge.timezone})::date + INTERVAL '1 day' + ${sendTimeFull}::TIME) AT TIME ZONE ${challenge.timezone} > ${now}
         ) AS in_window
       `;
 
